@@ -1,4 +1,4 @@
-; dostest.asm - checks the DOS86 kernel through INT 21h (DOSTEST.COM)
+; dostest.asm - checks the COS kernel through INT 21h (DOSTEST.COM)
 ;
 ; Each check prints "ok" or "FAIL" and its name; the last line says how
 ; many failed. Needs CHILD.COM and TESTEXE.EXE on the current drive and a

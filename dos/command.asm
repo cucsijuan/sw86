@@ -1,4 +1,4 @@
-; command.asm - DOS86 command interpreter (COMMAND.COM)
+; command.asm - COS command interpreter (COMMAND.COM)
 ;
 ; Shows the prompt, reads a line and runs it: a built-in command, a drive
 ; change (B:) or a program (.COM, then .EXE) from the current drive or the
@@ -602,7 +602,10 @@ c_echo:
     cmp byte [si], 0
     jne .text
     mov si, s_echo_on
+    jmp .print
 .text:
+    add si, line_typed - line       ; as typed, not in capitals
+.print:
     call print
     call crlf
     ret
@@ -1671,8 +1674,9 @@ c_time:
 ; Data
 ; ======================================================================
 
-s_banner      db 13, 10, 'DOS86 version 1.00', 13, 10, 0
-s_version     db 13, 10, 'DOS86 Version 1.00', 13, 10, 0
+s_banner      db 13, 10, 'CucsiCorp COS Version 1.00', 13, 10
+              db '(C) Copyright CucsiCorp 1981', 13, 10, 0
+s_version     db 13, 10, 'CucsiCorp COS Version 1.00', 13, 10, 0
 s_prompt      db ':\>', 0
 s_crlf        db 13, 10, 0
 s_root        db ':\', 0
@@ -1684,9 +1688,9 @@ s_dir_tag     db '   <DIR>  ', 0
 s_bad_command db 'Bad command or file name', 13, 10, 0
 s_bad_drive   db 'Invalid drive specification', 13, 10, 0
 s_too_big     db 'Program too big to fit in memory', 13, 10, 0
-s_no_batch    db 'Batch files are not supported by DOS86', 13, 10, 0
-s_no_subdirs  db 'Subdirectories are not supported by DOS86', 13, 10, 0
-s_no_set      db 'Changing the environment is not supported by DOS86', 13, 10, 0
+s_no_batch    db 'Batch files are not supported by COS', 13, 10, 0
+s_no_subdirs  db 'Subdirectories are not supported by COS', 13, 10, 0
+s_no_set      db 'Changing the environment is not supported by COS', 13, 10, 0
 s_bad_dir     db 'Invalid directory', 13, 10, 0
 s_bad_switch  db 'Invalid switch', 13, 10, 0
 s_echo_on     db 'ECHO is on', 0

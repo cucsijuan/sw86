@@ -1,4 +1,4 @@
-; unsup.asm - calls a function DOS86 does not have (0Fh, open an FCB): the
+; unsup.asm - calls a function COS does not have (0Fh, open an FCB): the
 ; kernel says so and ends the program; the line after it never prints.
 org 100h
 

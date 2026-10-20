@@ -1,49 +1,52 @@
-# DOS86 — a DOS for the pc86 machine
+# COS — CucsiCorp OS, a DOS for the pc86 machine
 
 A subset of MS-DOS 3.30 that boots from a diskette: the real `INT 21h` function numbers, `.COM` and `.EXE` programs with a PSP and an environment, memory control blocks, file handles on FAT12 diskettes in drives A: and B:, and a `COMMAND.COM` with the usual built-in commands. Programs written for DOS that stay within this subset run unchanged.
 
-Like the rest of the suite, what it implements behaves like DOS, and what it does not implement says so: a program that calls a missing `INT 21h` function is stopped with `DOS86: INT 21h function AH=xxh is not supported`, instead of getting something different.
+Like the rest of the suite, what it implements behaves like DOS, and what it does not implement says so: a program that calls a missing `INT 21h` function is stopped with `COS: INT 21h function AH=xxh is not supported`, instead of getting something different.
 
 ## Status
 
 | Check | Result |
 |---|---|
 | `tests/dostest.asm` on the machine: files across clusters and tracks, seek, truncate, find with wildcards, rename, attributes, duplicate handles, memory blocks, EXEC of a `.COM` (tail, return code) and of an `.EXE` (relocation, its own stack), IOCTL, FCB parsing, drive B:, free space | 20/20, on 1.44 MB and on 720 KB diskettes |
-| `tests/dos_test.py`: boot, commands, programs, Ctrl-C, a changed diskette, no diskette, write protection, a full diskette, the date and time, what the diskettes hold afterwards (read back on the host) | 26/26 |
-| `boot.asm`, `dos86.asm`, `command.asm` assembled with NASM 2.16 | identical bytes to asm86 |
+| `tests/dos_test.py`: boot, commands, programs, Ctrl-C, a changed diskette, no diskette, write protection, a full diskette, the date and time, what the diskettes hold afterwards (read back on the host) | 27/27 |
+| `boot.asm`, `cos.asm`, `command.asm` assembled with NASM 2.16 | identical bytes to asm86 |
 
 ## Making a system diskette
 
 ```
-make dos                        # build/dos86.img: DOS86.SYS and COMMAND.COM, bootable
+make dos                        # build/cos.img: COS.SYS and COMMAND.COM, bootable
 ```
 
 By hand, with the pc86 tools:
 
 ```
 asm86 dos/boot.asm -o boot.bin
-asm86 dos/dos86.asm -o DOS86.SYS
+asm86 dos/cos.asm -o COS.SYS
 asm86 dos/command.asm -o COMMAND.COM
-fdimage new dos86.img --label DOS86         # or --720k
-fdimage add dos86.img DOS86.SYS
-fdimage add dos86.img COMMAND.COM
-fdimage boot dos86.img boot.bin             # keeps the diskette's BPB
-fdimage add dos86.img GAME.COM              # and any programs
+fdimage new cos.img --label COS         # or --720k
+fdimage add cos.img COS.SYS
+fdimage add cos.img COMMAND.COM
+fdimage boot cos.img boot.bin             # keeps the diskette's BPB
+fdimage add cos.img GAME.COM              # and any programs
 ```
 
-Then put the image in drive A: and power on: `pcrun --a dos86.img`, Open image… in the workbench, or `fdd_insert()` in an engine. The [workbench](https://cucsijuan.github.io/pc86/) also makes one by itself: the "DOS86 system diskette" button assembles these sources in the page and boots. The BIOS loads the boot sector, the boot sector loads `DOS86.SYS`, and the kernel starts `COMMAND.COM`:
+Then put the image in drive A: and power on: `pcrun --a cos.img`, Open image… in the workbench, or `fdd_insert()` in an engine. The [workbench](https://cucsijuan.github.io/pc86/) also makes one by itself: the "COS system diskette" button assembles these sources in the page and boots. The BIOS loads the boot sector, the boot sector loads `COS.SYS`, and the kernel starts `COMMAND.COM`:
 
 ```
-DOS86 version 1.00
+CucsiCorp COS Version 1.00
+(C) Copyright CucsiCorp 1981
 A:\>dir
 
- Volume in drive A is DOS86
+ Volume in drive A is COS
  Directory of  A:\
 
-DOS86    SYS    11196   1-01-80  12:00a
-COMMAND  COM     5414   1-01-80  12:00a
+COS      SYS    11188   1-01-80  12:00a
+COMMAND  COM     5460   1-01-80  12:00a
         2 File(s)   1440768 bytes free
 ```
+
+The manual, [doc/COS-Manual.pdf](../doc/COS-Manual.pdf), tells users how to work with COS and programmers how to write for it (every command and message, the INT 21h reference, the PSP, memory, the diskette format). Its source is [doc/manual.html](../doc/manual.html); `python3 doc/build.py` prints it again with Edge, Chrome or Chromium.
 
 ## What is supported
 
@@ -96,7 +99,7 @@ Devices: `CON` (cooked or raw) and `NUL`. Handles 0, 1 and 2 are the console; pr
 
 ## How it works
 
-- **Boot.** The boot sector (`boot.asm`) reads the first FAT, finds `DOS86.SYS` in the root directory and follows its cluster chain to `0070:0000`. The kernel sets its vectors, builds the memory chain up to the top that `INT 12h` reports, and runs `COMMAND.COM` with `4B00h`; if it ever ends, it runs it again.
+- **Boot.** The boot sector (`boot.asm`) reads the first FAT, finds `COS.SYS` in the root directory and follows its cluster chain to `0070:0000`. The kernel sets its vectors, builds the memory chain up to the top that `INT 12h` reports, and runs `COMMAND.COM` with `4B00h`; if it ever ends, it runs it again.
 - **INT 21h.** The caller's registers are saved on its own stack and the kernel switches to its own. On EXEC the parent's stack goes into its PSP (`2Eh`); when the child ends, its handles are closed, its memory is freed, `INT 22h`–`24h` are put back and the parent continues after its `INT 21h` with its registers as they were.
 - **Diskettes.** Sectors are read a whole track at a time (one `INT 13h`, one turn of the diskette) into a track buffer. Writes change the buffer and are written back, one `INT 13h` for the changed sectors, before another track is read, when a file is closed or committed, at disk reset and when a program ends; a new directory entry is written at once, so a write-protected diskette fails on the create, as on DOS. The FAT of each drive is kept in memory and written to every copy. Before each access the change line (`INT 13h AH=16h`) says whether the diskette was changed; if so its BPB and FAT are read again.
 - **Errors.** `INT 13h` is tried three times; then `INT 24h` decides: Retry, Fail (the function returns error 83), or Abort (the program ends).
@@ -105,7 +108,7 @@ Devices: `CON` (cooked or raw) and `NUL`. Handles 0, 1 and 2 are the console; pr
 
 ```
 0000:0000  interrupt vectors, BIOS data
-0070:0000  DOS86.SYS: code and data (about 11 KB)
+0070:0000  COS.SYS: code and data (about 11 KB)
            the kernel's PSP, the track buffer (9 KB), the FATs (2 x 4.5 KB), stacks
            free memory, MCB chain: the master environment, COMMAND.COM, programs
 A000:0000  top of memory (640 KB)
@@ -127,7 +130,7 @@ A000:0000  top of memory (640 KB)
 
 ```
 boot.asm             boot sector
-dos86.asm            kernel (DOS86.SYS)
+cos.asm            kernel (COS.SYS)
 command.asm          command interpreter (COMMAND.COM)
 tests/dostest.asm    the kernel through INT 21h
 tests/child.asm      run by dostest: prints its tail, ends with code 42

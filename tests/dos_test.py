@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Tests DOS86 on the pc86 machine: assembles the boot sector, the kernel,
+Tests COS on the pc86 machine: assembles the boot sector, the kernel,
 COMMAND.COM and the test programs, makes diskettes with fdimage, boots them
 with pcrun, types commands and checks what is on the screen and, after
 --save, what is on the diskettes.
@@ -62,7 +62,7 @@ class Env:
 
 def build(env):
     env.assemble("dos/boot.asm", "boot.bin")
-    env.assemble("dos/dos86.asm", "DOS86.SYS")
+    env.assemble("dos/cos.asm", "COS.SYS")
     env.assemble("dos/command.asm", "COMMAND.COM")
     env.assemble("programs/hello/hello.asm", "HELLO.COM")
     for t in ("dostest", "child", "unsup", "readline", "diskfull"):
@@ -72,10 +72,10 @@ def build(env):
         f.write(b"Hello, diskette!\r\nSecond line.\r\n")
     with open(env.path("FILLER.BIN"), "wb") as f:     # leaves about 30 KB free
         f.write(bytes(1457664 - 30000))
-    system = ["DOS86.SYS", "COMMAND.COM", "HELLO.COM", "README.TXT", "DOSTEST.COM", "CHILD.COM",
+    system = ["COS.SYS", "COMMAND.COM", "HELLO.COM", "README.TXT", "DOSTEST.COM", "CHILD.COM",
               "UNSUP.COM", "READLINE.COM", "DISKFULL.COM", "TESTEXE.EXE"]
-    env.image("a.img", "DOS86", system, boot="boot.bin")
-    env.image("a720.img", "DOS86", system, boot="boot.bin", small=True)
+    env.image("a.img", "COS", system, boot="boot.bin")
+    env.image("a720.img", "COS", system, boot="boot.bin", small=True)
 
 
 def fresh(env):
@@ -88,9 +88,9 @@ def fresh(env):
 
 # (name, keys, expected texts, options)
 SCENARIOS = [
-    ("boots to the prompt", "", ["DOS86 version 1.00", "A:\\>"], {}),
-    ("VER", "ver\n", ["DOS86 Version 1.00"], {}),
-    ("DIR", "dir\n", [" Volume in drive A is DOS86", " Directory of  A:\\", "COMMAND  COM", "HELLO    COM       31",
+    ("boots to the prompt", "", ["CucsiCorp COS Version 1.00", "(C) Copyright CucsiCorp 1981", "A:\\>"], {}),
+    ("VER", "ver\n", ["CucsiCorp COS Version 1.00"], {}),
+    ("DIR", "dir\n", [" Volume in drive A is COS", " Directory of  A:\\", "COMMAND  COM", "HELLO    COM       31",
                       "TESTEXE  EXE", "File(s)", "bytes free"], {}),
     ("DIR /W and a pattern", "cls\ndir /w *.com\n", ["COMMAND  COM    HELLO    COM", "File(s)"], {}),
     ("TYPE", "type readme.txt\n", ["Hello, diskette!", "Second line."], {}),
@@ -98,7 +98,7 @@ SCENARIOS = [
     ("an .EXE program", "testexe\n", ["Hello from an .EXE"], {}),
     ("command tail as typed", "child One two\n", ["child got: One two"], {}),
     ("unknown command", "nothing\n", ["Bad command or file name"], {}),
-    ("unsupported INT 21h function", "unsup\n", ["DOS86: INT 21h function AH=0Fh is not supported"], {"absent": ["still running"]}),
+    ("unsupported INT 21h function", "unsup\n", ["COS: INT 21h function AH=0Fh is not supported"], {"absent": ["still running"]}),
     ("the kernel through INT 21h", "dostest\n", ["DOSTEST: 0 failure(s)"], {"b": "b.img", "absent": ["FAIL"]}),
     ("720 KB diskettes", "dostest\n", ["DOSTEST: 0 failure(s)"], {"a": "a720.img", "b": "b720.img", "absent": ["FAIL"]}),
     ("standard input, line editing", "readline\nabX\bc\n", ["got 5: abc"], {}),
@@ -119,8 +119,9 @@ SCENARIOS = [
     ("DATE and TIME", "date 12-31-1999\ndate\n\ntime 23:59:30\ntime\n\n",
      ["Current date is Fri 12-31-1999", "Current time is 23:59:3"], {}),
     ("invalid date", "date 2-30-1999\n", ["Invalid date"], {}),
-    ("batch files", "copy readme.txt run.bat\nrun\n", ["Batch files are not supported by DOS86"], {}),
+    ("batch files", "copy readme.txt run.bat\nrun\n", ["Batch files are not supported by COS"], {}),
     ("the environment", "set\n", ["COMSPEC=A:\\COMMAND.COM"], {}),
+    ("ECHO keeps the case", "echo Hello, World\n", ["Hello, World"], {}),
 ]
 
 
@@ -177,7 +178,7 @@ def main():
         print("FAIL the diskette read back on the host\n" + listing)
 
     total = len(SCENARIOS) + 1
-    print(f"\nDOS86 scenarios: {total - fails}/{total} passed")
+    print(f"\nCOS scenarios: {total - fails}/{total} passed")
     shutil.rmtree(tmp, ignore_errors=True)
     return 1 if fails else 0
 

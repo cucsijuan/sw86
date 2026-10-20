@@ -1,0 +1,1957 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>COS Disk Operating System - User's Guide and Technical Reference</title>
+<!--
+  The COS manual. Open it in a browser to read it, or print it to PDF with
+  build.py. The pages are laid out by the script at the end: the content in
+  #source flows into fixed-size pages with running heads, chapter-page
+  numbers (4-12) and tabs, and the contents get their page numbers.
+-->
+<style>
+@page { size: 7in 9in; margin: 0; }
+:root {
+  --paper: #f3eddc;
+  --ink: #1b1e27;
+  --spot: #4b5e58;
+  --spot-light: #dfe2d6;
+  --rule: #1b1e27;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #8a8577; }
+body { -webkit-print-color-adjust: exact; print-color-adjust: exact; color: var(--ink);
+       font-family: "Courier New", Courier, monospace; font-size: 9.5pt; line-height: 1.32; }
+#source { display: none; }
+#book { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 24px 0; }
+@media print {
+  html, body { background: var(--paper); }
+  #book { display: block; padding: 0; gap: 0; }
+}
+
+/* ---------- the page ---------- */
+.page { width: 7in; height: 9in; position: relative; overflow: hidden; background: var(--paper); contain: strict;
+        break-after: page; page-break-after: always; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+.page:last-child { break-after: auto; page-break-after: auto; }
+@media print { .page { box-shadow: none; } }
+.page .body { position: absolute; top: 0.85in; bottom: 0.85in; overflow: hidden; }
+.page.odd .body  { left: 0.85in; right: 0.65in; }
+.page.even .body { left: 0.65in; right: 0.85in; }
+.page .head { position: absolute; top: 0.42in; height: 0.22in; font-family: Bahnschrift, "Arial Narrow", sans-serif;
+              font-stretch: 75%; font-weight: 600; font-size: 8.5pt; letter-spacing: .04em; text-transform: uppercase;
+              border-bottom: 1.2pt solid var(--rule); display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 2px; }
+.page.odd .head  { left: 0.85in; right: 0.65in; }
+.page.even .head { left: 0.65in; right: 0.85in; flex-direction: row-reverse; }
+.page .foot { position: absolute; bottom: 0.4in; height: 0.25in; display: flex; justify-content: space-between;
+              align-items: flex-start; font-size: 8pt; border-top: 0.6pt solid var(--rule); padding-top: 3px; }
+.page.odd .foot  { left: 0.85in; right: 0.65in; }
+.page.even .foot { left: 0.65in; right: 0.85in; flex-direction: row-reverse; }
+.page .foot .label { font-family: Bahnschrift, sans-serif; font-weight: 700; font-size: 10pt; letter-spacing: .03em; }
+.page .tab { position: absolute; width: 0.32in; height: 0.52in; background: var(--ink); color: var(--paper);
+             font-family: Bahnschrift, sans-serif; font-weight: 700; font-size: 12pt; display: none;
+             align-items: center; justify-content: center; }
+.page.odd .tab  { right: 0; border-radius: 4px 0 0 4px; }
+.page.even .tab { left: 0;  border-radius: 0 4px 4px 0; }
+.page.has-tab .tab { display: flex; }
+.page.blank .body { display: flex; align-items: center; justify-content: center; font-style: italic; }
+.page.plain .head, .page.plain .foot { display: none; }
+
+/* ---------- type ---------- */
+h1, h2, h3, h4, .display { font-family: Bahnschrift, "Arial Narrow", sans-serif; font-stretch: 75%; font-weight: 700;
+                           letter-spacing: .01em; margin: 0; }
+h2 { font-size: 15pt; margin: 14px 0 6px; padding-bottom: 2px; border-bottom: 2.4pt solid var(--ink); }
+h3 { font-size: 11.5pt; margin: 12px 0 4px; }
+h4 { font-size: 10pt; margin: 9px 0 2px; text-transform: uppercase; letter-spacing: .05em; color: var(--spot); }
+.body > :first-child { margin-top: 0 !important; }
+p { margin: 0 0 7px; }
+ul, ol { margin: 0 0 7px; padding-left: 1.6em; }
+li { margin-bottom: 2px; }
+b, strong { font-weight: bold; }
+i, em { font-style: italic; }
+code, kbd { font-family: inherit; }
+.key { display: inline-block; border: 0.8pt solid var(--ink); border-radius: 3px; padding: 0 3px; line-height: 1.1;
+       font-size: 8pt; font-weight: bold; box-shadow: 1px 1px 0 var(--ink); margin: 0 1px; white-space: nowrap; }
+var { font-style: italic; }
+.small { font-size: 8.5pt; }
+
+pre { font-family: "Courier New", monospace; margin: 4px 0 9px; white-space: pre; }
+pre.screen { font-size: 8pt; line-height: 1.22; padding: 6px 8px; border: 0.8pt solid var(--ink);
+             outline: 0.8pt solid var(--ink); outline-offset: 2px; background: var(--spot-light); margin: 8px 3px 12px; }
+pre.screen b { font-weight: bold; text-decoration: underline; text-underline-offset: 2px; }
+pre.listing { font-size: 8.2pt; line-height: 1.22; padding: 5px 0 5px 10px; border-left: 3pt solid var(--spot); }
+.caption { font-size: 8pt; font-style: italic; margin: -6px 0 10px 4px; }
+
+table { border-collapse: collapse; margin: 4px 0 10px; width: 100%; font-size: 8.6pt; }
+th, td { text-align: left; vertical-align: top; padding: 2px 5px; }
+table.ref th { font-family: Bahnschrift, sans-serif; font-stretch: 75%; font-weight: 700; font-size: 9pt;
+               border-bottom: 1.2pt solid var(--ink); border-top: 1.2pt solid var(--ink); }
+table.ref td { border-bottom: 0.4pt solid #b9b29e; }
+table.ref td:first-child { white-space: nowrap; font-weight: bold; }
+table.ref.wrap td:first-child { white-space: normal; }
+
+.note { border: 1pt solid var(--ink); padding: 5px 8px; margin: 6px 0 10px; }
+.note::before { content: "NOTE: "; font-weight: bold; }
+.warn { border: 2pt solid var(--ink); padding: 5px 8px; margin: 6px 0 10px; background: var(--spot-light); }
+.warn::before { content: "WARNING: "; font-weight: bold; }
+
+/* a command or function entry */
+.entry { margin-bottom: 10px; }
+dl { margin: 0 0 6px; }
+dt { font-family: Bahnschrift, sans-serif; font-stretch: 75%; font-weight: 700; font-size: 9pt;
+     text-transform: uppercase; letter-spacing: .05em; color: var(--spot); margin-top: 5px; }
+dd, .in-dd { margin: 0 0 4px 0.3in; }
+dd > :last-child { margin-bottom: 2px; }
+dd > pre.screen, pre.screen.in-dd { margin-left: 3px; }
+dd pre:not(.screen) { margin: 0; }
+h2.cmd { display: flex; justify-content: space-between; align-items: baseline; }
+h2.cmd small { font-size: 8.5pt; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.fnhead { display: flex; gap: 10px; align-items: baseline; border-top: 1.2pt solid var(--ink); padding-top: 3px; margin-top: 12px; }
+.fnhead .num { font-family: Bahnschrift, sans-serif; font-weight: 700; font-size: 12pt; background: var(--ink); color: var(--paper);
+               padding: 0 5px; }
+.fnhead h3 { margin: 0; }
+table.regs { margin: 3px 0 5px; }
+table.regs th { width: 0.9in; font-family: Bahnschrift, sans-serif; font-stretch: 75%; font-weight: 700; font-size: 8.5pt;
+                text-transform: uppercase; color: var(--spot); padding-left: 0; }
+table.regs td { font-size: 8.6pt; }
+
+/* ---------- cover and openers ---------- */
+.cover .body { inset: 0 !important; }
+.cover .stripe { position: absolute; left: 0; right: 0; height: 0.42in;
+                 background: repeating-linear-gradient(115deg, var(--ink) 0 9px, transparent 9px 15px); }
+.cover .logo { position: absolute; left: 0.55in; right: 0.55in; top: 0.95in; }
+.cover .logo img { width: 100%; mix-blend-mode: multiply; display: block; }
+.cover .titles { position: absolute; left: 0.7in; right: 0.7in; top: 5.05in; }
+.cover .titles .display { font-size: 30pt; line-height: .95; }
+.cover .titles .sub { font-family: Bahnschrift, sans-serif; font-stretch: 75%; font-weight: 600; font-size: 14pt;
+                      margin-top: 8px; letter-spacing: .02em; }
+.cover .titles .ver { margin-top: 14px; font-size: 10pt; }
+.cover .boxline { position: absolute; left: 0.7in; right: 0.7in; bottom: 1.25in; border-top: 2.4pt solid var(--ink);
+                  padding-top: 6px; display: flex; justify-content: space-between; font-family: Bahnschrift, sans-serif;
+                  font-weight: 700; font-size: 10pt; letter-spacing: .05em; text-transform: uppercase; }
+.cover .boxline span:last-child { color: var(--spot); }
+
+.opener .num { font-family: Bahnschrift, sans-serif; font-weight: 700; font-size: 96pt; line-height: .8;
+               color: var(--spot); margin: 0.2in 0 6px; }
+.opener h1 { font-size: 28pt; line-height: 1; border-bottom: 3pt solid var(--ink); padding-bottom: 6px; margin-bottom: 0.35in; }
+.opener .mini h4 { color: var(--ink); margin-bottom: 6px; }
+.toc { width: 100%; }
+.toc .row { display: flex; align-items: baseline; gap: 4px; margin: 1px 0; }
+.toc .row .t { white-space: nowrap; overflow: hidden; }
+.toc .row .dots { flex: 1; border-bottom: 1px dotted var(--ink); transform: translateY(-3px); min-width: 12px; }
+.toc .row .p { white-space: nowrap; }
+.toc .row.ch { margin-top: 8px; font-family: Bahnschrift, sans-serif; font-stretch: 75%; font-weight: 700; font-size: 10.5pt; }
+.toc .row.sec { padding-left: 1.6em; }
+.toc .row.part { margin-top: 16px; text-transform: uppercase; letter-spacing: .08em; color: var(--spot); font-size: 9.5pt; }
+#toc > .row.part:first-child { margin-top: 0; }
+.notice p { font-size: 8.5pt; }
+.quick table td { font-size: 8.2pt; }
+.cp437 { width: auto; margin: 6px auto 10px; font-size: 9pt; }
+.cp437 td, .cp437 th { width: 0.28in; text-align: center; padding: 1px 0; border: 0.4pt solid #b9b29e; }
+.cp437 th { font-family: Bahnschrift, sans-serif; font-weight: 700; font-size: 7.5pt; background: var(--spot-light); }
+.cp437 td { font-family: "Courier New", monospace; font-size: 11pt; line-height: 1.1; }
+</style>
+</head>
+<body>
+<div id="book"></div>
+<div id="source">
+
+<!-- ================================================================== -->
+<!-- FRONT MATTER                                                         -->
+<!-- ================================================================== -->
+
+<section class="front" data-kind="notice">
+<div class="notice">
+<p style="margin-top:3.6in"><b>First Edition (October 1981)</b></p>
+<p>Changes are made periodically to the information herein; any such changes will be reported in subsequent revisions.</p>
+<p>This manual describes COS Version 1.00, the disk operating system for the pc86 personal computer, and its command processor, COMMAND.COM.</p>
+<p>The programs described in this manual are supplied on the COS System Diskette. Read the whole of Chapter 2, "Getting Started," before you use COS for the first time.</p>
+<p>Products are not stocked at the address below. Comments on this manual may be addressed to CucsiCorp, Personal Computer Software, Publications Department. CucsiCorp may use or distribute any of the information you supply in any way it believes appropriate without incurring any obligations whatever.</p>
+<p style="margin-top:0.25in">&copy; Copyright CucsiCorp 1981</p>
+<p class="small">COS and CucsiCorp are trademarks of CucsiCorp. MS-DOS is a trademark of Microsoft Corporation.</p>
+</div>
+</section>
+
+<section class="front" data-kind="preface" data-title="Preface">
+<h2>Preface</h2>
+<p>This manual tells you how to use COS, the CucsiCorp disk operating system, and how to write programs for it. It is written for two kinds of readers:</p>
+<ul>
+<li>If you want to <b>use</b> COS &mdash; start it, look after your diskettes, copy and erase files, run programs &mdash; read Part One, Chapters 1 to 5. You do not need to know anything about programming.</li>
+<li>If you want to <b>write programs</b> for COS in 8086 assembly language, read Part One first and then Part Two, Chapters 6 to 8, and the appendixes.</li>
+</ul>
+<h3>Organization of This Manual</h3>
+<table class="ref wrap">
+<tr><td>Chapter 1</td><td>Introduction: what COS is and what you need to use it.</td></tr>
+<tr><td>Chapter 2</td><td>Getting Started: starting COS, the prompt, the keyboard, date and time.</td></tr>
+<tr><td>Chapter 3</td><td>Files and Diskettes: drives, file names, global file name characters, looking after diskettes.</td></tr>
+<tr><td>Chapter 4</td><td>COS Commands: every command, in alphabetic order, with examples.</td></tr>
+<tr><td>Chapter 5</td><td>Messages: what each message means and what to do about it.</td></tr>
+<tr><td>Chapter 6</td><td>Programming COS: writing, assembling and running .COM and .EXE programs; the program segment prefix, memory, files and errors.</td></tr>
+<tr><td>Chapter 7</td><td>Interrupt and Function Reference: INT 20h to 2Fh and every INT 21h function.</td></tr>
+<tr><td>Chapter 8</td><td>Technical Information: memory map, diskette format, directory entries, disk buffers, compatibility.</td></tr>
+<tr><td>Appendix A</td><td>Error Codes.</td></tr>
+<tr><td>Appendix B</td><td>The Keyboard: keys, Ctrl combinations and extended codes.</td></tr>
+<tr><td>Appendix C</td><td>The Character Set: code page 437.</td></tr>
+<tr><td>Appendix D</td><td>BIOS Services and the Hardware.</td></tr>
+</table>
+<h3>Notation</h3>
+<p>In this manual, the following conventions are used in command formats and examples:</p>
+<table class="ref wrap">
+<tr><td>CAPITALS</td><td>Words in capital letters must be typed as shown, although you may type them in small letters: COS does not mind.</td></tr>
+<tr><td><var>italics</var></td><td>Words in italics are items you supply, for example a file name.</td></tr>
+<tr><td>[ ]</td><td>Square brackets mean the item inside is optional. Do not type the brackets.</td></tr>
+<tr><td>d:</td><td>A drive letter followed by a colon: A: or B:.</td></tr>
+<tr><td><span class="key">Enter</span></td><td>A key you press. <span class="key">Ctrl</span>-<span class="key">C</span> means: hold down Ctrl and press C.</td></tr>
+<tr><td><b><u>dir</u></b></td><td>In the screen examples, what you type is printed in bold and underlined; everything else is what COS displays.</td></tr>
+<tr><td>3Dh</td><td>Numbers that end in "h" are hexadecimal (base 16). Others are decimal.</td></tr>
+</table>
+<p>The screen examples in this manual were made on the machine itself. Your display will show the same text, although the sizes and free space shown for your diskettes will differ.</p>
+</section>
+
+<section class="front" data-kind="contents" data-title="Contents">
+<h2>Contents</h2>
+<div class="toc" id="toc"></div>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 1                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="1" data-title="Introduction" data-part="Part One: Using COS">
+
+<h2>What COS Is</h2>
+<p>COS, the CucsiCorp Operating System, is the disk operating system for the pc86 personal computer. It is the program that looks after the computer for you: it keeps your programs and information in <i>files</i> on diskettes, starts your programs, gives them the memory and the files they ask for, and lets you copy, rename, display and erase files with simple commands.</p>
+<p>COS has two parts:</p>
+<table class="ref wrap">
+<tr><td>COS.SYS</td><td>The operating system itself. It is read from the diskette when you start the computer and stays in memory all the time. Programs ask it for services through interrupt 21h.</td></tr>
+<tr><td>COMMAND.COM</td><td>The command processor. It shows the prompt, reads what you type and carries out your commands. It is an ordinary program: if it ever ends, COS starts it again.</td></tr>
+</table>
+<p>A small third part, the <i>boot record</i>, lives in the first sector of the System Diskette. It is what the computer reads first; its only job is to find COS.SYS on the diskette and start it.</p>
+
+<h2>What You Need</h2>
+<ul>
+<li>A pc86 personal computer, with the 8086 microprocessor and 640 KB of memory.</li>
+<li>A video card and a monitor. COS uses the 80-column text mode.</li>
+<li>A keyboard.</li>
+<li>A diskette adapter with one or two 3&frac12;-inch diskette drives. The first drive is drive A:, the second drive B:.</li>
+<li>The COS System Diskette, and blank formatted diskettes for your own work. COS reads and writes 1.44 MB (high density) and 720 KB (double density) diskettes.</li>
+</ul>
+<p>The computer must boot from drive A:. The System Diskette goes in drive A:; drive B:, if you have one, holds a second diskette, usually the one with your work.</p>
+
+<h2>What COS Can Do</h2>
+<ul>
+<li>Run programs: .COM and .EXE files, one at a time, with up to 583 KB of memory for each program.</li>
+<li>Keep files on diskettes: up to 224 files on a 1.44 MB diskette and 112 on a 720 KB diskette, each up to the size of the diskette.</li>
+<li>Copy, rename, erase and display files, and list what is on a diskette.</li>
+<li>Keep the date and the time of day, and record them on every file you write.</li>
+<li>Notice when you change the diskette in a drive, and tell you when a diskette cannot be read or written.</li>
+</ul>
+<p>COS provides the services of the version 3.30 disk operating system that programs most often use, with the same function numbers, so that programs written for those services run without change. Chapter 8 lists what COS leaves out.</p>
+
+<h2>What Is on the System Diskette</h2>
+<table class="ref wrap">
+<tr><td>COS.SYS</td><td>The operating system.</td></tr>
+<tr><td>COMMAND.COM</td><td>The command processor.</td></tr>
+<tr><td><i>Programs</i></td><td>Your System Diskette may also hold sample programs, for example HELLO.COM, NUMBERS.COM, FACTOR.COM and SORT.COM. Type their names at the prompt to run them.</td></tr>
+</table>
+<div class="warn">Never erase or rename COS.SYS or COMMAND.COM on your System Diskette. Without them the computer cannot start COS.</div>
+
+<h2>How to Use This Manual</h2>
+<p>If you are new to COS, read Chapters 2 and 3 at the computer, trying each example as you read. Chapter 4 describes every command; you do not need to learn them all at once. Keep Chapter 5 at hand: when COS shows a message you do not understand, look it up there. The Quick Reference at the end of the manual summarizes the commands and keys on one page.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 2                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="2" data-title="Getting Started" data-part="Part One: Using COS">
+
+<h2>Starting COS</h2>
+<ol>
+<li>Insert the COS System Diskette in drive A:, label side up.</li>
+<li>Turn on the monitor, then the computer. If the computer is already on, press its Reset button.</li>
+</ol>
+<p>The computer tests itself, reads the boot record from the diskette, and the boot record loads COS. After a moment you see:</p>
+<pre class="screen">
+CucsiCorp COS Version 1.00
+(C) Copyright CucsiCorp 1981
+A:\>
+</pre>
+<p>COS is now ready for your commands. If instead you see one of the following, the computer could not start COS:</p>
+<table class="ref wrap">
+<tr><td>No boot device available.</td><td>There is no diskette in drive A:, or no diskette adapter. Insert the System Diskette and press Reset.</td></tr>
+<tr><td>The diskette in drive A: is not bootable.</td><td>The diskette in drive A: has no boot record. It is not a System Diskette.</td></tr>
+<tr><td>Non-system disk</td><td>The diskette is formatted but has no operating system. Replace it with the System Diskette and press any key.</td></tr>
+<tr><td>COS.SYS is missing</td><td>The diskette has the COS boot record but not COS.SYS. Use another System Diskette.</td></tr>
+<tr><td>Disk error</td><td>The diskette could not be read. Try again; if it fails again, the diskette is damaged.</td></tr>
+</table>
+<div class="note">The pc86 workbench, the version of the computer that runs in a web browser, has a button labeled <b>COS system diskette</b>. It makes a new System Diskette in drive A: and starts the computer from it, in one step.</div>
+
+<h2>The Prompt</h2>
+<p>The prompt, <b>A:\&gt;</b>, means that COS is waiting for a command. The letter tells you the <i>default drive</i>: the drive COS uses when you do not name one. To make drive B: the default drive, type <b>b:</b> and press <span class="key">Enter</span>:</p>
+<pre class="screen">
+A:\&gt;<b>b:</b>
+
+B:\&gt;<b>a:</b>
+
+A:\&gt;
+</pre>
+
+<h2>Typing Commands</h2>
+<p>Type a command after the prompt and press <span class="key">Enter</span>. Nothing happens until you press Enter, so you can correct mistakes first:</p>
+<table class="ref wrap">
+<tr><td><span class="key">Backspace</span></td><td>Erases the last character you typed.</td></tr>
+<tr><td><span class="key">Esc</span></td><td>Cancels the whole line. COS displays a backslash (\), moves to the next line, and you can type the line again.</td></tr>
+<tr><td><span class="key">Enter</span></td><td>Gives the line to COS.</td></tr>
+<tr><td><span class="key">Ctrl</span>-<span class="key">C</span></td><td>Cancels the line, or stops the command or program that is waiting for you to type something. COS displays ^C and a new prompt.</td></tr>
+</table>
+<p>You may type commands in capital or small letters. A line holds up to 127 characters; if you type more, the computer beeps and ignores the extra keys.</p>
+<p>Try the VER command, which displays the version of COS:</p>
+<pre class="screen">
+A:\&gt;<b>ver</b>
+
+CucsiCorp COS Version 1.00
+
+A:\&gt;
+</pre>
+<p>If COS does not recognize what you typed, it says so:</p>
+<pre class="screen">
+A:\&gt;<b>helo</b>
+Bad command or file name
+</pre>
+
+<h2>Looking at a Diskette</h2>
+<p>The DIR command lists the files on a diskette:</p>
+<pre class="screen">
+A:\&gt;<b>dir</b>
+
+ Volume in drive A is COS
+ Directory of  A:\
+
+COS      SYS    11188   1-01-80  12:00a
+COMMAND  COM     5460   1-01-80  12:00a
+HELLO    COM       31   1-01-80  12:00a
+NUMBERS  COM       69   1-01-80  12:00a
+FACTOR   COM       81   1-01-80  12:00a
+SORT     COM      124   1-01-80  12:00a
+README   TXT       94   1-01-80  12:00a
+LETTER   TXT       47   1-01-80  12:00a
+        8 File(s)   1437696 bytes free
+</pre>
+<p>Each line shows a file's name, its extension, its size in bytes, and the date and time it was last written. The last line tells you how much room is left on the diskette.</p>
+
+<h2>Running a Program</h2>
+<p>To run a program, type its name, without the extension:</p>
+<pre class="screen">
+A:\&gt;<b>hello</b>
+Hello from the 8086!
+
+A:\&gt;<b>factor</b>
+1
+1
+2
+6
+24
+120
+720
+5040
+40320
+</pre>
+<p>When the program ends, the prompt comes back. COS looks for the program on the default drive, or on the drive you name before it: <b>b:game</b> runs GAME.COM (or GAME.EXE) from drive B:.</p>
+
+<h2>Entering the Date and Time</h2>
+<p>The computer has no battery clock. Each time you start COS, the date is set to Tuesday, 1 January 1980, and the time to midnight. COS records the date and time on every file you write, so set them first with the DATE and TIME commands:</p>
+<pre class="screen">
+A:\&gt;<b>date</b>
+Current date is Tue  1-01-1980
+Enter new date (mm-dd-yy): <b>10-14-81</b>
+
+A:\&gt;<b>time</b>
+Current time is  0:00:00.32
+Enter new time: <b>9:30</b>
+</pre>
+<p>The time is kept on the 24-hour clock: type 13:15 for a quarter past one in the afternoon. To keep the date or time shown, just press <span class="key">Enter</span>.</p>
+
+<h2>Stopping a Program</h2>
+<p>Press <span class="key">Ctrl</span>-<span class="key">C</span> to stop a program while it is waiting for you to type something. COS ends the program and shows the prompt. A program that never reads the keyboard cannot be stopped this way; press the computer's Reset button to start again.</p>
+
+<h2>Turning Off the Computer</h2>
+<p>Before you turn off the computer or remove a diskette, wait until the prompt is displayed and the drive light is out. COS writes some information to the diskette only when a program finishes with a file; removing the diskette before that may leave the file incomplete.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 3                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="3" data-title="Files and Diskettes" data-part="Part One: Using COS">
+
+<h2>Files</h2>
+<p>Everything COS keeps on a diskette is kept in <i>files</i>. A program is a file; a letter, a list or a game's high scores is a file. Every file has a name, and every diskette has a <i>directory</i>, a list of the files on it with their names, sizes and dates.</p>
+
+<h2>File Names</h2>
+<p>A file name has two parts: the <i>filename</i>, one to eight characters, and an optional <i>extension</i> of up to three characters, separated by a period:</p>
+<pre class="listing">
+LETTER.TXT      filename LETTER, extension TXT
+COMMAND.COM     filename COMMAND, extension COM
+SCORES          no extension
+</pre>
+<p>The characters you can use are the letters A to Z, the digits 0 to 9, and these special characters:</p>
+<pre class="listing">
+$ &amp; # @ ! % ' ( ) - { } ~ ` ^ _
+</pre>
+<p>Small letters are changed to capitals, so <b>letter.txt</b> and <b>LETTER.TXT</b> are the same file. Extra characters are ignored: <b>CORRESPONDENCE.TEXT</b> is the file CORRESPO.TEX.</p>
+<h3>Extensions</h3>
+<p>The extension usually says what kind of file it is. COS gives these extensions a meaning:</p>
+<table class="ref wrap">
+<tr><td>.COM</td><td>A program, in the simple .COM form (up to 64 KB).</td></tr>
+<tr><td>.EXE</td><td>A program, in the .EXE form, which may be larger and use several segments.</td></tr>
+<tr><td>.SYS</td><td>Part of the operating system: COS.SYS.</td></tr>
+<tr><td>.BAT</td><td>A batch file. COS Version 1.00 does not run batch files.</td></tr>
+</table>
+<p>Other common extensions are .TXT for text, .ASM for assembly language programs and .DAT for data, but you may use any extension you like.</p>
+<h3>File Specifications</h3>
+<p>To name a file on a drive other than the default drive, put the drive letter and a colon in front of it. This is a <i>file specification</i>:</p>
+<pre class="listing">
+B:LETTER.TXT
+</pre>
+<p>A backslash may follow the colon, B:\LETTER.TXT, to name the <i>root directory</i> of the diskette. COS Version 1.00 has only the root directory, so B:LETTER.TXT and B:\LETTER.TXT are the same file.</p>
+<h3>Reserved Names</h3>
+<p>Some names stand for devices, not files, and cannot be used as filenames, with any extension:</p>
+<table class="ref wrap">
+<tr><td>CON</td><td>The console: the keyboard for input, the display for output.</td></tr>
+<tr><td>NUL</td><td>A dummy device: what is written to it disappears, and reading from it gives an immediate end of file.</td></tr>
+<tr><td>AUX, PRN, COM1, COM2, LPT1, LPT2, CLOCK$</td><td>Serial, printer and clock devices. The pc86 computer does not have them; opening them is refused ("Access denied").</td></tr>
+</table>
+<p>For example, <b>copy readme.txt con</b> would display the file, as TYPE does.</p>
+
+<h2>Global Filename Characters</h2>
+<p>Two characters, ? and *, let one file specification stand for several files. They are called <i>global filename characters</i>, or <i>wildcards</i>.</p>
+<h3>The ? Character</h3>
+<p>A ? in a filename or extension matches any character in that position:</p>
+<pre class="listing">
+DIR REPORT?.TXT     lists REPORT1.TXT, REPORT2.TXT, REPORTA.TXT ...
+</pre>
+<h3>The * Character</h3>
+<p>An * matches any characters from its position to the end of the filename or the extension:</p>
+<pre class="listing">
+DIR *.TXT           every file with the extension TXT
+DIR R*.*            every file whose name begins with R
+COPY *.* B:         every file, to drive B:
+</pre>
+<p>DIR, COPY, DEL and REN accept global characters. Other commands, and programs you run, need a single file name.</p>
+
+<h2>Diskettes</h2>
+<table class="ref">
+<tr><th></th><th>High density</th><th>Double density</th></tr>
+<tr><td>Capacity</td><td>1,474,560 bytes (1.44 MB)</td><td>737,280 bytes (720 KB)</td></tr>
+<tr><td>Space for files</td><td>1,457,664 bytes</td><td>730,112 bytes</td></tr>
+<tr><td>Files in the directory</td><td>224</td><td>112</td></tr>
+<tr><td>Allocation unit</td><td>512 bytes</td><td>1,024 bytes</td></tr>
+</table>
+<p>Space on a diskette is given to files in <i>allocation units</i>, so a file of 10 bytes uses 512 bytes on a 1.44 MB diskette. The free space DIR shows is a multiple of the allocation unit.</p>
+<h3>Preparing Diskettes</h3>
+<p>COS works with diskettes that have been <i>formatted</i>: prepared with tracks, sectors, an empty directory and a file allocation table. COS Version 1.00 does not format diskettes itself. Use one of these:</p>
+<ul>
+<li>In the workbench, <b>New diskette</b> puts a formatted 1.44 MB diskette in drive A:, and <b>COS system diskette</b> one with COS on it. <b>Save image</b> keeps a diskette on your computer, and <b>Open image</b> brings it back.</li>
+<li>On a development computer, the <b>fdimage</b> program of the pc86 tools makes and fills diskette images: <b>fdimage new work.img</b> makes a blank formatted diskette, <b>fdimage add work.img GAME.COM</b> copies a file onto it. Chapter 6 explains how to make a System Diskette.</li>
+</ul>
+<h3>Write Protection</h3>
+<p>A diskette has a write-protect tab. When the tab is open, COS can read the diskette but cannot change it, so files on it cannot be erased by mistake. If you try to write to a protected diskette, COS says:</p>
+<pre class="screen">
+A:\&gt;<b>copy letter.txt b:</b>
+
+Write protect error writing drive B
+Abort, Retry, Fail?<b>F</b>
+File creation error
+        0 File(s) copied
+</pre>
+<p>Close the tab and type <b>R</b> to retry, or type <b>F</b> to give up. Chapter 5 explains the three answers.</p>
+<h3>Changing Diskettes</h3>
+<p>You may change the diskette in a drive whenever the prompt is displayed. COS notices the change the next time it uses the drive, and reads the new diskette's directory:</p>
+<pre class="screen">
+A:\&gt;<b>dir b:</b>
+
+ Volume in drive B is WORK
+ Directory of  B:\
+
+File not found
+
+A:\&gt;<b>dir b:</b>
+
+ Volume in drive B is COS
+ Directory of  B:\
+
+COS      SYS    11188   1-01-80  12:00a
+COMMAND  COM     5460   1-01-80  12:00a
+HELLO    COM       31   1-01-80  12:00a
+</pre>
+<div class="warn">Do not change a diskette while a program is using it. A file that is still open is written to whatever diskette is in the drive.</div>
+<h3>Caring for Diskettes</h3>
+<ul>
+<li>Keep diskettes away from magnets, heat and direct sunlight.</li>
+<li>Do not open the metal shutter or touch the surface of the diskette.</li>
+<li>Remove diskettes from the drives only when the drive light is out.</li>
+<li>Keep a copy of every diskette that holds work you cannot do again.</li>
+</ul>
+<h3>Volume Labels</h3>
+<p>A diskette may have a name of up to 11 characters, its <i>volume label</i>, written when it is formatted. DIR and VOL display it. Use labels to tell your diskettes apart.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 4                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="4" data-title="COS Commands" data-part="Part One: Using COS">
+
+<h2>About the Commands</h2>
+<p>All the commands in this chapter are built into COMMAND.COM: they are always available, whatever diskette is in the drive. Anything else you type is taken as the name of a program to run (see "Running Programs" at the end of this chapter).</p>
+<p>Each command is described in the same way:</p>
+<table class="ref wrap">
+<tr><td>Purpose</td><td>What the command does.</td></tr>
+<tr><td>Format</td><td>How to type it. See "Notation" in the Preface.</td></tr>
+<tr><td>Remarks</td><td>How it works, and the details you need to know.</td></tr>
+<tr><td>Example</td><td>The command at work, as it appears on the display.</td></tr>
+</table>
+<p>Separate a command from its parameters with a space. A command line can hold up to 127 characters.</p>
+
+<div class="entry">
+<h2 class="cmd">CD (Change Directory) <small>also CHDIR</small></h2>
+<dl>
+<dt>Purpose</dt><dd>Displays the current directory of a drive.</dd>
+<dt>Format</dt><dd><pre>CD [d:][\]</pre></dd>
+<dt>Remarks</dt><dd><p>COS Version 1.00 keeps all files in the root directory of each diskette, so the current directory is always the root. CD without parameters displays it; CD \ is accepted and does nothing. Any other directory name gives "Invalid directory".</p></dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>cd</b>
+A:\
+
+A:\&gt;<b>cd games</b>
+Invalid directory
+</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">CLS (Clear Screen)</h2>
+<dl>
+<dt>Purpose</dt><dd>Clears the display.</dd>
+<dt>Format</dt><dd><pre>CLS</pre></dd>
+<dt>Remarks</dt><dd><p>The display is cleared and the prompt appears in the top left corner.</p></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">COPY</h2>
+<dl>
+<dt>Purpose</dt><dd>Copies one or more files, to the same diskette with another name or to another diskette.</dd>
+<dt>Format</dt><dd><pre>COPY [d:]<var>filename</var>[.<var>ext</var>] [d:][<var>filename</var>[.<var>ext</var>]]</pre></dd>
+<dt>Remarks</dt><dd>
+<p>The first file specification is the <i>source</i>; it may contain global characters. The second is the <i>target</i>:</p>
+<ul>
+<li>If the target is only a drive, B:, the copies get the same names on that drive.</li>
+<li>If the target is a name, the copy gets that name. With global characters in the target, each ? or * keeps the corresponding characters of the source name: COPY *.TXT B:*.BAK.</li>
+<li>If there is no target, the copy goes to the default drive with the same name.</li>
+</ul>
+<p>When the source has global characters, COPY displays the name of each file as it copies it. At the end it tells you how many files it copied. A file that already exists on the target diskette is replaced.</p>
+<p>The copy is exact, byte for byte, and keeps the date and time of the original. A file cannot be copied onto itself. If the target diskette fills up, the incomplete copy is erased and COPY says "Insufficient disk space".</p>
+</dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>copy letter.txt b:note.txt</b>
+        1 File(s) copied
+
+A:\&gt;<b>copy *.com b:</b>
+A:COMMAND.COM
+A:HELLO.COM
+A:NUMBERS.COM
+A:FACTOR.COM
+A:SORT.COM
+        5 File(s) copied
+</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">DATE</h2>
+<dl>
+<dt>Purpose</dt><dd>Displays and sets the date.</dd>
+<dt>Format</dt><dd><pre>DATE [<var>mm</var>-<var>dd</var>-<var>yy</var>]</pre></dd>
+<dt>Remarks</dt><dd>
+<p>Without a parameter, DATE displays the date, with the day of the week, and asks for a new one. Press <span class="key">Enter</span> to keep it.</p>
+<p>Type the month (1-12), the day (1-31) and the year, separated by hyphens (-), slashes (/) or periods (.). The year may be given with two digits, 80 to 99 for 1980 to 1999 and 00 to 79 for 2000 to 2079, or with four, from 1980 to 2099. COS knows how many days each month has, leap years included. If the date is not valid, COS says "Invalid date" and asks again.</p>
+<p>COS advances the date at midnight while the computer is on.</p>
+</dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>date</b>
+Current date is Tue  1-01-1980
+Enter new date (mm-dd-yy): <b>10-14-81</b>
+
+A:\&gt;<b>date</b>
+Current date is Wed 10-14-1981
+Enter new date (mm-dd-yy):
+</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">DEL (Delete) <small>also ERASE</small></h2>
+<dl>
+<dt>Purpose</dt><dd>Erases files.</dd>
+<dt>Format</dt><dd><pre>DEL [d:]<var>filename</var>[.<var>ext</var>]</pre></dd>
+<dt>Remarks</dt><dd>
+<p>The file specification may contain global characters to erase several files. To erase every file on a diskette, type DEL *.*; because this cannot be undone, COS asks you first:</p>
+<pre class="screen">
+B:\&gt;<b>del *.*</b>
+All files in directory will be deleted!
+Are you sure (Y/N)?<b>y</b>
+</pre>
+<p>Type Y and press Enter to go on; anything else cancels the command. Files marked read-only are not erased ("Access denied").</p>
+</dd>
+<dt>Example</dt><dd><pre class="screen">
+B:\&gt;<b>del letter.txt</b>
+
+B:\&gt;
+</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">DIR (Directory)</h2>
+<dl>
+<dt>Purpose</dt><dd>Lists the files on a diskette.</dd>
+<dt>Format</dt><dd><pre>DIR [d:][<var>filename</var>[.<var>ext</var>]] [/W]</pre></dd>
+<dt>Remarks</dt><dd>
+<p>DIR displays the volume label of the diskette, then one line for each file: name, extension, size in bytes, and the date and time it was last written. The last line gives the number of files listed and the free space on the diskette.</p>
+<p>Without a file specification, DIR lists every file. With one, it lists only the files that match; global characters are allowed. A filename without an extension means any extension: DIR LETTER lists LETTER.TXT, LETTER.OLD and so on.</p>
+<p>The /W (wide) parameter lists only the names, five to a line.</p>
+<p>Hidden and system files are not listed.</p>
+</dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>dir *.txt</b>
+
+ Volume in drive A is COS
+ Directory of  A:\
+
+README   TXT       94   1-01-80  12:00a
+LETTER   TXT       47   1-01-80  12:00a
+        2 File(s)   1437696 bytes free
+
+A:\&gt;<b>dir /w</b>
+
+ Volume in drive A is COS
+ Directory of  A:\
+
+COS      SYS    COMMAND  COM    HELLO    COM    NUMBERS  COM    FACTOR   COM
+SORT     COM    README   TXT    LETTER   TXT
+        8 File(s)   1437696 bytes free
+</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">ECHO</h2>
+<dl>
+<dt>Purpose</dt><dd>Displays a message.</dd>
+<dt>Format</dt><dd><pre>ECHO [<var>message</var>]</pre></dd>
+<dt>Remarks</dt><dd><p>ECHO displays the message exactly as you typed it. Without a message, it displays "ECHO is on".</p></dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>echo Hello there</b>
+Hello there
+</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">EXIT</h2>
+<dl>
+<dt>Purpose</dt><dd>Ends a command processor started by a program.</dd>
+<dt>Format</dt><dd><pre>EXIT</pre></dd>
+<dt>Remarks</dt><dd><p>The command processor started by COS is permanent, and EXIT does nothing in it.</p></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">MD, RD (Make and Remove Directory) <small>also MKDIR, RMDIR</small></h2>
+<dl>
+<dt>Purpose</dt><dd>Reserved for subdirectories.</dd>
+<dt>Remarks</dt><dd><p>COS Version 1.00 keeps all files in the root directory and does not create or remove subdirectories. These commands say "Subdirectories are not supported by COS".</p></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">PAUSE</h2>
+<dl>
+<dt>Purpose</dt><dd>Waits for a key.</dd>
+<dt>Format</dt><dd><pre>PAUSE</pre></dd>
+<dt>Remarks</dt><dd><p>PAUSE displays "Strike a key when ready . . ." and waits until a key is pressed. Use it, for example, to give yourself time to change a diskette.</p></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">REM (Remark)</h2>
+<dl>
+<dt>Purpose</dt><dd>Does nothing.</dd>
+<dt>Format</dt><dd><pre>REM [<var>remark</var>]</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">REN (Rename) <small>also RENAME</small></h2>
+<dl>
+<dt>Purpose</dt><dd>Changes the name of files.</dd>
+<dt>Format</dt><dd><pre>REN [d:]<var>filename</var>[.<var>ext</var>] <var>filename</var>[.<var>ext</var>]</pre></dd>
+<dt>Remarks</dt><dd>
+<p>The first name is the file's present name; it may include a drive and global characters. The second is the new name, without a drive: the file stays on the same diskette. Global characters in the new name keep the corresponding characters of the old one, so REN *.TXT *.BAK changes the extension of every .TXT file.</p>
+<p>If there is no such file, or a file with the new name already exists, COS says "Duplicate file name or file not found".</p>
+</dd>
+<dt>Example</dt><dd><pre class="screen">
+B:\&gt;<b>ren letter.txt letter.old</b>
+
+B:\&gt;<b>ren *.txt *.bak</b>
+
+B:\&gt;<b>dir</b>
+
+ Volume in drive B is WORK
+ Directory of  B:\
+
+README   BAK       94   1-01-80  12:00a
+LETTER   OLD       47   1-01-80  12:00a
+        2 File(s)   1456640 bytes free
+</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">SET</h2>
+<dl>
+<dt>Purpose</dt><dd>Displays the environment.</dd>
+<dt>Format</dt><dd><pre>SET</pre></dd>
+<dt>Remarks</dt><dd><p>The environment is a list of settings in the form <var>name</var>=<var>value</var> that COS gives to every program it runs. COMSPEC tells programs where the command processor is. COS Version 1.00 does not change the environment: SET with parameters says "Changing the environment is not supported by COS".</p></dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>set</b>
+COMSPEC=A:\COMMAND.COM
+</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">TIME</h2>
+<dl>
+<dt>Purpose</dt><dd>Displays and sets the time.</dd>
+<dt>Format</dt><dd><pre>TIME [<var>hh</var>[:<var>mm</var>[:<var>ss</var>[.<var>xx</var>]]]]</pre></dd>
+<dt>Remarks</dt><dd>
+<p>Without a parameter, TIME displays the time, in hours, minutes, seconds and hundredths of a second, and asks for a new one. Press <span class="key">Enter</span> to keep it.</p>
+<p>Type the hour (0-23) and, if you wish, the minutes (0-59), the seconds (0-59) and the hundredths (0-99). Parts you leave out are set to zero. If the time is not valid, COS says "Invalid time" and asks again.</p>
+</dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>time</b>
+Current time is  0:00:00.32
+Enter new time: <b>9:30</b>
+
+A:\&gt;<b>time</b>
+Current time is  9:30:00.12
+Enter new time:
+</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">TYPE</h2>
+<dl>
+<dt>Purpose</dt><dd>Displays the contents of a file.</dd>
+<dt>Format</dt><dd><pre>TYPE [d:]<var>filename</var>[.<var>ext</var>]</pre></dd>
+<dt>Remarks</dt><dd><p>TYPE is for text files. It stops at the end of the file or at an end-of-file mark (Ctrl-Z, 1Ah). Program files and other binary files display as strange characters. Global characters are not allowed.</p></dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>type readme.txt</b>
+Welcome to COS, the CucsiCorp Operating System.
+Type DIR to see the files on this diskette.
+</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">VER (Version)</h2>
+<dl>
+<dt>Purpose</dt><dd>Displays the version of COS.</dd>
+<dt>Format</dt><dd><pre>VER</pre></dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>ver</b>
+
+CucsiCorp COS Version 1.00
+</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">VOL (Volume)</h2>
+<dl>
+<dt>Purpose</dt><dd>Displays the volume label of a diskette.</dd>
+<dt>Format</dt><dd><pre>VOL [d:]</pre></dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>vol b:</b>
+
+ Volume in drive B is WORK
+</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">d: (Change the Default Drive)</h2>
+<dl>
+<dt>Purpose</dt><dd>Makes another drive the default drive.</dd>
+<dt>Format</dt><dd><pre>d:</pre></dd>
+<dt>Remarks</dt><dd><p>Type the drive letter and a colon. The prompt shows the new default drive. If the computer has no such drive, COS says "Invalid drive specification".</p></dd>
+</dl>
+</div>
+
+<h2>Running Programs</h2>
+<p>A word at the prompt that is not a command is the name of a program:</p>
+<pre class="listing">
+[d:]<var>filename</var>[.<var>ext</var>] [<var>parameters</var>]
+</pre>
+<p>COS looks on the drive you name, or on the default drive, for <var>filename</var>.COM and then for <var>filename</var>.EXE, and runs the first one it finds. If you type the extension, only that file is tried. The rest of the line, the <i>parameters</i>, is given to the program exactly as you typed it.</p>
+<p>If there is no such program, COS says "Bad command or file name". If there is not enough memory for it, "Program too big to fit in memory". If only a batch file (.BAT) has that name, "Batch files are not supported by COS".</p>
+<p>When the program ends, its memory is given back and the prompt returns. The files it left open are closed.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 5                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="5" data-title="Messages" data-part="Part One: Using COS">
+
+<h2>About the Messages</h2>
+<p>This chapter lists, in alphabetic order, the messages that COS and COMMAND.COM display, with their meaning and what to do. In the messages, <var>x</var> stands for a drive letter and <var>xx</var> for a hexadecimal number.</p>
+
+<h2>Disk Errors</h2>
+<p>When a diskette cannot be read or written, COS tries three times and then displays the problem and a question:</p>
+<pre class="screen">
+Not ready reading drive B
+Abort, Retry, Fail?
+</pre>
+<p>Correct the problem if you can &mdash; insert a diskette, close the drive, open the write-protect tab &mdash; and answer with one of these letters:</p>
+<table class="ref wrap">
+<tr><td>R (Retry)</td><td>Try the operation again.</td></tr>
+<tr><td>F (Fail)</td><td>Give up this operation. The program or command is told it failed and goes on; a command usually displays another message.</td></tr>
+<tr><td>A (Abort)</td><td>End the program that was using the diskette. If it was a command, the command processor starts again and shows its title.</td></tr>
+</table>
+<p>The first line names the problem:</p>
+<table class="ref wrap">
+<tr><td>Not ready</td><td>There is no diskette in the drive, or the drive is open.</td></tr>
+<tr><td>Write protect error</td><td>The diskette is write-protected.</td></tr>
+<tr><td>Data error</td><td>A sector could not be read correctly.</td></tr>
+<tr><td>Sector not found</td><td>The diskette is not formatted, or is damaged.</td></tr>
+<tr><td>Seek error</td><td>The drive could not find the track.</td></tr>
+<tr><td>Unknown media type</td><td>The diskette is not a COS (FAT) diskette, or has a format COS does not know.</td></tr>
+<tr><td>General failure</td><td>Another error.</td></tr>
+</table>
+
+<h2>Messages in Alphabetic Order</h2>
+<table class="ref wrap">
+<tr><th>Message</th><th>Meaning and action</th></tr>
+<tr><td>Access denied</td><td>The file is read-only, or the name is a device the computer does not have. Choose another file.</td></tr>
+<tr><td>All files in directory will be deleted! Are you sure (Y/N)?</td><td>You typed DEL *.*. Type Y and Enter to erase every file, or N and Enter to keep them.</td></tr>
+<tr><td>Bad command or file name</td><td>What you typed is not a command, and there is no program with that name on the drive. Check the spelling and the drive.</td></tr>
+<tr><td>Bad or missing command interpreter</td><td>COS could not find COMMAND.COM on the diskette it started from. Start the computer with a System Diskette.</td></tr>
+<tr><td>Batch files are not supported by COS</td><td>You named a .BAT file. COS Version 1.00 runs only .COM and .EXE programs.</td></tr>
+<tr><td>Changing the environment is not supported by COS</td><td>SET only displays the environment.</td></tr>
+<tr><td>COS: CALL 5 (CP/M entry) is not supported</td><td>The program uses the old CP/M way of calling the operating system. COS ended it.</td></tr>
+<tr><td>COS: INT 21h function AH=<var>xx</var>h is not supported</td><td>The program asked COS for a service that COS Version 1.00 does not provide. COS ended it rather than give it a wrong answer. Chapter 7 lists the functions COS provides.</td></tr>
+<tr><td>COS: INT 25h (absolute disk read) is not supported<br>COS: INT 26h (absolute disk write) is not supported</td><td>The program tried to read or write diskette sectors directly. COS ended it.</td></tr>
+<tr><td>COS.SYS is missing</td><td>The diskette in drive A: has the COS boot record but not COS.SYS. Use another System Diskette and press any key.</td></tr>
+<tr><td>Disk error</td><td>The boot record could not read the System Diskette. Press any key to try again.</td></tr>
+<tr><td>Duplicate file name or file not found</td><td>REN found no file with the old name, or a file with the new name already exists.</td></tr>
+<tr><td>File cannot be copied onto itself</td><td>The source and the target of COPY are the same file. Give the copy another name or another drive.</td></tr>
+<tr><td>File creation error</td><td>COPY could not create the target file: the directory is full, the name belongs to a read-only file, or the diskette is write-protected.</td></tr>
+<tr><td>File not found</td><td>There is no file with that name. Check the name and the drive with DIR.</td></tr>
+<tr><td>General failure</td><td>A command could not read a file because of a disk error you answered with F.</td></tr>
+<tr><td>Insufficient disk space</td><td>The target diskette is full. The incomplete copy was erased. Make room or use another diskette.</td></tr>
+<tr><td>Invalid date</td><td>The date is not one COS can keep: check the month, the day and the year (1980-2099).</td></tr>
+<tr><td>Invalid directory</td><td>CD was given a directory other than the root.</td></tr>
+<tr><td>Invalid drive specification</td><td>The computer does not have that drive.</td></tr>
+<tr><td>Invalid number of parameters</td><td>REN needs two names.</td></tr>
+<tr><td>Invalid switch</td><td>DIR accepts only /W.</td></tr>
+<tr><td>Invalid time</td><td>Hours go from 0 to 23, minutes and seconds from 0 to 59.</td></tr>
+<tr><td>Press any key to restart</td><td>The boot record could not start COS (see the message before it). Insert a System Diskette and press a key.</td></tr>
+<tr><td>Program too big to fit in memory</td><td>There is not enough memory for the program.</td></tr>
+<tr><td>Required parameter missing</td><td>The command needs a file name: COPY, DEL and TYPE.</td></tr>
+<tr><td>Strike a key when ready . . .</td><td>PAUSE is waiting for a key.</td></tr>
+<tr><td>Subdirectories are not supported by COS</td><td>MD and RD are reserved for a later version.</td></tr>
+<tr><td>^C</td><td>You pressed Ctrl-C. The command or program was stopped.</td></tr>
+</table>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 6                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="6" data-title="Programming COS" data-part="Part Two: Programming">
+
+<h2>Introduction</h2>
+<p>This chapter is for programmers. It explains how programs are written for COS, how COS loads and runs them, and how a program asks COS for its services. It assumes you know the 8086 processor and its assembly language.</p>
+<p>A program asks for a service by loading a function number into register AH, and the other parameters into other registers, and executing an INT 21h instruction. COS does the work and returns, with results in registers. When a function fails, COS sets the carry flag (CF) and puts an error code in AX. Chapter 7 describes every function; Appendix A lists the error codes.</p>
+
+<h2>Tools</h2>
+<p>COS programs are written in 8086 assembly language with the syntax of the Netwide Assembler, and assembled with <b>asm86</b>, the assembler of the pc86 tools, which produces exactly the same bytes. The assembler runs on a development computer, or inside the pc86 workbench, which has an editor:</p>
+<ol>
+<li>Write the program in the workbench's editor.</li>
+<li>Type its name in <b>Copy the program as</b>, for example GAME.COM, and press <b>Copy</b>. The program is assembled and copied onto the diskette in drive A:.</li>
+<li>Type its name at the COS prompt.</li>
+</ol>
+<p>On a development computer:</p>
+<pre class="listing">
+asm86 game.asm -o GAME.COM          assemble
+fdimage add work.img GAME.COM       copy onto a diskette image
+</pre>
+<h3>Making a System Diskette</h3>
+<p>The parts of COS are assembled the same way, from the source files boot.asm, cos.asm and command.asm:</p>
+<pre class="listing">
+asm86 boot.asm -o boot.bin
+asm86 cos.asm -o COS.SYS
+asm86 command.asm -o COMMAND.COM
+fdimage new system.img --label COS
+fdimage add system.img COS.SYS
+fdimage add system.img COMMAND.COM
+fdimage boot system.img boot.bin     install the boot record
+</pre>
+<p>COS.SYS can be anywhere on the diskette; the boot record finds it in the directory.</p>
+
+<h2>Your First Program</h2>
+<p>This program displays a message and ends:</p>
+<pre class="listing">
+; hello.asm - the classic: print a string with COS service 09h
+org 100h
+
+    mov dx, message     ; DS:DX points to the text
+    mov ah, 09h         ; "display a string ending in $"
+    int 21h
+    ret                 ; a .COM program may end with RET
+
+message db 'Hello from the 8086!', 13, 10, '$'
+</pre>
+<p>Assembled, it is a .COM file of 31 bytes. Run it by typing HELLO.</p>
+<h3>Ending a Program</h3>
+<p>A program ends with one of these:</p>
+<table class="ref wrap">
+<tr><td>MOV AX,4C00h / INT 21h</td><td>The best way. AL is a return code (0 means success) that the parent can read with function 4Dh.</td></tr>
+<tr><td>INT 20h</td><td>CS must point to the PSP. Return code 0.</td></tr>
+<tr><td>RET</td><td>In a .COM program, with the stack as it was at the start: the word 0 at the top of the stack sends it to the INT 20h at the start of the PSP.</td></tr>
+</table>
+<p>When a program ends, COS closes its files, frees its memory, restores interrupt vectors 22h, 23h and 24h, and returns to the program that started it.</p>
+
+<h2>.COM Programs</h2>
+<p>A .COM file is an image of the program: COS copies it into memory at offset 100h of a segment and jumps to it. The program must be assembled with ORG 100h and fit in 64 KB less 256 bytes for the PSP and the stack (the largest .COM file is 65,280 bytes).</p>
+<p>At the start of a .COM program:</p>
+<table class="ref wrap">
+<tr><td>CS, DS, ES, SS</td><td>The segment of the program segment prefix (PSP).</td></tr>
+<tr><td>IP</td><td>0100h.</td></tr>
+<tr><td>SP</td><td>FFFEh, or the top of the memory given to the program if that is less than 64 KB. A word of 0 is on the stack.</td></tr>
+<tr><td>AX</td><td>0000h. (BX = 0, CX = 00FFh, DX = PSP segment, SI = DI = BP = 0.)</td></tr>
+<tr><td>Flags</td><td>Interrupts enabled.</td></tr>
+<tr><td>Memory</td><td>The largest free block of memory belongs to the program.</td></tr>
+<tr><td>DTA</td><td>PSP:0080h.</td></tr>
+</table>
+<div class="note">Because a .COM program owns the largest block of memory, it must give back what it does not need with function 4Ah before it can allocate memory with function 48h or run another program with function 4Bh.</div>
+
+<h2>.EXE Programs</h2>
+<p>An .EXE file begins with a header that tells COS how big the program is, where its stack and its first instruction are, and which words must be adjusted for the segment it is loaded at (the <i>relocation table</i>). An .EXE program may be larger than 64 KB and use several segments.</p>
+<table class="ref">
+<tr><th>Offset</th><th>Contents</th></tr>
+<tr><td>00h</td><td>'MZ', the signature</td></tr>
+<tr><td>02h</td><td>Bytes in the last 512-byte page of the file (0 = the whole page)</td></tr>
+<tr><td>04h</td><td>Pages in the file, header included</td></tr>
+<tr><td>06h</td><td>Number of relocation entries</td></tr>
+<tr><td>08h</td><td>Size of the header in paragraphs</td></tr>
+<tr><td>0Ah</td><td>Minimum paragraphs needed above the program</td></tr>
+<tr><td>0Ch</td><td>Maximum paragraphs wanted above the program</td></tr>
+<tr><td>0Eh</td><td>SS, relative to the start of the program</td></tr>
+<tr><td>10h</td><td>SP</td></tr>
+<tr><td>12h</td><td>Checksum (not checked)</td></tr>
+<tr><td>14h</td><td>IP</td></tr>
+<tr><td>16h</td><td>CS, relative to the start of the program</td></tr>
+<tr><td>18h</td><td>Offset of the relocation table in the file</td></tr>
+<tr><td>1Ah</td><td>Overlay number (0)</td></tr>
+</table>
+<p>Each relocation entry is two words, an offset and a segment relative to the start of the program. COS loads the program image (the file after the header) at the paragraph after the PSP, adds that segment to every word named in the relocation table, and starts the program with DS and ES pointing to the PSP, and CS:IP and SS:SP as given in the header. The program gets the memory it needs plus the maximum it asks for, as far as there is memory.</p>
+<p>An assembler that writes flat binary files can write an .EXE file too, by writing the header itself with DB and DW. The relocation entries point at words such as the operand of MOV AX,<var>segment</var>.</p>
+
+<h2>The Program Segment Prefix</h2>
+<p>COS builds a 256-byte <i>program segment prefix</i> (PSP) in front of every program. A program finds its PSP in DS and ES when it starts, or with function 62h.</p>
+<table class="ref">
+<tr><th>Offset</th><th>Contents</th></tr>
+<tr><td>00h</td><td>INT 20h instruction</td></tr>
+<tr><td>02h</td><td>Segment just past the memory given to the program</td></tr>
+<tr><td>05h</td><td>CALL to the CP/M entry (not supported)</td></tr>
+<tr><td>0Ah</td><td>Terminate address: where the parent continues (INT 22h)</td></tr>
+<tr><td>0Eh</td><td>Ctrl-C handler address when the program started (INT 23h)</td></tr>
+<tr><td>12h</td><td>Critical error handler address when the program started (INT 24h)</td></tr>
+<tr><td>16h</td><td>Segment of the parent's PSP</td></tr>
+<tr><td>18h</td><td>Handle table: 20 bytes, FFh for an unused handle</td></tr>
+<tr><td>2Ch</td><td>Segment of the environment</td></tr>
+<tr><td>2Eh</td><td>Used by COS: the program's stack while it runs a child</td></tr>
+<tr><td>32h</td><td>Number of entries in the handle table (20)</td></tr>
+<tr><td>34h</td><td>Address of the handle table</td></tr>
+<tr><td>50h</td><td>INT 21h and RETF instructions</td></tr>
+<tr><td>5Ch</td><td>First parameter as an unopened file control block</td></tr>
+<tr><td>6Ch</td><td>Second parameter as an unopened file control block</td></tr>
+<tr><td>80h</td><td>Length of the command tail</td></tr>
+<tr><td>81h</td><td>Command tail: the parameters as typed, ending with a carriage return (0Dh)</td></tr>
+</table>
+<p>The command tail of <b>child One two</b> is a length of 8 and the characters " One two" followed by 0Dh. The tail area is also the default disk transfer area (DTA), so read the parameters before you use functions that write to the DTA, such as 4Eh.</p>
+
+<h2>The Environment</h2>
+<p>The environment is a block of memory of strings in the form <var>NAME</var>=<var>value</var>, each ending with a zero byte, with an extra zero after the last one. A word 0001h and the full name of the program, such as A:\GAME.COM, follow it. The segment of the environment is at offset 2Ch of the PSP. Under COS it holds:</p>
+<pre class="listing">
+COMSPEC=A:\COMMAND.COM
+</pre>
+
+<h2>Memory</h2>
+<p>The memory COS does not use itself is divided into <i>blocks</i>, each preceded by a 16-byte <i>memory control block</i> (MCB): a byte 'M' (or 'Z' for the last block), the segment of the PSP that owns the block (0 if it is free), and the size of the block in paragraphs. A program allocates, resizes and frees blocks with functions 48h, 4Ah and 49h; COS gives the first free block that is large enough. All the blocks a program owns are freed when it ends, unless it ends with function 31h (terminate and stay resident).</p>
+<p>With COMMAND.COM loaded, the largest block a program can have is 91E2h paragraphs: 597,536 bytes. Chapter 8 shows how memory is used.</p>
+
+<h2>Files and Handles</h2>
+<p>A program uses files through <i>handles</i>: small numbers that COS gives it when it opens or creates a file (functions 3Dh and 3Ch), and that it then uses to read (3Fh), write (40h), move (42h) and close (3Eh) the file. Every program starts with three handles open:</p>
+<table class="ref">
+<tr><th>Handle</th><th>Name</th><th>Device</th></tr>
+<tr><td>0</td><td>Standard input</td><td>CON (the keyboard)</td></tr>
+<tr><td>1</td><td>Standard output</td><td>CON (the display)</td></tr>
+<tr><td>2</td><td>Standard error</td><td>CON (the display)</td></tr>
+</table>
+<p>A program may have 20 handles open at once, and COS 20 files for all programs together. A program started with function 4Bh inherits its parent's open handles, so it writes to the same standard output.</p>
+<p>Reading from the console through handle 0 is <i>cooked</i>: COS reads a whole line with editing, as function 0Ah does, and returns it followed by a carriage return and a line feed. Function 4401h can set the console to <i>raw</i> mode, in which each key is returned as it is pressed, without echo.</p>
+<p>COS writes a file's data to the diskette when the program closes the file (3Eh) or commits it (68h), at disk reset (0Dh), when the program ends, and whenever it needs to read another track of the diskette. A program that keeps a file open for a long time should commit it from time to time.</p>
+<h3>Example: Writing a File</h3>
+<pre class="listing">
+    mov ah, 3Ch             ; create SCORES.DAT
+    mov dx, name
+    xor cx, cx              ; normal attributes
+    int 21h
+    jc error                ; CF set: AX = error code
+    mov bx, ax              ; the handle
+    mov ah, 40h             ; write 4 bytes
+    mov dx, scores
+    mov cx, 4
+    int 21h
+    jc error
+    mov ah, 3Eh             ; close: the data reaches the diskette
+    int 21h
+    ...
+name   db 'SCORES.DAT', 0
+scores db 10, 20, 30, 40
+</pre>
+
+<h2>Errors</h2>
+<p>Handle functions and most other functions report an error by setting the carry flag and returning an error code in AX: always test CF after INT 21h. Function 59h returns the code of the last error again. Appendix A lists the codes.</p>
+<p>Disk errors are reported to the user first, by the critical error handler, which asks "Abort, Retry, Fail?". If the user answers F, the function returns error 83 (53h). A program can install its own critical error handler at INT 24h; Chapter 8 describes how it is called.</p>
+
+<h2>Ctrl-C</h2>
+<p>When the user presses Ctrl-C while a program waits in a console input function (01h, 08h, 0Ah, 0Bh, or a cooked read of handle 0), COS displays ^C and executes INT 23h. The default handler ends the program. A program may install its own handler with function 25h:</p>
+<ul>
+<li>If the handler returns with IRET, COS carries out the function again.</li>
+<li>The handler may also end the program, or jump to a safe place in it after resetting its stack.</li>
+</ul>
+<p>COS restores INT 23h when the program ends. Functions 06h and 07h do not check for Ctrl-C; a program that reads keys with them sees Ctrl-C as the character 03h.</p>
+
+<h2>Running Another Program</h2>
+<p>Function 4Bh, EXEC, loads and runs another program and returns when it ends. The caller passes the program's name and a parameter block:</p>
+<pre class="listing">
+    mov ah, 4Ah             ; first, give back unused memory
+    mov bx, (program_end - $$ + 100h + 15) / 16
+    int 21h
+    mov dx, child           ; DS:DX = name
+    mov bx, block           ; ES:BX = parameter block
+    mov [block+4], cs
+    mov [block+8], cs
+    mov [block+12], cs
+    mov ax, 4B00h
+    int 21h
+    jc failed
+    mov ah, 4Dh             ; the child's return code
+    int 21h
+    ...
+child db 'CHILD.COM', 0
+tail  db 7, ' hello!', 13
+block dw 0                  ; environment: a copy of ours
+      dw tail, 0            ; command tail
+      dw 5Ch, 0             ; first FCB
+      dw 6Ch, 0             ; second FCB
+</pre>
+<p>All registers are kept across the call. The DTA is set to the caller's PSP:0080h.</p>
+
+<h2>Terminate and Stay Resident</h2>
+<p>A program can end and leave part of itself in memory, for example an interrupt handler, with function 31h (or INT 27h). DX gives the number of paragraphs to keep, counted from the PSP; the rest is freed. Open files are not closed.</p>
+
+<h2>The Processor</h2>
+<p>The pc86 computer's 8086 executes every 8086 instruction except these, which stop the computer with an error instead of doing something different: the decimal adjust instructions (DAA, DAS, AAA, AAS, AAM, AAD), XLAT, LOCK, WAIT, ESC, INTO, and undocumented instructions. Avoid them in COS programs.</p>
+
+<h2>Rules for Well-Behaved Programs</h2>
+<ul>
+<li>Use the COS functions for the keyboard, the display and files; use the BIOS (Appendix D) for what COS does not do, such as moving the cursor or graphics.</li>
+<li>Test the carry flag after every function that can fail.</li>
+<li>Close every file you open, and end with function 4Ch.</li>
+<li>Restore any interrupt vector you change, except 22h, 23h and 24h, which COS restores for you.</li>
+<li>Do not call INT 21h from an interrupt handler or from a critical error handler: COS does not allow a function to be interrupted by another.</li>
+</ul>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 7                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="7" data-title="Interrupt and Function Reference" data-part="Part Two: Programming">
+
+<h2>The COS Interrupts</h2>
+<table class="ref wrap">
+<tr><th>INT</th><th>Use</th></tr>
+<tr><td>20h</td><td>Terminate the program (CS = PSP). Use function 4Ch instead.</td></tr>
+<tr><td>21h</td><td>Function request: the functions in this chapter.</td></tr>
+<tr><td>22h</td><td>Terminate address. Not called; COS keeps it in the PSP and restores it.</td></tr>
+<tr><td>23h</td><td>Ctrl-C handler. Called by COS; a program may replace it.</td></tr>
+<tr><td>24h</td><td>Critical error handler. Called by COS; a program may replace it.</td></tr>
+<tr><td>25h, 26h</td><td>Absolute disk read and write: not supported. The program is ended with a message.</td></tr>
+<tr><td>27h</td><td>Terminate and stay resident, DX = bytes to keep from the PSP. Use function 31h instead.</td></tr>
+<tr><td>28h</td><td>Idle: COS calls nothing; returns at once.</td></tr>
+<tr><td>29h</td><td>Fast console output of AL.</td></tr>
+<tr><td>2Ah, 2Fh</td><td>Network and multiplex: nothing is installed. They return at once with AL unchanged.</td></tr>
+</table>
+
+<h2>Calling Conventions</h2>
+<p>Load AH with the function number and the other registers as shown, and execute INT 21h. COS preserves all registers except those that return a result. Functions that can fail return with the carry flag clear on success, or set with an error code in AX. "ASCIIZ" means a string ending with a zero byte. File names may include a drive and a backslash for the root directory: B:\SCORES.DAT.</p>
+
+<h2>Functions in Numeric Order</h2>
+<table class="ref quick">
+<tr><th>AH</th><th>Function</th><th>AH</th><th>Function</th></tr>
+<tr><td>00h</td><td>Terminate program</td><td>38h</td><td>Country information</td></tr>
+<tr><td>01h</td><td>Keyboard input with echo</td><td>3Bh</td><td>Change directory</td></tr>
+<tr><td>02h</td><td>Display output</td><td>3Ch</td><td>Create a file</td></tr>
+<tr><td>06h</td><td>Direct console I/O</td><td>3Dh</td><td>Open a file</td></tr>
+<tr><td>07h</td><td>Direct keyboard input</td><td>3Eh</td><td>Close a handle</td></tr>
+<tr><td>08h</td><td>Keyboard input, no echo</td><td>3Fh</td><td>Read from a file or device</td></tr>
+<tr><td>09h</td><td>Display a string</td><td>40h</td><td>Write to a file or device</td></tr>
+<tr><td>0Ah</td><td>Buffered keyboard input</td><td>41h</td><td>Delete a file</td></tr>
+<tr><td>0Bh</td><td>Check keyboard status</td><td>42h</td><td>Move the file pointer</td></tr>
+<tr><td>0Ch</td><td>Clear buffer, then input</td><td>43h</td><td>File attributes</td></tr>
+<tr><td>0Dh</td><td>Disk reset</td><td>44h</td><td>I/O control (IOCTL)</td></tr>
+<tr><td>0Eh</td><td>Select disk</td><td>45h</td><td>Duplicate a handle</td></tr>
+<tr><td>19h</td><td>Current disk</td><td>46h</td><td>Force a duplicate handle</td></tr>
+<tr><td>1Ah</td><td>Set the disk transfer address</td><td>47h</td><td>Current directory</td></tr>
+<tr><td>25h</td><td>Set an interrupt vector</td><td>48h</td><td>Allocate memory</td></tr>
+<tr><td>29h</td><td>Parse a file name</td><td>49h</td><td>Free memory</td></tr>
+<tr><td>2Ah</td><td>Get the date</td><td>4Ah</td><td>Resize a memory block</td></tr>
+<tr><td>2Bh</td><td>Set the date</td><td>4Bh</td><td>Load and execute a program</td></tr>
+<tr><td>2Ch</td><td>Get the time</td><td>4Ch</td><td>Terminate with a return code</td></tr>
+<tr><td>2Dh</td><td>Set the time</td><td>4Dh</td><td>Return code of a child</td></tr>
+<tr><td>2Eh</td><td>Set the verify switch</td><td>4Eh</td><td>Find the first file</td></tr>
+<tr><td>2Fh</td><td>Get the disk transfer address</td><td>4Fh</td><td>Find the next file</td></tr>
+<tr><td>30h</td><td>COS version number</td><td>50h</td><td>Set the PSP</td></tr>
+<tr><td>31h</td><td>Terminate and stay resident</td><td>51h, 62h</td><td>Get the PSP</td></tr>
+<tr><td>33h</td><td>Ctrl-Break check, boot drive</td><td>54h</td><td>Get the verify switch</td></tr>
+<tr><td>34h</td><td>Address of the InDOS flag</td><td>56h</td><td>Rename a file</td></tr>
+<tr><td>35h</td><td>Get an interrupt vector</td><td>57h</td><td>File date and time</td></tr>
+<tr><td>36h</td><td>Free disk space</td><td>58h</td><td>Allocation strategy</td></tr>
+<tr><td>37h</td><td>Switch character</td><td>59h</td><td>Extended error</td></tr>
+<tr><td></td><td></td><td>5Bh</td><td>Create a new file</td></tr>
+<tr><td></td><td></td><td>68h</td><td>Commit a file</td></tr>
+</table>
+<p>Functions not in this list &mdash; among them 03h-05h (auxiliary and printer), 0Fh-18h and 21h-24h (file control blocks), 1Bh and 1Ch (FAT information), 26h-28h, 32h, 39h and 3Ah (subdirectories), 52h and 5Ah-61h &mdash; are not supported: COS displays "COS: INT 21h function AH=<var>xx</var>h is not supported" and ends the program.</p>
+
+<h2>Console Functions</h2>
+
+<div class="entry fn"><div class="fnhead"><span class="num">00h</span><h3>Terminate Program</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 00h</td></tr></table>
+<p>Ends the program with return code 0. Same as function 4Ch with AL = 0.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">01h</span><h3>Keyboard Input with Echo</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 01h</td></tr><tr><th>Return</th><td>AL = character</td></tr></table>
+<p>Waits for a key and displays it. For a key with no character (a function or cursor key) AL = 0, and the next call returns its extended code (Appendix B). Ctrl-C runs INT 23h.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">02h</span><h3>Display Output</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 02h<br>DL = character</td></tr></table>
+<p>Displays the character. Carriage return (0Dh), line feed (0Ah), backspace (08h) and bell (07h) act on the cursor; tab (09h) moves to the next multiple of eight columns.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">06h</span><h3>Direct Console I/O</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 06h<br>DL = FFh to read, or a character to display</td></tr>
+<tr><th>Return</th><td>For DL = FFh: ZF clear and AL = character if a key was waiting; ZF set and AL = 0 if not</td></tr></table>
+<p>Does not wait and does not check for Ctrl-C.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">07h</span><h3>Direct Keyboard Input</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 07h</td></tr><tr><th>Return</th><td>AL = character</td></tr></table>
+<p>Waits for a key; no echo, no Ctrl-C check.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">08h</span><h3>Keyboard Input without Echo</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 08h</td></tr><tr><th>Return</th><td>AL = character</td></tr></table>
+<p>As 07h, but Ctrl-C runs INT 23h.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">09h</span><h3>Display a String</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 09h<br>DS:DX = string ending with '$'</td></tr></table>
+<p>Displays the characters up to, not including, the dollar sign.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">0Ah</span><h3>Buffered Keyboard Input</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 0Ah<br>DS:DX = buffer: byte 0 = its size, including the carriage return</td></tr>
+<tr><th>Return</th><td>Byte 1 = number of characters typed; then the characters and a carriage return</td></tr></table>
+<p>Reads a line with the editing keys of Chapter 2: Backspace, Esc and Enter. Control characters are stored and displayed as ^<var>X</var>; when the buffer is full the bell sounds. The carriage return is echoed, the line feed is not. Ctrl-C runs INT 23h.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">0Bh</span><h3>Check Keyboard Status</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 0Bh</td></tr><tr><th>Return</th><td>AL = FFh if a key is waiting, 00h if not</td></tr></table>
+<p>A waiting Ctrl-C runs INT 23h.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">0Ch</span><h3>Clear Keyboard Buffer and Input</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 0Ch<br>AL = 01h, 06h, 07h, 08h or 0Ah: the input function to run then<br>other registers as for that function</td></tr></table>
+<p>Throws away the keys typed ahead, then carries out the function in AL.</p></div>
+
+<h2>Disk and Directory Functions</h2>
+
+<div class="entry fn"><div class="fnhead"><span class="num">0Dh</span><h3>Disk Reset</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 0Dh</td></tr></table>
+<p>Writes to the diskettes everything COS keeps in memory for them. Files stay open.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">0Eh</span><h3>Select Disk</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 0Eh<br>DL = drive (0 = A:, 1 = B:)</td></tr><tr><th>Return</th><td>AL = number of drives</td></tr></table>
+<p>Makes the drive the default drive, if it exists.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">19h</span><h3>Current Disk</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 19h</td></tr><tr><th>Return</th><td>AL = default drive (0 = A:, 1 = B:)</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">1Ah</span><h3>Set the Disk Transfer Address</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 1Ah<br>DS:DX = DTA</td></tr></table>
+<p>The DTA receives the results of functions 4Eh and 4Fh. When a program starts it is at PSP:0080h.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">2Fh</span><h3>Get the Disk Transfer Address</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 2Fh</td></tr><tr><th>Return</th><td>ES:BX = DTA</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">36h</span><h3>Free Disk Space</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 36h<br>DL = drive (0 = default, 1 = A:, 2 = B:)</td></tr>
+<tr><th>Return</th><td>AX = sectors per allocation unit, or FFFFh if the drive is not valid<br>BX = free allocation units<br>CX = bytes per sector (512)<br>DX = allocation units on the diskette</td></tr></table>
+<p>Free bytes = AX &times; BX &times; CX.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">3Bh</span><h3>Change Directory</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 3Bh<br>DS:DX = ASCIIZ path</td></tr><tr><th>Return</th><td>CF set, AX = 3 if the path is not the root directory</td></tr></table>
+<p>Only the root directory exists: "\", "A:\" and "A:" are accepted.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">47h</span><h3>Current Directory</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 47h<br>DL = drive (0 = default, 1 = A:, 2 = B:)<br>DS:SI = 64-byte buffer</td></tr>
+<tr><th>Return</th><td>The buffer holds an empty ASCIIZ string (the root); CF set, AX = 0Fh for a drive that does not exist</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">4Eh</span><h3>Find the First File</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 4Eh<br>DS:DX = ASCIIZ file specification, global characters allowed<br>CX = attributes to include</td></tr>
+<tr><th>Return</th><td>CF clear: the DTA describes the file; CF set: AX = 2 (no file) or 3 (bad path)</td></tr></table>
+<p>Normal and read-only files are always found. Hidden (02h), system (04h) and directory (10h) entries are found only if their bits are in CX. With CX = 08h, only the volume label is found. The DTA receives:</p>
+<table class="ref"><tr><th>Offset</th><th>Contents</th></tr>
+<tr><td>00h-14h</td><td>Used by COS for function 4Fh: do not change</td></tr>
+<tr><td>15h</td><td>Attribute of the file</td></tr>
+<tr><td>16h</td><td>Time of the file</td></tr>
+<tr><td>18h</td><td>Date of the file</td></tr>
+<tr><td>1Ah</td><td>Size of the file (doubleword)</td></tr>
+<tr><td>1Eh</td><td>Name and extension as ASCIIZ, e.g. "HELLO.COM"</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">4Fh</span><h3>Find the Next File</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 4Fh<br>DTA as left by 4Eh or 4Fh</td></tr><tr><th>Return</th><td>CF clear: the DTA describes the next file; CF set: AX = 12h, no more files</td></tr></table></div>
+
+<h2>File Functions</h2>
+
+<div class="entry fn"><div class="fnhead"><span class="num">3Ch</span><h3>Create a File</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 3Ch<br>DS:DX = ASCIIZ file name<br>CX = attributes (00h normal, 01h read-only, 02h hidden, 04h system, 20h archive)</td></tr>
+<tr><th>Return</th><td>CF clear: AX = handle, open for reading and writing<br>CF set: AX = 3, 4 or 5</td></tr></table>
+<p>Creates the file, or empties it if it exists (unless it is read-only). The directory entry is written to the diskette at once, so a full directory or a write-protected diskette is reported here.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">3Dh</span><h3>Open a File</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 3Dh<br>DS:DX = ASCIIZ file name<br>AL = 0 read, 1 write, 2 read and write</td></tr>
+<tr><th>Return</th><td>CF clear: AX = handle<br>CF set: AX = 2, 4, 5 or 0Ch</td></tr></table>
+<p>The file pointer is at the start of the file. The names CON and NUL open the devices.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">3Eh</span><h3>Close a Handle</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 3Eh<br>BX = handle</td></tr><tr><th>Return</th><td>CF set: AX = 6 (invalid handle) or a disk error</td></tr></table>
+<p>When the last handle to a file is closed, its directory entry (size, date, time) is updated and its data written to the diskette.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">3Fh</span><h3>Read from a File or Device</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 3Fh<br>BX = handle<br>CX = bytes to read<br>DS:DX = buffer</td></tr>
+<tr><th>Return</th><td>CF clear: AX = bytes read (0 at the end of the file)<br>CF set: AX = 5 or 6</td></tr></table>
+<p>Reads from the file pointer on, and moves the pointer past what was read. From the console, see "Files and Handles" in Chapter 6.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">40h</span><h3>Write to a File or Device</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 40h<br>BX = handle<br>CX = bytes to write<br>DS:DX = data</td></tr>
+<tr><th>Return</th><td>CF clear: AX = bytes written<br>CF set: AX = 5 or 6</td></tr></table>
+<p>If the diskette fills up, fewer bytes are written and AX says how many; this is not an error. With CX = 0 the file is cut off at the file pointer.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">41h</span><h3>Delete a File</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 41h<br>DS:DX = ASCIIZ file name, no global characters</td></tr><tr><th>Return</th><td>CF set: AX = 2 or 5</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">42h</span><h3>Move the File Pointer</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 42h<br>BX = handle<br>CX:DX = distance (signed)<br>AL = 0 from the start, 1 from the current position, 2 from the end</td></tr>
+<tr><th>Return</th><td>CF clear: DX:AX = new position<br>CF set: AX = 1 or 6</td></tr></table>
+<p>AL = 2 with CX:DX = 0 returns the size of the file.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">43h</span><h3>File Attributes</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 43h<br>DS:DX = ASCIIZ file name<br>AL = 0 to get, 1 to set them from CX</td></tr>
+<tr><th>Return</th><td>CF clear: CX = attributes (AL = 0)<br>CF set: AX = 1, 2 or 5</td></tr></table>
+<p>The volume label and directory bits cannot be set.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">45h</span><h3>Duplicate a Handle</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 45h<br>BX = handle</td></tr><tr><th>Return</th><td>CF clear: AX = new handle to the same file and pointer<br>CF set: AX = 4 or 6</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">46h</span><h3>Force a Duplicate Handle</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 46h<br>BX = handle<br>CX = second handle</td></tr><tr><th>Return</th><td>CF set: AX = 6</td></tr></table>
+<p>Closes CX if it is open, and makes it refer to the same file as BX.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">56h</span><h3>Rename a File</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 56h<br>DS:DX = ASCIIZ present name<br>ES:DI = ASCIIZ new name</td></tr><tr><th>Return</th><td>CF set: AX = 2, 3, 5 or 11h</td></tr></table>
+<p>Both names must be on the same drive (error 11h). If a file with the new name exists, error 5.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">57h</span><h3>File Date and Time</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 57h<br>BX = handle<br>AL = 0 to get; 1 to set from CX (time) and DX (date)</td></tr>
+<tr><th>Return</th><td>CF clear: CX = time, DX = date (AL = 0)<br>CF set: AX = 1 or 6</td></tr></table>
+<p>A date and time that are set are recorded when the file is closed, instead of the current ones. Chapter 8 shows their format.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">5Bh</span><h3>Create a New File</h3></div>
+<table class="regs"><tr><th>Entry</th><td>As 3Ch</td></tr><tr><th>Return</th><td>As 3Ch; CF set, AX = 50h if the file exists</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">68h</span><h3>Commit a File</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 68h<br>BX = handle</td></tr><tr><th>Return</th><td>CF set: AX = 6 or a disk error</td></tr></table>
+<p>Writes the file's data and directory entry to the diskette, as closing it would, and leaves it open.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">44h</span><h3>I/O Control (IOCTL)</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 44h<br>AL = subfunction<br>BX = handle (00h, 01h, 06h, 07h) or BL = drive, 0 = default (08h, 09h, 0Eh)</td></tr></table>
+<table class="ref wrap"><tr><th>AL</th><th>Subfunction</th></tr>
+<tr><td>00h</td><td>Get device information in DX. Devices: bit 7 set; CON 80D3h (bit 5 set in raw mode), NUL 8084h. Files: drive number in bits 0-5, bit 6 set if not written to.</td></tr>
+<tr><td>01h</td><td>Set device information from DX (DH = 0); only bit 5, raw mode, of CON is used.</td></tr>
+<tr><td>06h</td><td>Input status: AL = FFh ready, 00h not ready (a file at its end; the keyboard with no key).</td></tr>
+<tr><td>07h</td><td>Output status: always AL = FFh.</td></tr>
+<tr><td>08h</td><td>Removable media: AX = 0, diskettes are removable.</td></tr>
+<tr><td>09h</td><td>Remote drive: DX = 0, local.</td></tr>
+<tr><td>0Eh</td><td>Logical drive map: AL = 0, one letter per drive.</td></tr></table></div>
+
+<h2>Program Functions</h2>
+
+<div class="entry fn"><div class="fnhead"><span class="num">31h</span><h3>Terminate and Stay Resident</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 31h<br>AL = return code<br>DX = paragraphs to keep, from the PSP</td></tr></table>
+<p>Ends the program but leaves the first DX paragraphs of its memory in place, and its files open.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">4Bh</span><h3>Load and Execute a Program (EXEC)</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AX = 4B00h<br>DS:DX = ASCIIZ program name, with its extension<br>ES:BX = parameter block</td></tr>
+<tr><th>Return</th><td>CF clear: the program ran and ended<br>CF set: AX = 2, 8 or 0Bh</td></tr></table>
+<table class="ref"><tr><th>Offset</th><th>Parameter block</th></tr>
+<tr><td>00h</td><td>Segment of the environment to give it, or 0 for a copy of the caller's</td></tr>
+<tr><td>02h</td><td>Address (offset, segment) of the command tail</td></tr>
+<tr><td>06h</td><td>Address of the first file control block, copied to PSP:5Ch</td></tr>
+<tr><td>0Ah</td><td>Address of the second file control block, copied to PSP:6Ch</td></tr></table>
+<p>Loads a .COM or .EXE program, as described in Chapter 6, and runs it; the call returns when it ends, with all registers as they were. AL = 01h (load only) and 03h (overlay) are not supported.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">4Ch</span><h3>Terminate with a Return Code</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 4Ch<br>AL = return code</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">4Dh</span><h3>Return Code of a Child</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 4Dh</td></tr><tr><th>Return</th><td>AL = return code of the last program that ended<br>AH = how it ended: 0 normally, 1 by Ctrl-C, 2 by a critical error (Abort), 3 resident</td></tr></table>
+<p>The code can be read only once.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">50h</span><h3>Set the PSP</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 50h<br>BX = segment of the PSP to make current</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">62h</span><h3>Get the PSP</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 62h (or 51h)</td></tr><tr><th>Return</th><td>BX = segment of the current PSP</td></tr></table></div>
+
+<h2>Memory Functions</h2>
+
+<div class="entry fn"><div class="fnhead"><span class="num">48h</span><h3>Allocate Memory</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 48h<br>BX = paragraphs</td></tr>
+<tr><th>Return</th><td>CF clear: AX = segment of the block<br>CF set: AX = 7 or 8, BX = size of the largest free block</td></tr></table>
+<p>Asking for FFFFh paragraphs always fails and tells you how much memory there is.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">49h</span><h3>Free Memory</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 49h<br>ES = segment of the block</td></tr><tr><th>Return</th><td>CF set: AX = 9</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">4Ah</span><h3>Resize a Memory Block</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 4Ah<br>ES = segment of the block<br>BX = new size in paragraphs</td></tr>
+<tr><th>Return</th><td>CF set: AX = 8 or 9; BX = largest size possible</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">58h</span><h3>Allocation Strategy</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AX = 5800h to get, 5801h to set from BX</td></tr><tr><th>Return</th><td>AX = 0: first fit</td></tr></table>
+<p>COS uses first fit only; setting another strategy is not supported.</p></div>
+
+<h2>Other Functions</h2>
+
+<div class="entry fn"><div class="fnhead"><span class="num">25h</span><h3>Set an Interrupt Vector</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 25h<br>AL = interrupt number<br>DS:DX = handler</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">35h</span><h3>Get an Interrupt Vector</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 35h<br>AL = interrupt number</td></tr><tr><th>Return</th><td>ES:BX = handler</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">29h</span><h3>Parse a File Name</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 29h<br>DS:SI = text to parse<br>ES:DI = 37-byte file control block<br>AL = options: bit 0 skip leading separators; bit 1 keep the FCB's drive if none is given; bit 2 keep its filename; bit 3 keep its extension</td></tr>
+<tr><th>Return</th><td>AL = 00h, 01h if there were global characters, FFh if the drive is not valid<br>DS:SI = the first character after the name<br>ES:DI+0 = drive (0 = default, 1 = A:); +1 = filename, 8 characters; +9 = extension, 3 characters</td></tr></table>
+<p>An * fills the rest of the field with ?. COMMAND.COM uses this function to fill the FCBs in the PSP.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">2Ah</span><h3>Get the Date</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 2Ah</td></tr><tr><th>Return</th><td>CX = year (1980-2099), DH = month, DL = day<br>AL = day of the week (0 = Sunday)</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">2Bh</span><h3>Set the Date</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 2Bh<br>CX = year, DH = month, DL = day</td></tr><tr><th>Return</th><td>AL = 00h if valid, FFh if not</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">2Ch</span><h3>Get the Time</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 2Ch</td></tr><tr><th>Return</th><td>CH = hour (0-23), CL = minutes<br>DH = seconds, DL = hundredths</td></tr></table>
+<p>The time comes from the timer tick (18.2 per second), so the hundredths advance in steps of about 5.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">2Dh</span><h3>Set the Time</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 2Dh<br>CH = hour, CL = minutes, DH = seconds, DL = hundredths</td></tr><tr><th>Return</th><td>AL = 00h if valid, FFh if not</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">2Eh</span><h3>Set the Verify Switch</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 2Eh<br>AL = 0 off, 1 on</td></tr></table>
+<p>The switch is kept for programs that read it back with function 54h.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">30h</span><h3>COS Version Number</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 30h</td></tr><tr><th>Return</th><td>AL = 3, AH = 30: the 3.30 level of services<br>BH = FFh, BL = 0, CX = 0</td></tr></table>
+<p>Programs that check the version find the level of services they need. Use VER to see the COS version.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">33h</span><h3>Ctrl-Break Check, Boot Drive</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 33h<br>AL = 0 get, 1 set from DL, 5 get the boot drive</td></tr><tr><th>Return</th><td>DL = switch (0 off, 1 on), or the boot drive (1 = A:)</td></tr></table>
+<p>COS checks for Ctrl-C on console input only, whatever the switch says.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">34h</span><h3>Address of the InDOS Flag</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 34h</td></tr><tr><th>Return</th><td>ES:BX = a byte that is not 0 while a function is being carried out</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">37h</span><h3>Switch Character</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AX = 3700h</td></tr><tr><th>Return</th><td>DL = '/', AL = 0</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">38h</span><h3>Country Information</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AX = 3800h<br>DS:DX = 34-byte buffer</td></tr><tr><th>Return</th><td>BX = 1 (United States); the buffer holds the date format (0: month-day-year), the currency symbol "$", the separators ",", ".", "-" and ":", and the 12-hour clock</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">54h</span><h3>Get the Verify Switch</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 54h</td></tr><tr><th>Return</th><td>AL = 0 off, 1 on</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">59h</span><h3>Extended Error</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 59h, BX = 0</td></tr><tr><th>Return</th><td>AX = code of the last error; BH = class, BL = suggested action, CH = locus</td></tr></table></div>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 8                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="8" data-title="Technical Information" data-part="Part Two: Programming">
+
+<h2>Memory Map</h2>
+<table class="ref">
+<tr><th>Address</th><th>Contents</th></tr>
+<tr><td>0000:0000</td><td>Interrupt vectors</td></tr>
+<tr><td>0040:0000</td><td>BIOS data area</td></tr>
+<tr><td>0070:0000</td><td>COS.SYS: code and data (11 KB), its own PSP, the track buffer (9 KB), the file allocation tables of drives A: and B: (4.5 KB each) and its stacks</td></tr>
+<tr><td>085Ch</td><td>First memory control block: the master environment</td></tr>
+<tr><td>0860h</td><td>COMMAND.COM's environment, then COMMAND.COM (PSP at 0863h) with its 16 KB copy buffer and stack</td></tr>
+<tr><td>0E09h</td><td>Free memory: programs (583 KB)</td></tr>
+<tr><td>A000:0000</td><td>Video memory</td></tr>
+<tr><td>F000:0000</td><td>BIOS read-only memory</td></tr>
+</table>
+<p>The segments of COMMAND.COM and the free memory are those of COS Version 1.00 started from its System Diskette; a program should take them from its PSP and from the memory functions, not from this table.</p>
+
+<h2>How COS Starts</h2>
+<ol>
+<li>The BIOS reads sector 1 of the diskette in drive A: to 0000:7C00h and jumps to it with DL = 0.</li>
+<li>The boot record reads the BIOS parameter block in itself, loads the first file allocation table at 0000:7E00h, finds COS.SYS in the root directory and loads it at 0070:0000h, following its chain of allocation units. Then it jumps to it, with DL still the boot drive.</li>
+<li>COS.SYS counts the diskette drives (BIOS equipment word), sets interrupt vectors 20h to 2Fh, makes the memory control blocks up to the top of memory given by INT 12h, builds the master environment, and runs A:\COMMAND.COM with function 4Bh. If COMMAND.COM ever ends, COS runs it again.</li>
+</ol>
+
+<h2>Diskette Format</h2>
+<table class="ref">
+<tr><th></th><th>1.44 MB</th><th>720 KB</th></tr>
+<tr><td>Tracks per side</td><td>80</td><td>80</td></tr>
+<tr><td>Sides</td><td>2</td><td>2</td></tr>
+<tr><td>Sectors per track</td><td>18</td><td>9</td></tr>
+<tr><td>Bytes per sector</td><td>512</td><td>512</td></tr>
+<tr><td>Sectors per allocation unit</td><td>1</td><td>2</td></tr>
+<tr><td>Reserved sectors (boot record)</td><td>1</td><td>1</td></tr>
+<tr><td>File allocation tables</td><td>2 &times; 9 sectors</td><td>2 &times; 3 sectors</td></tr>
+<tr><td>Root directory</td><td>224 entries, 14 sectors</td><td>112 entries, 7 sectors</td></tr>
+<tr><td>Allocation units</td><td>2,847</td><td>713</td></tr>
+<tr><td>Media descriptor</td><td>F0h</td><td>F9h</td></tr>
+</table>
+<p>Sectors are numbered from 0, track by track: logical sector <var>n</var> is on track <var>n</var> / sectors-per-track / 2, side (<var>n</var> / sectors-per-track) mod 2, sector <var>n</var> mod sectors-per-track + 1. The boot record is sector 0, then come the file allocation tables, the root directory and the data area.</p>
+<h3>The BIOS Parameter Block</h3>
+<p>Bytes 0Bh to 1Dh of the boot record describe the diskette. COS reads them from every diskette it uses, so any diskette with these values works.</p>
+<table class="ref">
+<tr><th>Offset</th><th>Size</th><th>Contents</th></tr>
+<tr><td>00h</td><td>3</td><td>Jump to the boot code</td></tr>
+<tr><td>0Bh</td><td>Word</td><td>Bytes per sector: 512</td></tr>
+<tr><td>0Dh</td><td>Byte</td><td>Sectors per allocation unit</td></tr>
+<tr><td>0Eh</td><td>Word</td><td>Reserved sectors</td></tr>
+<tr><td>10h</td><td>Byte</td><td>Number of file allocation tables</td></tr>
+<tr><td>11h</td><td>Word</td><td>Root directory entries</td></tr>
+<tr><td>13h</td><td>Word</td><td>Total sectors</td></tr>
+<tr><td>15h</td><td>Byte</td><td>Media descriptor</td></tr>
+<tr><td>16h</td><td>Word</td><td>Sectors per file allocation table</td></tr>
+<tr><td>18h</td><td>Word</td><td>Sectors per track</td></tr>
+<tr><td>1Ah</td><td>Word</td><td>Sides (heads)</td></tr>
+<tr><td>1FEh</td><td>Word</td><td>Signature 55h AAh</td></tr>
+</table>
+
+<h2>The File Allocation Table</h2>
+<p>The file allocation table (FAT) has a 12-bit entry for every allocation unit, numbered from 2. An entry of 000h means the unit is free; FF8h to FFFh, that it is the last unit of a file; any other value, the number of the file's next unit. The entry of unit <var>n</var> is the word at byte <var>n</var> &times; 3 / 2 of the table: its low 12 bits if <var>n</var> is even, its high 12 bits if <var>n</var> is odd. COS keeps the whole table of each drive in memory and writes it to both copies on the diskette.</p>
+
+<h2>Directory Entries</h2>
+<table class="ref">
+<tr><th>Offset</th><th>Size</th><th>Contents</th></tr>
+<tr><td>00h</td><td>8</td><td>Filename, padded with spaces. First byte 00h: end of the directory; E5h: an erased entry</td></tr>
+<tr><td>08h</td><td>3</td><td>Extension, padded with spaces</td></tr>
+<tr><td>0Bh</td><td>Byte</td><td>Attribute: 01h read-only, 02h hidden, 04h system, 08h volume label, 10h directory, 20h archive (set when the file is written)</td></tr>
+<tr><td>0Ch</td><td>10</td><td>Reserved</td></tr>
+<tr><td>16h</td><td>Word</td><td>Time</td></tr>
+<tr><td>18h</td><td>Word</td><td>Date</td></tr>
+<tr><td>1Ah</td><td>Word</td><td>First allocation unit (0 for an empty file)</td></tr>
+<tr><td>1Ch</td><td>Dword</td><td>Size in bytes</td></tr>
+</table>
+<h3>Time and Date</h3>
+<pre class="listing">
+Time:  bits 15-11 hours (0-23), 10-5 minutes, 4-0 seconds / 2
+Date:  bits 15-9 year - 1980, 8-5 month (1-12), 4-0 day (1-31)
+</pre>
+
+<h2>Disk Buffering</h2>
+<p>COS reads diskettes a whole track at a time into its track buffer: one turn of the diskette, a fifth of a second, brings in 18 sectors. Reads from the same track then need no diskette access.</p>
+<p>Writes go into the buffer, and the sectors changed are written back together, in one operation, when COS needs another track, when a file is closed or committed, at disk reset, and when a program ends. A new directory entry (function 3Ch or 5Bh) and changes to the directory (41h, 43h, 56h) are written at once.</p>
+<p>Before each use of a drive, COS asks the BIOS whether the diskette has been changed (INT 13h AH=16h). If it has, COS reads the new diskette's boot record and file allocation table.</p>
+
+<h2>Critical Errors</h2>
+<p>When a diskette operation still fails after three tries, COS calls INT 24h with:</p>
+<table class="ref wrap">
+<tr><td>AH</td><td>Bit 0: 0 reading, 1 writing. Bits 1-2: area (3 = data). Bit 3: Fail allowed. Bit 4: Retry allowed. Bit 7: 0 (a disk error).</td></tr>
+<tr><td>AL</td><td>Drive: 0 = A:, 1 = B:.</td></tr>
+<tr><td>DI</td><td>Low byte: 00h write-protected, 02h not ready, 04h data error, 07h unknown media, 08h sector not found, 0Ch general failure.</td></tr>
+<tr><td>BP:SI</td><td>0000:0000 (no device header).</td></tr>
+</table>
+<p>The handler returns with IRET and AL = 1 to retry, 2 to abort (end the program), or 3 (or 0) to fail the function, which then returns error 83. The handler runs on COS's own stack and must not call INT 21h.</p>
+
+<h2>System Limits</h2>
+<table class="ref wrap">
+<tr><td>Drives</td><td>2 (A: and B:)</td></tr>
+<tr><td>Files open at once</td><td>20 in all, 20 per program</td></tr>
+<tr><td>Command line</td><td>127 characters</td></tr>
+<tr><td>.COM program</td><td>65,280 bytes</td></tr>
+<tr><td>Memory for programs</td><td>597,536 bytes in the largest block</td></tr>
+<tr><td>Files per diskette</td><td>224 (1.44 MB), 112 (720 KB)</td></tr>
+<tr><td>Dates</td><td>1 January 1980 to 31 December 2099</td></tr>
+</table>
+
+<h2>Compatibility</h2>
+<p>COS provides the version 3.30 services listed in Chapter 7, with the same numbers, registers and results. Programs that use only those services, through file handles, run on COS unchanged. COS Version 1.00 does not provide:</p>
+<ul>
+<li>Subdirectories and paths (all files are in the root directory).</li>
+<li>File control block (FCB) file functions, and absolute disk access (INT 25h and 26h).</li>
+<li>Batch files, redirection (&gt; and &lt;) and pipes (|) in COMMAND.COM.</li>
+<li>Installable device drivers, CONFIG.SYS, and the printer and serial devices.</li>
+<li>Commands such as FORMAT, DISKCOPY, CHKDSK and SYS: diskettes are prepared with the workbench or fdimage.</li>
+<li>Loading high: an .EXE file that asks for no memory above it is loaded low.</li>
+<li>A check that a diskette changed while a file was open on it ("Invalid disk change").</li>
+</ul>
+<p>Programs that ask for a missing function are stopped with a message rather than given a wrong result.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- APPENDIXES                                                           -->
+<!-- ================================================================== -->
+
+<section class="chapter appendix" data-num="A" data-title="Error Codes" data-part="Appendixes">
+<h2>Function Error Codes</h2>
+<p>Returned in AX, with the carry flag set, by the functions of Chapter 7.</p>
+<table class="ref">
+<tr><th>Code</th><th>Meaning</th></tr>
+<tr><td>1 (01h)</td><td>Invalid function or subfunction</td></tr>
+<tr><td>2 (02h)</td><td>File not found</td></tr>
+<tr><td>3 (03h)</td><td>Path not found (a directory other than the root)</td></tr>
+<tr><td>4 (04h)</td><td>Too many open files: no handle left</td></tr>
+<tr><td>5 (05h)</td><td>Access denied: read-only file, full directory, existing name, or a device the computer does not have</td></tr>
+<tr><td>6 (06h)</td><td>Invalid handle</td></tr>
+<tr><td>7 (07h)</td><td>Memory control blocks destroyed</td></tr>
+<tr><td>8 (08h)</td><td>Insufficient memory</td></tr>
+<tr><td>9 (09h)</td><td>Invalid memory block address</td></tr>
+<tr><td>11 (0Bh)</td><td>Invalid format (an .EXE file that cannot be loaded)</td></tr>
+<tr><td>12 (0Ch)</td><td>Invalid access code (function 3Dh)</td></tr>
+<tr><td>15 (0Fh)</td><td>Invalid drive</td></tr>
+<tr><td>17 (11h)</td><td>Not the same device (function 56h)</td></tr>
+<tr><td>18 (12h)</td><td>No more files (function 4Fh)</td></tr>
+<tr><td>21 (15h)</td><td>Drive not ready</td></tr>
+<tr><td>80 (50h)</td><td>File exists (function 5Bh)</td></tr>
+<tr><td>83 (53h)</td><td>Fail: the user answered F to a critical error</td></tr>
+</table>
+<h2>Return Codes</h2>
+<p>Function 4Dh returns in AH how the last program ended: 00h normally, 01h by Ctrl-C, 02h by Abort after a critical error, 03h resident. AL is the code the program gave to function 4Ch or 31h, and 0 otherwise. A program ended by COS for an unsupported function returns FFh.</p>
+</section>
+
+<section class="chapter appendix" data-num="B" data-title="The Keyboard" data-part="Appendixes">
+<h2>Keys at the Prompt</h2>
+<table class="ref wrap">
+<tr><td><span class="key">Enter</span></td><td>Ends the line.</td></tr>
+<tr><td><span class="key">Backspace</span></td><td>Erases the last character.</td></tr>
+<tr><td><span class="key">Esc</span></td><td>Cancels the line.</td></tr>
+<tr><td><span class="key">Ctrl</span>-<span class="key">C</span></td><td>Cancels the line or stops the command or program.</td></tr>
+</table>
+<p>Function and cursor keys are ignored at the prompt; programs can read them. The keyboard is the United States layout.</p>
+<h2>Control Characters</h2>
+<p>Holding Ctrl while pressing a letter gives the control characters 01h (Ctrl-A) to 1Ah (Ctrl-Z). Some have a name:</p>
+<table class="ref">
+<tr><th>Code</th><th>Key</th><th>Name</th></tr>
+<tr><td>03h</td><td>Ctrl-C</td><td>Break (stops a program)</td></tr>
+<tr><td>07h</td><td>Ctrl-G</td><td>Bell</td></tr>
+<tr><td>08h</td><td>Ctrl-H, Backspace</td><td>Backspace</td></tr>
+<tr><td>09h</td><td>Ctrl-I, Tab</td><td>Tab</td></tr>
+<tr><td>0Ah</td><td>Ctrl-J</td><td>Line feed</td></tr>
+<tr><td>0Dh</td><td>Ctrl-M, Enter</td><td>Carriage return</td></tr>
+<tr><td>1Ah</td><td>Ctrl-Z</td><td>End of file</td></tr>
+<tr><td>1Bh</td><td>Esc</td><td>Escape</td></tr>
+</table>
+<h2>Extended Codes</h2>
+<p>Keys with no character return 00h, and then a second code, from functions 01h, 07h and 08h:</p>
+<table class="ref">
+<tr><th>Key</th><th>Code</th><th>Key</th><th>Code</th></tr>
+<tr><td>F1 to F10</td><td>3Bh to 44h</td><td>Home</td><td>47h</td></tr>
+<tr><td>Up arrow</td><td>48h</td><td>PgUp</td><td>49h</td></tr>
+<tr><td>Left arrow</td><td>4Bh</td><td>Right arrow</td><td>4Dh</td></tr>
+<tr><td>End</td><td>4Fh</td><td>Down arrow</td><td>50h</td></tr>
+<tr><td>PgDn</td><td>51h</td><td>Ins</td><td>52h</td></tr>
+<tr><td>Del</td><td>53h</td><td>Shift-F1 to F10</td><td>54h to 5Dh</td></tr>
+<tr><td>Ctrl-F1 to F10</td><td>5Eh to 67h</td><td>Alt-F1 to F10</td><td>68h to 71h</td></tr>
+</table>
+</section>
+
+<section class="chapter appendix" data-num="C" data-title="The Character Set" data-part="Appendixes">
+<h2>Code Page 437</h2>
+<p>The display shows these 256 characters. Find a character's code by its row (the first hexadecimal digit) and column (the second): A is 41h. Codes 00h to 1Fh print as symbols when written to video memory or with BIOS functions that do not act on them; through COS, the control characters of Appendix B act on the cursor instead.</p>
+<div id="cp437"></div>
+</section>
+
+<section class="chapter appendix" data-num="D" data-title="BIOS Services and the Hardware" data-part="Appendixes">
+<h2>BIOS Services</h2>
+<p>Programs may call the BIOS of the pc86 computer for what COS does not do. These services are available:</p>
+<table class="ref wrap">
+<tr><th>INT</th><th>Services</th></tr>
+<tr><td>10h</td><td>Video: AH = 00h set mode (03h text, 13h 320&times;200 graphics in 256 colors), 01h cursor shape, 02h/03h set/get cursor position, 05h page, 06h/07h scroll a window, 08h read character, 09h/0Ah write character, 0Eh teletype output, 0Fh get mode, 10h palette, 12h information, 13h write string, 1Ah display combination.</td></tr>
+<tr><td>11h</td><td>Equipment list.</td></tr>
+<tr><td>12h</td><td>Memory size: 640 (KB).</td></tr>
+<tr><td>13h</td><td>Diskette: AH = 00h reset, 01h status, 02h read, 03h write, 04h verify, 05h format a track, 08h drive parameters, 15h drive type, 16h change line, 17h/18h set the type for format.</td></tr>
+<tr><td>16h</td><td>Keyboard: AH = 00h/10h read a key, 01h/11h check for a key, 02h/12h shift state, 03h typematic rate, 05h store a key.</td></tr>
+<tr><td>19h</td><td>Start the computer from drive A: again.</td></tr>
+<tr><td>1Ah</td><td>Timer: AH = 00h get, 01h set the tick count (18.2 ticks per second since midnight).</td></tr>
+<tr><td>1Ch</td><td>User timer hook, called on every tick. A program may take it over; restore it before ending.</td></tr>
+</table>
+<h2>Hardware</h2>
+<table class="ref wrap">
+<tr><th>Ports</th><th>Device</th></tr>
+<tr><td>20h-21h</td><td>Interrupt controller (8259A). IRQ 0 timer, 1 keyboard, 6 diskette.</td></tr>
+<tr><td>40h-43h</td><td>Timer (8253): channel 0 the tick, channel 2 the speaker.</td></tr>
+<tr><td>60h, 64h</td><td>Keyboard controller (8042).</td></tr>
+<tr><td>61h</td><td>Speaker gate and enable.</td></tr>
+<tr><td>00h-0Fh, 80h-8Fh</td><td>DMA controller (8237) and page registers.</td></tr>
+<tr><td>3C0h-3DAh</td><td>VGA video card.</td></tr>
+<tr><td>3F2h-3F7h</td><td>Diskette adapter (765).</td></tr>
+<tr><td>B800:0000h</td><td>Text mode video memory: 80 &times; 25, character then attribute. Mode 13h: A000:0000h, a byte per dot.</td></tr>
+</table>
+</section>
+
+<section class="back quick" data-kind="quick" data-title="Quick Reference">
+<h2>Quick Reference</h2>
+<table class="ref wrap">
+<tr><th>Command</th><th>What it does</th></tr>
+<tr><td>d:</td><td>Makes d: the default drive</td></tr>
+<tr><td>CD [d:]</td><td>Displays the current directory (the root)</td></tr>
+<tr><td>CLS</td><td>Clears the display</td></tr>
+<tr><td>COPY <var>source</var> [<var>target</var>]</td><td>Copies files; global characters allowed</td></tr>
+<tr><td>DATE [<var>mm-dd-yy</var>]</td><td>Displays or sets the date</td></tr>
+<tr><td>DEL <var>filespec</var></td><td>Erases files (also ERASE)</td></tr>
+<tr><td>DIR [<var>filespec</var>] [/W]</td><td>Lists files</td></tr>
+<tr><td>ECHO [<var>message</var>]</td><td>Displays a message</td></tr>
+<tr><td>PAUSE</td><td>Waits for a key</td></tr>
+<tr><td>REN <var>old new</var></td><td>Renames files (also RENAME)</td></tr>
+<tr><td>SET</td><td>Displays the environment</td></tr>
+<tr><td>TIME [<var>hh:mm</var>]</td><td>Displays or sets the time</td></tr>
+<tr><td>TYPE <var>filespec</var></td><td>Displays a text file</td></tr>
+<tr><td>VER</td><td>Displays the version</td></tr>
+<tr><td>VOL [d:]</td><td>Displays the volume label</td></tr>
+<tr><td><var>name</var> [<var>parameters</var>]</td><td>Runs NAME.COM or NAME.EXE</td></tr>
+</table>
+<table class="ref wrap">
+<tr><th>Key</th><th>At the prompt</th></tr>
+<tr><td><span class="key">Backspace</span></td><td>Erase the last character</td></tr>
+<tr><td><span class="key">Esc</span></td><td>Cancel the line</td></tr>
+<tr><td><span class="key">Ctrl</span>-<span class="key">C</span></td><td>Stop the command or program</td></tr>
+<tr><td>Abort, Retry, Fail?</td><td>A: end the program &middot; R: try again &middot; F: give up the operation</td></tr>
+</table>
+<table class="ref wrap">
+<tr><th>Program</th><th>INT 21h</th></tr>
+<tr><td>Display a string</td><td>AH=09h, DS:DX = text ending in '$'</td></tr>
+<tr><td>Read a key</td><td>AH=08h (AL = key)</td></tr>
+<tr><td>Open, read, write, close</td><td>AH=3Dh, 3Fh, 40h, 3Eh (BX = handle, CF = error)</td></tr>
+<tr><td>End</td><td>AX=4C00h</td></tr>
+</table>
+</section>
+
+</div>
+
+<script>
+// ---------------------------------------------------------------------
+// Pagination: flows the sections of #source into 7 x 9 inch pages, with
+// chapter-page numbers, running heads, tabs and a table of contents.
+// ---------------------------------------------------------------------
+const book = document.getElementById("book");
+const src = document.getElementById("source");
+const pages = [];
+const ROMAN = ["", "i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", "xi", "xii", "xiii", "xiv"];
+const BLANK = "This page intentionally left blank.";
+
+// ---------- code page 437 table (before the layout: it takes room) ----------
+(function () {
+  const CP = " ☺☻♥♦♣♠•◘○◙♂♀♪♫☼►◄↕‼¶§▬↨↑↓→←∟↔▲▼" +
+    " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~⌂" +
+    "ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ";
+  const host = document.getElementById("cp437");
+  if (!host) return;
+  let html = "<tr><th></th>";
+  for (let c = 0; c < 16; c++) html += "<th>" + c.toString(16).toUpperCase() + "</th>";
+  html += "</tr>";
+  for (let r = 0; r < 16; r++) {
+    html += "<tr><th>" + r.toString(16).toUpperCase() + "</th>";
+    for (let c = 0; c < 16; c++) {
+      const ch = CP[r * 16 + c];
+      html += "<td>" + (ch === "<" ? "&lt;" : ch === "&" ? "&amp;" : ch) + "</td>";
+    }
+    html += "</tr>";
+  }
+  const t = document.createElement("table");
+  t.className = "cp437";
+  t.innerHTML = html;
+  host.replaceWith(t);
+})();
+
+// ---------- pages ----------
+function newPage(opts) {
+  const p = document.createElement("div");
+  p.className = "page odd";
+  p.innerHTML = '<div class="head"><span class="l"></span><span class="r"></span></div>' +
+                '<div class="body"></div><div class="foot"><span class="label"></span><span class="ed"></span></div>' +
+                '<div class="tab"></div>';
+  Object.assign(p, opts || {});
+  book.appendChild(p);
+  pages.push(p);
+  return p;
+}
+function blankPage(chap) {
+  const p = newPage({ kind: "blank", chap });
+  p.classList.add("blank");
+  bodyOf(p).textContent = BLANK;
+  return p;
+}
+const bodyOf = p => p.querySelector(".body");
+const fits = b => b.scrollHeight <= b.clientHeight + 1;
+const isHead = el => /^(H[1-4]|DT)$/.test(el.tagName) || el.classList.contains("fnhead");
+
+let cur = null;
+function startPage(opts) { cur = newPage(opts); return cur; }
+
+// A new page; headings left at the bottom of the old one go with it.
+function breakPage() {
+  const old = bodyOf(cur), moving = [];
+  while (old.children.length > 1 && isHead(old.lastElementChild)) moving.unshift(old.removeChild(old.lastElementChild));
+  startPage({ chap: cur.chap, kind: cur.kind === "opener" ? undefined : cur.kind });
+  for (const m of moving) bodyOf(cur).appendChild(m);
+}
+
+// Splits a block where the page ends: [what fits, the rest], or null.
+function split(el, body) {
+  const tag = el.tagName;
+  let items, make, fill;
+  if (tag === "PRE") {
+    items = el.innerHTML.replace(/\n$/, "").split("\n");
+    if (items.length < 6) return null;
+    make = () => el.cloneNode(false);
+    fill = (box, list) => { box.innerHTML = list.join("\n"); };
+  } else if (tag === "TABLE") {
+    const rows = [...el.querySelectorAll(":scope > tbody > tr, :scope > tr")];
+    const head = rows.length && rows[0].querySelector("th") ? rows[0] : null;
+    items = head ? rows.slice(1) : rows;
+    if (items.length < 4) return null;
+    make = () => el.cloneNode(false);
+    fill = (box, list) => {
+      box.innerHTML = "";
+      const tb = document.createElement("tbody");
+      if (head) tb.appendChild(head.cloneNode(true));
+      for (const r of list) tb.appendChild(r.cloneNode(true));
+      box.appendChild(tb);
+    };
+  } else if (tag === "UL" || tag === "OL" || tag === "DIV" && el.classList.contains("toc")) {
+    items = [...el.children];
+    if (items.length < 2) return null;
+    make = () => el.cloneNode(false);
+    fill = (box, list) => { box.innerHTML = ""; for (const li of list) box.appendChild(li.cloneNode(true)); };
+  } else if (tag === "DL") {
+    items = [];                                  // dt + dd pairs
+    for (const k of el.children) {
+      if (k.tagName === "DT" || !items.length) items.push([k]);
+      else items[items.length - 1].push(k);
+    }
+    if (items.length < 2) return null;
+    make = () => el.cloneNode(false);
+    fill = (box, list) => { box.innerHTML = ""; for (const g of list) for (const k of g) box.appendChild(k.cloneNode(true)); };
+  } else return null;
+
+  const min = tag === "PRE" ? 3 : tag === "TABLE" ? 2 : 1;
+  const a = make();
+  body.appendChild(a);
+  let best = 0, lo = min, hi = items.length - 1;      // the most items that fit
+  while (lo <= hi) {
+    const k = (lo + hi) >> 1;
+    fill(a, items.slice(0, k));
+    if (fits(body)) { best = k; lo = k + 1; } else hi = k - 1;
+  }
+  body.removeChild(a);
+  if (!best || best >= items.length) return null;
+  fill(a, items.slice(0, best));
+  const b = make();
+  fill(b, items.slice(best));
+  if (tag === "OL") b.setAttribute("start", String(best + parseInt(el.getAttribute("start") || "1")));
+  return [a, b];
+}
+
+// Boxes that may be opened up when they do not fit: their children flow.
+const container = el => el.tagName === "DIV" && el.classList.contains("entry") ||
+                        (el.tagName === "DD" || el.tagName === "DL") && el.children.length > 0;
+
+let placed = 0;
+function place(el, retried) {
+  if (++placed > 20000) throw new Error("layout loop at: " + (el.textContent || "").slice(0, 80));
+  const body = bodyOf(cur);
+  body.appendChild(el);
+  if (fits(body)) return;
+  body.removeChild(el);
+  const parts = split(el, body);
+  if (parts) {
+    body.appendChild(parts[0]);
+    breakPage();
+    place(parts[1]);
+    return;
+  }
+  if (container(el)) {
+    for (const k of [...el.children]) {
+      if (el.tagName === "DD") k.classList.add("in-dd");
+      place(k);
+    }
+    return;
+  }
+  if (body.children.length && !retried) {      // again on a new page, where it may split
+    breakPage();
+    place(el, true);
+    return;
+  }
+  bodyOf(cur).appendChild(el);
+  if (!fits(bodyOf(cur))) console.warn("too tall for a page:", el.tagName, el.className, el.textContent.slice(0, 60));
+}
+
+function flowSection(sec, opts) {
+  startPage(opts);
+  for (const el of [...sec.children]) place(el);
+}
+
+const front = [...src.querySelectorAll(":scope > section.front")];
+const chapters = [...src.querySelectorAll(":scope > section.chapter")];
+const back = [...src.querySelectorAll(":scope > section.back")];
+const frontOf = kind => front.find(s => s.dataset.kind === kind);
+
+// ---------- the cover and its back ----------
+const cover = startPage({ kind: "cover" });
+cover.classList.add("cover", "plain");
+bodyOf(cover).innerHTML =
+  '<div class="stripe" style="top:0.35in"></div>' +
+  '<div class="logo"><img src="logo.jpg" alt="CucsiCorp OS"></div>' +
+  '<div class="titles"><div class="display">COS<br>Disk Operating System</div>' +
+  '<div class="sub">User\'s Guide and Technical Reference</div>' +
+  '<div class="ver">Version 1.00<br>for the pc86 Personal Computer</div></div>' +
+  '<div class="boxline"><span>CucsiCorp</span><span>Personal Computer Software</span></div>' +
+  '<div class="stripe" style="bottom:0.45in"></div>';
+flowSection(frontOf("notice"), { kind: "notice" });
+
+// ---------- the chapters: their page numbers do not depend on the front matter ----------
+const frontStart = pages.length;           // the preface and contents go here later
+const chapterInfo = [];
+for (const ch of chapters) {
+  if (pages.length % 2 === 1) blankPage(cur.chap);       // a chapter starts on a right-hand page
+  const chap = { num: ch.dataset.num, title: ch.dataset.title, part: ch.dataset.part,
+                 appendix: ch.classList.contains("appendix") };
+  const op = startPage({ chap, kind: "opener" });
+  op.classList.add("opener");
+  bodyOf(op).innerHTML = '<div class="num">' + chap.num + '</div><h1>' +
+    (chap.appendix ? "Appendix " + chap.num + ". " : "") + chap.title +
+    '</h1><div class="mini"><h4>Contents</h4><div class="toc"></div></div>';
+  startPage({ chap });
+  const heads = [...ch.querySelectorAll("h2")];
+  for (const el of [...ch.children]) place(el);
+  chapterInfo.push({ chap, heads, op });
+}
+for (const b of back) {
+  if (pages.length % 2 === 1) blankPage(cur.chap);
+  flowSection(b, { kind: "back", chap: { title: b.dataset.title } });
+}
+
+// ---------- chapter-page labels ----------
+const count = {};
+for (const p of pages) {
+  if (!p.chap || !p.chap.num) continue;
+  count[p.chap.num] = (count[p.chap.num] || 0) + 1;
+  p.label = p.chap.num + "-" + count[p.chap.num];
+}
+const labelOf = el => { let p = el; while (p && !(p.classList && p.classList.contains("page"))) p = p.parentNode; return p ? p.label : ""; };
+const headText = h => h.childNodes[0].textContent.trim();
+
+function tocRow(box, text, label, cls) {
+  const r = document.createElement("div");
+  r.className = "row " + (cls || "");
+  r.innerHTML = '<span class="t"></span><span class="dots"></span><span class="p"></span>';
+  r.querySelector(".t").textContent = text;
+  r.querySelector(".p").textContent = label;
+  if (!label) r.querySelector(".dots").style.visibility = "hidden";
+  box.appendChild(r);
+}
+for (const { heads, op } of chapterInfo) {
+  const t = op.querySelector(".toc");
+  for (const h of heads) tocRow(t, headText(h), labelOf(h));
+}
+
+// ---------- the front matter, laid out last and moved in front ----------
+const toc = document.getElementById("toc");
+let part = "";
+for (const { chap, heads } of chapterInfo) {
+  if (chap.part !== part) { part = chap.part; tocRow(toc, part, "", "ch part"); }
+  tocRow(toc, (chap.appendix ? "Appendix " : "Chapter ") + chap.num + ". " + chap.title, chap.num + "-1", "ch");
+  for (const h of heads) tocRow(toc, headText(h), labelOf(h), "sec");
+}
+tocRow(toc, "Quick Reference", "", "ch");
+
+const mark = pages.length;
+for (const s of [frontOf("preface"), frontOf("contents")]) {
+  if ((frontStart + pages.length - mark) % 2 === 1) blankPage(null);
+  flowSection(s, { kind: "front", chap: { title: s.dataset.title } });
+}
+if ((frontStart + pages.length - mark) % 2 === 1) blankPage(null);   // chapter 1 on the right
+const moved = pages.splice(mark);
+const anchor = pages[frontStart];
+for (const p of moved) book.insertBefore(p, anchor);
+pages.splice(frontStart, 0, ...moved);
+
+// ---------- sides, heads, feet, tabs ----------
+const tabOrder = ["1", "2", "3", "4", "5", "6", "7", "8", "A", "B", "C", "D"];
+pages.forEach((p, i) => {
+  p.classList.remove("odd", "even");
+  p.classList.add(i % 2 === 0 ? "odd" : "even");
+  if (p.kind === "cover") return;
+  const chap = p.chap || {};
+  if (!chap.num && p.kind !== "back") p.label = ROMAN[i + 1];
+  const head = p.querySelector(".head"), foot = p.querySelector(".foot");
+  head.querySelector(".l").textContent = chap.num ?
+    (chap.appendix ? "Appendix " : "Chapter ") + chap.num + ". " + chap.title : (chap.title || "");
+  head.querySelector(".r").textContent = chap.part || "COS Version 1.00";
+  foot.querySelector(".label").textContent = p.label || "";
+  foot.querySelector(".ed").textContent = "CucsiCorp COS User's Guide";
+  if (p.kind === "opener" || p.kind === "blank" || p.kind === "notice") head.style.visibility = "hidden";
+  if (p.kind === "notice") foot.style.visibility = "hidden";
+  if (chap.num) {
+    p.classList.add("has-tab");
+    const t = p.querySelector(".tab");
+    t.textContent = chap.num;
+    t.style.top = (0.95 + tabOrder.indexOf(chap.num) * 0.6) + "in";
+  }
+});
+src.remove();
+window.MANUAL_READY = pages.length;
+</script>
+</body>
+</html>

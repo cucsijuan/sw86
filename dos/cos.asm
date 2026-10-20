@@ -1,4 +1,4 @@
-; dos86.asm - DOS86 kernel (DOS86.SYS)
+; cos.asm - COS kernel (COS.SYS), CucsiCorp OS
 ;
 ; A subset of MS-DOS 3.30 for the pc86 machine: INT 21h with the real
 ; function numbers, .COM and .EXE programs with a PSP and an environment,
@@ -4624,11 +4624,11 @@ upcase_far:
     call upcase
     retf
 
-msg_unsup_fn  db 13, 10, 'DOS86: INT 21h function AH=', 0
+msg_unsup_fn  db 13, 10, 'COS: INT 21h function AH=', 0
 msg_unsup_end db 'h is not supported', 13, 10, 0
-msg_unsup_25  db 13, 10, 'DOS86: INT 25h (absolute disk read) is not supported', 13, 10, 0
-msg_unsup_26  db 13, 10, 'DOS86: INT 26h (absolute disk write) is not supported', 13, 10, 0
-msg_unsup_cpm db 13, 10, 'DOS86: CALL 5 (CP/M entry) is not supported', 13, 10, 0
+msg_unsup_25  db 13, 10, 'COS: INT 25h (absolute disk read) is not supported', 13, 10, 0
+msg_unsup_26  db 13, 10, 'COS: INT 26h (absolute disk write) is not supported', 13, 10, 0
+msg_unsup_cpm db 13, 10, 'COS: CALL 5 (CP/M entry) is not supported', 13, 10, 0
 msg_ctrl_c    db '^C', 13, 10, 0
 msg_crlf      db 13, 10, 0
 msg_reading   db ' reading drive ', 0

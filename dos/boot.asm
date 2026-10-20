@@ -1,7 +1,7 @@
-; boot.asm - DOS86 boot sector
+; boot.asm - COS boot sector
 ;
 ; The BIOS loads this sector at 0000:7C00 and jumps to it with DL = the
-; drive. It reads the first FAT, looks for DOS86.SYS in the root directory
+; drive. It reads the first FAT, looks for COS.SYS in the root directory
 ; and loads it at 0070:0000 cluster by cluster, then jumps to it with DL
 ; still the boot drive. The diskette's own BPB replaces the zeros below
 ; when the sector is installed (fdimage boot).
@@ -173,8 +173,8 @@ print:
 .done:
     ret
 
-kernel_name db 'DOS86   SYS'
-msg_missing db 13, 10, 'DOS86.SYS is missing', 0
+kernel_name db 'COS     SYS'
+msg_missing db 13, 10, 'COS.SYS is missing', 0
 msg_error   db 13, 10, 'Disk error', 0
 msg_restart db 13, 10, 'Press any key to restart', 13, 10, 0
 

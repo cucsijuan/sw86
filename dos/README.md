@@ -1,0 +1,139 @@
+# DOS86 — a DOS for the pc86 machine
+
+A subset of MS-DOS 3.30 that boots from a diskette: the real `INT 21h` function numbers, `.COM` and `.EXE` programs with a PSP and an environment, memory control blocks, file handles on FAT12 diskettes in drives A: and B:, and a `COMMAND.COM` with the usual built-in commands. Programs written for DOS that stay within this subset run unchanged.
+
+Like the rest of the suite, what it implements behaves like DOS, and what it does not implement says so: a program that calls a missing `INT 21h` function is stopped with `DOS86: INT 21h function AH=xxh is not supported`, instead of getting something different.
+
+## Status
+
+| Check | Result |
+|---|---|
+| `tests/dostest.asm` on the machine: files across clusters and tracks, seek, truncate, find with wildcards, rename, attributes, duplicate handles, memory blocks, EXEC of a `.COM` (tail, return code) and of an `.EXE` (relocation, its own stack), IOCTL, FCB parsing, drive B:, free space | 20/20, on 1.44 MB and on 720 KB diskettes |
+| `tests/dos_test.py`: boot, commands, programs, Ctrl-C, a changed diskette, no diskette, write protection, a full diskette, the date and time, what the diskettes hold afterwards (read back on the host) | 26/26 |
+| `boot.asm`, `dos86.asm`, `command.asm` assembled with NASM 2.16 | identical bytes to asm86 |
+
+## Making a system diskette
+
+```
+make dos                        # build/dos86.img: DOS86.SYS and COMMAND.COM, bootable
+```
+
+By hand, with the pc86 tools:
+
+```
+asm86 dos/boot.asm -o boot.bin
+asm86 dos/dos86.asm -o DOS86.SYS
+asm86 dos/command.asm -o COMMAND.COM
+fdimage new dos86.img --label DOS86         # or --720k
+fdimage add dos86.img DOS86.SYS
+fdimage add dos86.img COMMAND.COM
+fdimage boot dos86.img boot.bin             # keeps the diskette's BPB
+fdimage add dos86.img GAME.COM              # and any programs
+```
+
+Then put the image in drive A: and power on: `pcrun --a dos86.img`, the workbench's diskette menu, or `fdd_insert()` in an engine. The BIOS loads the boot sector, the boot sector loads `DOS86.SYS`, and the kernel starts `COMMAND.COM`:
+
+```
+DOS86 version 1.00
+A:\>dir
+
+ Volume in drive A is DOS86
+ Directory of  A:\
+
+DOS86    SYS    11196   1-01-80  12:00a
+COMMAND  COM     5414   1-01-80  12:00a
+        2 File(s)   1440768 bytes free
+```
+
+## What is supported
+
+### INT 21h
+
+| AH | Function |
+|---|---|
+| `00h`, `4Ch`, `31h` | terminate (return code, Ctrl-C and critical-error types for `4Dh`), terminate and stay resident |
+| `01h`, `02h`, `06h`, `07h`, `08h`, `09h`, `0Ah`, `0Bh`, `0Ch` | console: keys (extended keys as 0 + scan code), characters, `$` strings, line input with Backspace and Esc, Ctrl-C |
+| `0Dh`, `0Eh`, `19h` | disk reset (writes everything pending), select drive, current drive |
+| `1Ah`, `2Fh` | set / get the DTA |
+| `25h`, `35h` | set / get an interrupt vector |
+| `29h` | parse a file name into an FCB |
+| `2Ah`–`2Dh` | date and time (day of the week included) |
+| `2Eh`, `54h` | verify flag |
+| `30h` | version: 3.30 |
+| `33h` | Ctrl-Break flag (`00h`, `01h`), boot drive (`05h`) |
+| `34h` | InDOS flag address |
+| `36h` | free space |
+| `37h` | switch character (`00h`: `/`) |
+| `38h` | country information (`00h`: United States) |
+| `3Bh`, `47h` | change / get the directory: the root |
+| `3Ch`, `5Bh`, `3Dh`, `3Eh`, `3Fh`, `40h`, `42h`, `68h` | create, create new, open, close, read, write (0 bytes truncates), seek, commit |
+| `41h`, `43h`, `56h`, `57h` | delete, attributes, rename, date and time of a file |
+| `44h` | IOCTL: `00h`/`01h` device information (raw mode for CON), `06h`/`07h` status, `08h` removable, `09h` remote, `0Eh` drive map |
+| `45h`, `46h` | duplicate a handle |
+| `48h`, `49h`, `4Ah`, `58h` | memory blocks (first fit) |
+| `4Bh` | load and run (`00h`): `.COM` and `.EXE` |
+| `4Dh` | return code of the last program |
+| `4Eh`, `4Fh` | find first / next, with `*` and `?` |
+| `50h`, `51h`, `62h` | set / get the current PSP |
+| `59h` | extended error |
+
+Devices: `CON` (cooked or raw) and `NUL`. Handles 0, 1 and 2 are the console; programs inherit their parent's handles.
+
+### Other interrupts
+
+| INT | |
+|---|---|
+| `20h`, `27h` | terminate, terminate and stay resident |
+| `22h` | where the parent continues (from the PSP) |
+| `23h` | Ctrl-C: ends the program; a program can install its own |
+| `24h` | critical errors: "Not ready reading drive B" / "Abort, Retry, Fail?"; a program can install its own |
+| `28h`, `2Ah`, `2Fh` | `IRET` (nothing installed) |
+| `29h` | fast console output |
+
+### COMMAND.COM
+
+`CD` `CHDIR` `CLS` `COPY` `DATE` `DEL` `DIR` (`/W`) `ECHO` `ERASE` `EXIT` `PAUSE` `REM` `REN` `RENAME` `SET` `TIME` `TYPE` `VER` `VOL`, `B:` to change drive, and programs: `NAME` runs `NAME.COM`, then `NAME.EXE`, from the current drive or the one given (`B:GAME`). `COPY`, `DEL` and `REN` take wildcards (`COPY *.COM B:`, `REN *.TXT *.BAK`). The command tail reaches the program as typed, with the first two arguments in the PSP's FCBs.
+
+## How it works
+
+- **Boot.** The boot sector (`boot.asm`) reads the first FAT, finds `DOS86.SYS` in the root directory and follows its cluster chain to `0070:0000`. The kernel sets its vectors, builds the memory chain up to the top that `INT 12h` reports, and runs `COMMAND.COM` with `4B00h`; if it ever ends, it runs it again.
+- **INT 21h.** The caller's registers are saved on its own stack and the kernel switches to its own. On EXEC the parent's stack goes into its PSP (`2Eh`); when the child ends, its handles are closed, its memory is freed, `INT 22h`–`24h` are put back and the parent continues after its `INT 21h` with its registers as they were.
+- **Diskettes.** Sectors are read a whole track at a time (one `INT 13h`, one turn of the diskette) into a track buffer. Writes change the buffer and are written back, one `INT 13h` for the changed sectors, before another track is read, when a file is closed or committed, at disk reset and when a program ends; a new directory entry is written at once, so a write-protected diskette fails on the create, as on DOS. The FAT of each drive is kept in memory and written to every copy. Before each access the change line (`INT 13h AH=16h`) says whether the diskette was changed; if so its BPB and FAT are read again.
+- **Errors.** `INT 13h` is tried three times; then `INT 24h` decides: Retry, Fail (the function returns error 83), or Abort (the program ends).
+
+### Memory
+
+```
+0000:0000  interrupt vectors, BIOS data
+0070:0000  DOS86.SYS: code and data (about 11 KB)
+           the kernel's PSP, the track buffer (9 KB), the FATs (2 x 4.5 KB), stacks
+           free memory, MCB chain: the master environment, COMMAND.COM, programs
+A000:0000  top of memory (640 KB)
+```
+
+## Not supported
+
+- Subdirectories: only the root directory (`MD`, `RD` and functions `39h`/`3Ah` say so; `3Bh` only goes to the root).
+- FCB file functions (`0Fh`–`28h`), absolute disk access (`INT 25h`/`26h`), `CALL 5`, `4B01h`/`4B03h`, and the other functions not listed: they stop the program with a message.
+- Batch files, redirection and pipes in COMMAND.COM; environment changes with `SET`.
+- `AUX`, `PRN`, `COMx`, `LPTx` and `CLOCK$`: the machine has no such hardware; opening them gives "access denied".
+- `INT 21h` is not reentrant: an `INT 24h` handler or a hardware interrupt cannot call it.
+- Ctrl-C is checked on console input only (`BREAK OFF`). A program's `INT 23h` handler must return with `IRET` (the function is retried) or not return.
+- An `.EXE` asking to be loaded high (minimum and maximum allocation 0) is loaded low.
+- A diskette changed while it has open files gets their data, as on DOS without the "Invalid disk change" check.
+- There is no real-time clock: the date starts at 1 January 1980 and the time at midnight; `DATE` and `TIME` set them.
+
+## Files
+
+```
+boot.asm             boot sector
+dos86.asm            kernel (DOS86.SYS)
+command.asm          command interpreter (COMMAND.COM)
+tests/dostest.asm    the kernel through INT 21h
+tests/child.asm      run by dostest: prints its tail, ends with code 42
+tests/testexe.asm    an .EXE written by hand, with a relocation
+tests/readline.asm   reads a line from standard input
+tests/diskfull.asm   writes until the diskette is full
+tests/unsup.asm      calls a function that is not supported
+../tests/dos_test.py builds diskettes and runs everything on the machine
+```

@@ -31,7 +31,7 @@ fdimage boot dos86.img boot.bin             # keeps the diskette's BPB
 fdimage add dos86.img GAME.COM              # and any programs
 ```
 
-Then put the image in drive A: and power on: `pcrun --a dos86.img`, the workbench's diskette menu, or `fdd_insert()` in an engine. The BIOS loads the boot sector, the boot sector loads `DOS86.SYS`, and the kernel starts `COMMAND.COM`:
+Then put the image in drive A: and power on: `pcrun --a dos86.img`, Open image… in the workbench, or `fdd_insert()` in an engine. The [workbench](https://cucsijuan.github.io/pc86/) also makes one by itself: the "DOS86 system diskette" button assembles these sources in the page and boots. The BIOS loads the boot sector, the boot sector loads `DOS86.SYS`, and the kernel starts `COMMAND.COM`:
 
 ```
 DOS86 version 1.00

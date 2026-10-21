@@ -83,7 +83,8 @@ def name83(path):
 def asm_sources(env):
     """Every source of sw86, assembled inside COS: the same bytes as asm86."""
     srcs = sorted(glob.glob(os.path.join(ROOT, "programs", "*", "*.asm")))
-    srcs += [os.path.join(ROOT, "dos", f) for f in ("boot.asm", "cos.asm", "command.asm", "edit.asm", "asm.asm")]
+    srcs += [os.path.join(ROOT, "dos", f) for f in ("boot.asm", "cos.asm", "command.asm", "edit.asm", "asm.asm",
+                                                         "basic.asm")]
     srcs += sorted(glob.glob(os.path.join(ROOT, "dos", "tests", "*.asm")))
     files, keys, jobs = [], "", []
     for i, src in enumerate(srcs):

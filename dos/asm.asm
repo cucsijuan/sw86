@@ -17,8 +17,9 @@
 ; every line until nothing changes, picking the shortest form of each jump,
 ; displacement and immediate, like NASM; the last pass writes the bytes.
 ;
-; Memory, above the program's own 64 KB: the names (64 KB), the output
-; (64 KB) and the tokens (the rest).
+; Memory, above the program's own 64 KB: the hash table of the names, the
+; output (64 KB), then the tokens growing up and the names growing down
+; from the top, each name on a paragraph of its own.
 org 100h
 
     jmp start
@@ -127,8 +128,8 @@ M_IN        equ 43
 M_OUT       equ 44
 M_SIMPLE    equ 45
 
-; A name (symbol or keyword) in the names segment
-S_NEXT      equ 0               ; next entry with the same hash
+; A name (symbol or keyword): its own segment, the entry at offset 0
+S_NEXT      equ 0               ; next entry with the same hash (segment)
 S_KIND      equ 2               ; 0 symbol, 1 keyword
 S_ID        equ 3               ; keyword: its number; symbol: SF_*
 S_VLO       equ 4               ; value (dword)
@@ -141,7 +142,7 @@ S_NAME      equ 13
 SF_DEFINED  equ 1               ; has a known value
 SF_LABEL    equ 2
 
-HASH_SIZE   equ 1024            ; buckets, at the start of the names segment
+HASH_SIZE   equ 1024            ; buckets, in their own segment
 
 ; Statement kinds
 K_EMPTY     equ 0
@@ -210,11 +211,12 @@ start:
     mov ax, cs                      ; the segments above the program
     add ax, 1000h
     mov [sym_seg], ax
-    add ax, 1000h
+    add ax, HASH_SIZE * 2 / 16
     mov [out_seg], ax
     add ax, 1000h
     mov [ir_seg], ax
     mov bx, [2]                     ; the top of our memory, from the PSP
+    mov [name_top], bx
     sub bx, 400h                    ; room for the longest line
     mov [ir_limit], bx
     cmp ax, bx
@@ -555,20 +557,17 @@ put_symbol:
     push ax
     push cx
     push si
-    push ds
-    mov si, ax
-    mov ds, [cs:sym_seg]
-    mov cl, [si + S_LEN]
+    push es
+    mov es, ax
+    mov cl, [es:S_LEN]
     xor ch, ch
-    add si, S_NAME
+    mov si, S_NAME
 .loop:
-    lodsb
-    pop ds                          ; putc works on our segment
+    mov al, [es:si]
+    inc si
     call putc
-    push ds
-    mov ds, [cs:sym_seg]
     loop .loop
-    pop ds
+    pop es
     pop si
     pop cx
     pop ax
@@ -709,7 +708,6 @@ init_names:
     xor ax, ax
     rep stosw
     pop es
-    mov word [sym_free], HASH_SIZE * 2
     mov si, keywords
     xor bx, bx                      ; keyword number
 .next:
@@ -744,7 +742,7 @@ init_names:
 
 ; Looks up namebuf (namelen characters), and enters it as a symbol if it
 ; is not there. Keywords match in any case, symbols exactly.
-; Returns ES = names segment, DI = the entry. Changes AX, BX, CX, DX, SI.
+; Returns ES = the entry, DI = 0. Changes AX, BX, CX, DX, SI.
 find_name:
     mov es, [sym_seg]
     mov si, namebuf
@@ -772,10 +770,12 @@ find_name:
     shl ax, 1
     mov [hash_slot], ax
     mov bx, ax
-    mov di, [es:bx]
+    mov ax, [es:bx]
 .entry:
-    or di, di
+    or ax, ax
     jz .new
+    mov es, ax
+    xor di, di
     mov al, [es:di + S_LEN]
     cmp al, [namelen]
     jne .other
@@ -808,25 +808,32 @@ find_name:
 .kw_differ:
     pop di
 .other:
-    mov di, [es:di + S_NEXT]
+    mov ax, [es:S_NEXT]
     jmp .entry
 .new:
-    mov di, [sym_free]
-    mov ax, [namelen]
-    add ax, S_NAME
-    add ax, di
-    jc .full
-    cmp ax, 0FFF0h
-    jb .room
-.full:
-    mov si, m_names_full
+    mov ax, [namelen]               ; paragraphs below the last name
+    add ax, S_NAME + 15
+    mov cl, 4
+    shr ax, cl
+    mov bx, [name_top]
+    sub bx, ax
+    mov ax, [ir_cur_seg]            ; above the tokens and a line
+    add ax, 400h
+    cmp bx, ax
+    ja .room
+    mov si, m_memory
     jmp fatal
 .room:
-    mov [sym_free], ax
-    mov bx, [hash_slot]
-    mov ax, [es:bx]
+    mov [name_top], bx
+    lea ax, [bx - 400h]
+    mov [ir_limit], ax
+    mov es, [sym_seg]
+    mov si, [hash_slot]
+    mov ax, [es:si]
+    mov [es:si], bx
+    mov es, bx
+    xor di, di
     mov [es:di + S_NEXT], ax
-    mov [es:bx], di
     xor ax, ax
     mov [es:di + S_KIND], ax        ; kind, flags
     mov [es:di + S_VLO], ax
@@ -1189,7 +1196,7 @@ lex_name:
     mov di, namebuf
     rep movsb
     call find_name
-    mov ax, di
+    mov ax, es
     mov bl, [es:di + S_KIND]
     mov bh, [es:di + S_ID]
     push ds
@@ -1496,8 +1503,8 @@ lex_finish:
     mov ax, [si + TK_LO]            ; ..name labels do not count
     push es
     push di
-    mov es, [sym_seg]
-    mov di, ax
+    mov es, ax
+    xor di, di
     cmp byte [es:di + S_NAME], '.'
     pop di
     pop es
@@ -1580,8 +1587,8 @@ resolve_local:
     jz .own
     push si
     push ds
-    mov si, ax
-    mov ds, [sym_seg]
+    mov ds, ax
+    xor si, si
     mov cl, [si + S_LEN]
     add si, S_NAME
     rep movsb
@@ -1604,7 +1611,7 @@ resolve_local:
     mov [namelen], ax
     rep movsb
     call find_name
-    mov ax, di
+    mov ax, es
     push ds
     pop es
     pop di
@@ -2176,10 +2183,12 @@ do_equ:
 ; def_label = SF_LABEL or 0
 define_sym:
     push es
-    mov es, [sym_seg]
+    push di
+    mov es, bx
+    xor di, di
     mov si, ax
     mov al, [pass]
-    cmp al, [es:bx + S_PASS]
+    cmp al, [es:di + S_PASS]
     mov ax, si
     jne .new_pass
     call err_begin
@@ -2190,40 +2199,42 @@ define_sym:
     call put_symbol
     mov si, m_defined_on
     call puts
-    mov ax, [es:bx + S_LINE]
+    mov ax, [es:di + S_LINE]
     xor dx, dx
     call put_unsigned
     call err_end
 .done:
+    pop di
     pop es
     ret
 .new_pass:
-    cmp ax, [es:bx + S_VLO]
+    cmp ax, [es:di + S_VLO]
     jne .changed
-    cmp dx, [es:bx + S_VHI]
+    cmp dx, [es:di + S_VHI]
     jne .changed
-    cmp cl, [es:bx + S_RELOC]
+    cmp cl, [es:di + S_RELOC]
     jne .changed
-    test byte [es:bx + S_ID], SF_DEFINED
+    test byte [es:di + S_ID], SF_DEFINED
     jz .changed
     or ch, ch
     jz .stored
 .changed:
     mov byte [changed], 1
 .stored:
-    mov [es:bx + S_VLO], ax
-    mov [es:bx + S_VHI], dx
-    mov [es:bx + S_RELOC], cl
+    mov [es:di + S_VLO], ax
+    mov [es:di + S_VHI], dx
+    mov [es:di + S_RELOC], cl
     mov al, [def_label]
     or ch, ch
     jnz .unknown
     or al, SF_DEFINED
 .unknown:
-    mov [es:bx + S_ID], al
+    mov [es:di + S_ID], al
     mov al, [pass]
-    mov [es:bx + S_PASS], al
+    mov [es:di + S_PASS], al
     mov ax, [cur_line]
-    mov [es:bx + S_LINE], ax
+    mov [es:di + S_LINE], ax
+    pop di
     pop es
     ret
 
@@ -2573,8 +2584,8 @@ section_number:
     push si
     push di
     push es
-    mov es, [sym_seg]
-    mov di, [bx + TK_LO]
+    mov es, [bx + TK_LO]
+    xor di, di
     mov si, section_names
     xor ax, ax
 .next:
@@ -2982,12 +2993,12 @@ ex_primary:
     add word [ex_pos], TK_SIZE
     mov bx, [si + TK_LO]
     push es
-    mov es, [sym_seg]
-    test byte [es:bx + S_ID], SF_DEFINED
+    mov es, bx
+    test byte [es:S_ID], SF_DEFINED
     jz .undefined
-    mov ax, [es:bx + S_VLO]
-    mov dx, [es:bx + S_VHI]
-    mov bl, [es:bx + S_RELOC]
+    mov ax, [es:S_VLO]
+    mov dx, [es:S_VHI]
+    mov bl, [es:S_RELOC]
     xor bh, bh
     pop es
     ret
@@ -5497,7 +5508,6 @@ m_cannot_open   db 'cannot open ', 0
 m_nothing       db 0
 m_cannot_write  db 'cannot write ', 0
 m_read_error    db 'cannot read the source', 0
-m_names_full    db 'too many names', 0
 m_many_lines    db 'too many lines', 0
 m_long_line     db 'line too long', 0
 m_colon         db ': ', 0
@@ -5641,11 +5651,11 @@ punct_chars_end:
 
 ; ---------- variables ----------
 
-sym_seg         dw 0                ; segments: names, output, tokens
+sym_seg         dw 0                ; segments: name hash, output, tokens
 out_seg         dw 0
 ir_seg          dw 0
 ir_limit        dw 0                ; the tokens must stay below it
-sym_free        dw 0                ; the next free byte for a name
+name_top        dw 0                ; the last name made, top of memory first
 hash_slot       dw 0
 namelen         dw 0
 src_handle      dw 0

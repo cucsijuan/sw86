@@ -335,7 +335,7 @@ A:\&gt;<b>dir</b>
 
 COS      SYS    12902   1-01-80  12:00a
 COMMAND  COM     7035   1-01-80  12:00a
-ASM      COM    17184   1-01-80  12:00a
+ASM      COM    17945   1-01-80  12:00a
 EDIT     COM     5410   1-01-80  12:00a
 HELLO    ASM      299   1-01-80  12:00a
 HELLO    COM       31   1-01-80  12:00a
@@ -344,7 +344,7 @@ FACTOR   COM       81   1-01-80  12:00a
 SORT     COM      124   1-01-80  12:00a
 README   TXT       94   1-01-80  12:00a
 LETTER   TXT       47   1-01-80  12:00a
-       11 File(s)   1410560 bytes free
+       11 File(s)   1409536 bytes free
 </pre>
 <p>Each line shows a file's name, its extension, its size in bytes, and the date and time it was last written. The last line tells you how much room is left on the diskette.</p>
 
@@ -535,7 +535,7 @@ A:\&gt;<b>dir b:</b>
 
 COS      SYS    12902   1-01-80  12:00a
 COMMAND  COM     7035   1-01-80  12:00a
-ASM      COM    17184   1-01-80  12:00a
+ASM      COM    17945   1-01-80  12:00a
 EDIT     COM     5410   1-01-80  12:00a
 HELLO    ASM      299   1-01-80  12:00a
 HELLO    COM       31   1-01-80  12:00a
@@ -700,7 +700,7 @@ A:\&gt;<b>dir *.txt</b>
 
 README   TXT       94   1-01-80  12:00a
 LETTER   TXT       47   1-01-80  12:00a
-        2 File(s)   1410560 bytes free
+        2 File(s)   1409536 bytes free
 
 A:\&gt;<b>dir /w</b>
 
@@ -710,7 +710,7 @@ A:\&gt;<b>dir /w</b>
 COS      SYS    COMMAND  COM    ASM      COM    EDIT     COM    HELLO    ASM
 HELLO    COM    NUMBERS  COM    FACTOR   COM    SORT     COM    README   TXT
 LETTER   TXT
-       11 File(s)   1410560 bytes free
+       11 File(s)   1409536 bytes free
 </pre></dd>
 </dl>
 </div>
@@ -753,7 +753,7 @@ A:\&gt;<b>dir</b>
 
 COS      SYS    12902   1-01-80  12:00a
 COMMAND  COM     7035   1-01-80  12:00a
-ASM      COM    17184   1-01-80  12:00a
+ASM      COM    17945   1-01-80  12:00a
 EDIT     COM     5410   1-01-80  12:00a
 HELLO    ASM      299   1-01-80  12:00a
 HELLO    COM       31   1-01-80  12:00a
@@ -1880,7 +1880,7 @@ B:\&gt;<b>a:asm command.asm</b>
 COMMAND.COM: 7035 bytes
 
 B:\&gt;<b>a:asm asm.asm</b>
-ASM.COM: 17184 bytes
+ASM.COM: 17945 bytes
 
 B:\&gt;<b>dir</b>
 
@@ -1894,7 +1894,7 @@ ASM      ASM   125177   1-01-80  12:00a
 EDIT     ASM    40762   1-01-80  12:00a
 COS      SYS    12902   1-01-80  12:01a
 COMMAND  COM     7035   1-01-80  12:01a
-ASM      COM    17184   1-01-80  12:02a
+ASM      COM    17945   1-01-80  12:02a
         8 File(s)   1095680 bytes free
 
 B:\&gt;
@@ -1938,7 +1938,7 @@ B:\&gt;
 <tr><td>^</td><td>Exclusive OR</td></tr>
 <tr><td>|</td><td>OR</td></tr>
 </table>
-<p>Two symbols have a special meaning: <b>$</b> is the address of the start of the current line, and <b>$$</b> the address where the program starts (the ORG). So <b>$ - message</b> is the number of bytes from the label message to here, and <b>times 510 - ($ - $$) db 0</b> fills a boot sector up to byte 510.</p>
+<p>Two symbols have a special meaning: <b>$</b> is the address of the start of the current line, and <b>$$</b> the address where the current section starts (for .text, the ORG). So <b>$ - message</b> is the number of bytes from the label message to here, and <b>times 510 - ($ - $$) db 0</b> fills a boot sector up to byte 510.</p>
 
 <h3>Directives</h3>
 <table class="ref wrap">
@@ -1949,6 +1949,7 @@ B:\&gt;
 <tr><td>RESB <var>n</var>, RESW <var>n</var></td><td><var>n</var> bytes or words of zeros.</td></tr>
 <tr><td><var>name</var> EQU <var>value</var></td><td>Gives a name to a number. The name has no colon. <b>WIDTH equ 80</b></td></tr>
 <tr><td>TIMES <var>n</var> <var>line</var></td><td>Repeats an instruction or DB/DW <var>n</var> times. <b>times 16 db 0</b></td></tr>
+<tr><td>SECTION .text<br>SECTION .data<br>SECTION .bss</td><td>What follows goes in that section; SEGMENT is the same. A program can go from one to another as often as it likes. In the output file the code of .text comes first, then .data, starting at the next address that is a multiple of 4; .bss comes after .data but is not in the file at all: its labels have addresses, and only RESB and RESW go in it. It is the place for large buffers, which then take no room on the diskette.</td></tr>
 <tr><td>BITS 16, CPU 8086</td><td>Say that the program is for the 16-bit 8086. They are accepted and change nothing.</td></tr>
 </table>
 
@@ -1978,7 +1979,7 @@ B:\&gt;
 <p>The decimal arithmetic instructions (AAA, AAD, AAM, AAS, DAA, DAS), XLAT, LOCK, WAIT and ESC are not supported by the pc86 processor, and ASM rejects them, as it rejects the instructions of later processors (PUSHA, ENTER, MOVZX...).</p>
 
 <h3>What ASM Does Not Have</h3>
-<p>ASM Version 1.00 has no macros, no INCLUDE, no conditional assembly and no sections: a program is one source file, assembled into one segment, like a .COM file. DD and the other directives for larger data are not supported; use DB and DW.</p>
+<p>ASM Version 1.00 has no macros, no INCLUDE and no conditional assembly: a program is one source file, assembled into one segment, like a .COM file. Only the .text, .data and .bss sections exist, without attributes (ALIGN=, VSTART=). DD and the other directives for larger data are not supported; use DB and DW.</p>
 
 <h2>ASM Messages</h2>
 <p>These are the messages you are most likely to see. Each error message is preceded by the name of the source file and the line, as shown above.</p>
@@ -1998,6 +1999,7 @@ B:\&gt;
 <tr><td>instruction not supported on this machine: <var>name</var></td><td>The pc86 processor does not run it.</td></tr>
 <tr><td>invalid number: <var>text</var></td><td>A word that starts with a digit is not a number: a hexadecimal number needs its h.</td></tr>
 <tr><td>unterminated string (missing ')</td><td>The quote that ends the string is missing.</td></tr>
+<tr><td>only RESB and RESW go in .bss</td><td>.bss is not in the file, so it can hold no code or data, only room.</td></tr>
 <tr><td>the program does not fit in a 64 KB segment</td><td>The program is too large for one segment.</td></tr>
 <tr><td><var>n</var> errors</td><td>The program has errors; no file was written.</td></tr>
 <tr><td>ASM: cannot open <var>name</var></td><td>There is no source file with that name.</td></tr>

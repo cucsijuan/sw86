@@ -12,6 +12,12 @@ Software for the [pc86](../pc86) virtual PC that is not part of any hardware
 - `programs/`: one folder per program. Copied from the pc86 examples; some
   may need pc86 devices (e.g. VGA, PIT).
 
+## Roadmap
+
+- An object format and a linker for COS (as NASM's `-f obj` with LINK):
+  programs built from several source files, and `.EXE` programs larger
+  than one 64 KB segment, with their relocations written by the linker.
+
 Build: `make -C ../pc86/vm86`, `make -C ../pc86/fdc86` and `make -C ../pc86/pc86`
 once for `asm86`, `fdimage` and `pcrun`, then:
 

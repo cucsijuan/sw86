@@ -139,6 +139,8 @@ ERRORS = [
     ("mov ax, eax", 1, "32-bit register"),
     ("lds si, bx", 1, "far pointer in memory"),
     ("jmp far 0:7C00h", 1, "already far"),
+    ("section .bss\nnop", 2, "only RESB and RESW"),
+    ("section code", 1, "only the .text, .data and .bss"),
 ]
 
 

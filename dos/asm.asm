@@ -7,7 +7,7 @@
 ; (ASM COS.ASM COS.SYS). The dialect is the one of the pc86 asm86
 ; assembler and gives the same bytes: every 8086 instruction the machine
 ; runs, labels and .local labels, EQU, DB/DW/RESB/RESW, TIMES, ORG, $ and
-; $$, expressions with + - * / % // %% << >> & | ^ ~ ! and parentheses,
+; $$, the .text, .data and .bss sections, expressions with + - * / % // %% << >> & | ^ ~ ! and parentheses,
 ; BYTE/WORD/SHORT/NEAR/FAR, segment overrides and REP prefixes. It is
 ; written in that same dialect, so it assembles itself.
 ;
@@ -154,6 +154,13 @@ K_EQU       equ 6
 K_ORG       equ 7
 K_IGNORE    equ 8
 K_ERROR     equ 9
+K_SECTION   equ 10
+
+; Sections: .text, then .data and .bss from the next multiple of 4; .bss
+; takes addresses but no room in the output
+SEC_TEXT    equ 0
+SEC_DATA    equ 1
+SEC_BSS     equ 2
 
 ; An operand (32 bytes)
 O_TYPE      equ 0               ; OT_*
@@ -1501,6 +1508,14 @@ lex_finish:
     je .write
     cmp byte [si + TK_TYPE], T_LOCAL
     jne .resolved
+    call after_section              ; SECTION .data: the name as it is
+    jne .local
+    push word [last_global]
+    mov word [last_global], 0
+    call resolve_local
+    pop word [last_global]
+    jmp .resolved
+.local:
     call resolve_local
 .resolved:
     add si, TK_SIZE
@@ -1598,6 +1613,30 @@ resolve_local:
     mov [si + TK_LO], ax
     ret
 
+; SI = a token of raw[]: ZF = 1 if the token before it is SECTION or SEGMENT
+after_section:
+    cmp si, raw
+    je .no
+    cmp byte [si - TK_SIZE + TK_TYPE], T_KW
+    jne .ret
+    push ax
+    push bx
+    mov al, [si - TK_SIZE + TK_SUB]
+    xor ah, ah
+    mov bx, ax
+    shl bx, 1
+    mov bx, [kw_ptr + bx]
+    mov al, [bx]
+    add bx, ax
+    cmp word [bx + 1], C_DIR | (D_SECTION << 8)
+    pop bx
+    pop ax
+.ret:
+    ret
+.no:
+    cmp si, 0                       ; ZF = 0
+    ret
+
 ; AL = keyword number: AL = its flags
 kw_flags:
     push bx
@@ -1668,6 +1707,13 @@ assemble:
     mov byte [final], 1
     mov word [out_len], 0
     mov word [out_len + 2], 0
+    mov es, [out_seg]
+    xor di, di
+    mov cx, 8000h
+    xor ax, ax
+    rep stosw
+    push ds
+    pop es
     call run_pass
     cmp word [err_count], 0
     jne .done
@@ -1692,6 +1738,27 @@ assemble:
     ret
 
 run_pass:
+    mov ax, [org_val]               ; .text, .data, .bss
+    xor dx, dx
+    mov [sec_base], ax
+    mov [sec_base + 2], dx
+    add ax, [sec_size]
+    adc dx, [sec_size + 2]
+    call align4
+    mov [sec_base + 4], ax
+    mov [sec_base + 6], dx
+    add ax, [sec_size + 4]
+    adc dx, [sec_size + 6]
+    call align4
+    mov [sec_base + 8], ax
+    mov [sec_base + 10], dx
+    mov si, sec_base
+    mov di, sec_addr
+    mov cx, 6
+    push ds
+    pop es
+    rep movsw
+    mov byte [cur_sec], SEC_TEXT
     mov ax, [org_val]
     mov [addr_lo], ax
     mov word [addr_hi], 0
@@ -1721,6 +1788,25 @@ run_pass:
     cmp byte [abort], 0
     je .line
 .end:
+    call sec_save                   ; the size of each section changed?
+    xor bx, bx
+.size:
+    mov ax, [sec_addr + bx]
+    mov dx, [sec_addr + bx + 2]
+    sub ax, [sec_base + bx]
+    sbb dx, [sec_base + bx + 2]
+    cmp ax, [sec_size + bx]
+    jne .size_changed
+    cmp dx, [sec_size + bx + 2]
+    je .size_same
+.size_changed:
+    mov [sec_size + bx], ax
+    mov [sec_size + bx + 2], dx
+    mov byte [changed], 1
+.size_same:
+    add bx, 4
+    cmp bx, 12
+    jb .size
     mov ax, [addr_lo]               ; the size of the program changed?
     mov dx, [addr_hi]
     cmp ax, [prev_end]
@@ -1732,6 +1818,30 @@ run_pass:
     mov [prev_end], ax
     mov [prev_end + 2], dx
 .end_same:
+    ret
+
+; DX:AX up to a multiple of 4
+align4:
+    add ax, 3
+    adc dx, 0
+    and ax, 0FFFCh
+    ret
+
+; BX = 4 * the current section
+sec_index:
+    mov bl, [cur_sec]
+    xor bh, bh
+    shl bx, 1
+    shl bx, 1
+    ret
+
+; The address reached in the current section is kept
+sec_save:
+    call sec_index
+    mov ax, [addr_lo]
+    mov [sec_addr + bx], ax
+    mov ax, [addr_hi]
+    mov [sec_addr + bx + 2], ax
     ret
 
 ; The next line of tokens from memory into tk[] (strings and the error
@@ -1879,6 +1989,18 @@ statement:
     jne .not_equ
     jmp do_equ
 .not_equ:
+    cmp al, K_SECTION
+    jne .not_section
+    call sec_save                   ; to the other section
+    mov al, [st_section]
+    mov [cur_sec], al
+    call sec_index
+    mov ax, [sec_addr + bx]
+    mov [addr_lo], ax
+    mov ax, [sec_addr + bx + 2]
+    mov [addr_hi], ax
+    jmp .done
+.not_section:
     cmp al, K_INSTR
     jae .skip14
     jmp .done
@@ -1887,6 +2009,14 @@ statement:
     jbe .skip13
     jmp .done
 .skip13:
+    cmp byte [cur_sec], SEC_BSS
+    jne .in_file
+    cmp al, K_RESB
+    jae .in_file
+    mov si, m_bss_only
+    call error
+    jmp .done
+.in_file:
     mov word [reps], 1              ; code and data, TIMES times
     mov word [reps + 2], 0
     mov si, [st_times_beg]
@@ -1900,7 +2030,13 @@ statement:
 .repeat:
     mov ax, [reps]
     or ax, [reps + 2]
-    jz .done
+    jnz .skip1
+    jmp .done
+.skip1:
+    mov ax, [addr_lo]               ; the bytes go at this address
+    mov [wpos], ax
+    mov ax, [addr_hi]
+    mov [wpos + 2], ax
     xor ax, ax
     xor dx, dx
     mov cl, [st_kind]
@@ -2000,6 +2136,11 @@ do_org:
     mov si, m_org_range
     jmp .error
 .in_range:
+    cmp byte [cur_sec], SEC_TEXT
+    je .in_text
+    mov si, m_org_text
+    jmp .error
+.in_text:
     mov cx, [cur_line]
     mov [org_set], cx
     cmp ax, [org_val]
@@ -2009,6 +2150,8 @@ do_org:
 .same:
     mov [addr_lo], ax
     mov word [addr_hi], 0
+    mov [sec_base], ax
+    mov word [sec_base + 2], 0
 .done:
     jmp statement.done
 .error:
@@ -2214,6 +2357,8 @@ parse_stmt:
     je .times_bad
     cmp al, K_ORG
     je .times_bad
+    cmp al, K_SECTION
+    je .times_bad
     cmp al, K_IGNORE
     jne .times_ok
 .times_bad:
@@ -2317,8 +2462,42 @@ parse_stmt:
     mov byte [st_kind], K_ERROR
     ret
 .section:
-    mov si, m_section
+    lea bx, [si + TK_SIZE]          ; its name: .text, .data or .bss
+    cmp bx, [tk_end]
+    jae .section_unnamed
+    mov al, [bx + TK_TYPE]
+    cmp al, T_KW
+    je .section_other
+    cmp al, T_SYM
+    jne .section_unnamed
+    call section_number
+    jc .section_other
+    lea cx, [bx + TK_SIZE]
+    cmp cx, [tk_end]
+    jne .section_attributes
+    mov [st_section], al
+    mov byte [st_kind], K_SECTION
+    ret
+.section_unnamed:
+    mov si, m_section_name
     jmp stmt_error
+.section_attributes:
+    mov si, m_section_attr
+    jmp stmt_error
+.section_other:
+    call err_begin
+    jc .section_done
+    mov si, m_section_other
+    call puts
+    mov al, 27h
+    call putc
+    call put_token
+    mov al, 27h
+    call putc
+    call err_end
+.section_done:
+    mov byte [st_kind], K_ERROR
+    ret
 .mnemonic:
     mov [st_mnem], si
     mov byte [st_kind], K_INSTR
@@ -2388,27 +2567,64 @@ split_operands:
 .done:
     ret
 
+; BX = a T_SYM token: AL = the section it names (CF if none)
+section_number:
+    push cx
+    push si
+    push di
+    push es
+    mov es, [sym_seg]
+    mov di, [bx + TK_LO]
+    mov si, section_names
+    xor ax, ax
+.next:
+    mov cl, [si]
+    or cl, cl
+    jz .none
+    xor ch, ch
+    cmp cl, [es:di + S_LEN]
+    jne .skip
+    push si
+    push di
+    inc si
+    add di, S_NAME
+    repe cmpsb
+    pop di
+    pop si
+    je .found
+.skip:
+    mov cl, [si]
+    xor ch, ch
+    add si, cx
+    inc si
+    inc ax
+    jmp .next
+.none:
+    stc
+    jmp .ret
+.found:
+    clc
+.ret:
+    pop es
+    pop di
+    pop si
+    pop cx
+    ret
+
+section_names db 5, '.text', 5, '.data', 4, '.bss', 0
+
 ; ---------- output ----------
 
-; CX bytes at SI, on the last pass
+; CX bytes at SI, on the last pass, at address wpos (not for .bss)
 out_bytes:
     cmp byte [final], 0
     je .done
     jcxz .done
-    push es
-    mov es, [out_seg]
 .loop:
-    cmp word [out_len + 2], 0
-    jne .skip
-    mov bx, [out_len]
     mov al, [si]
-    mov [es:bx], al
-.skip:
+    call out_byte
     inc si
-    add word [out_len], 1
-    adc word [out_len + 2], 0
     loop .loop
-    pop es
 .done:
     ret
 
@@ -2418,27 +2634,53 @@ out_zero:
     je .done
     push ax
     push dx
-    push es
-    mov es, [out_seg]
 .loop:
     mov bx, ax
     or bx, dx
     jz .end
-    cmp word [out_len + 2], 0
-    jne .skip
-    mov bx, [out_len]
-    mov byte [es:bx], 0
-.skip:
-    add word [out_len], 1
-    adc word [out_len + 2], 0
+    push ax
+    xor al, al
+    call out_byte
+    pop ax
     sub ax, 1
     sbb dx, 0
     jmp .loop
 .end:
-    pop es
     pop dx
     pop ax
 .done:
+    ret
+
+; AL at address wpos of the output (64 KB from ORG), and wpos moves on
+out_byte:
+    push bx
+    push dx
+    push es
+    cmp byte [cur_sec], SEC_BSS
+    je .next
+    mov bx, [wpos]
+    mov dx, [wpos + 2]
+    sub bx, [org_val]
+    sbb dx, 0
+    jnz .next                       ; past 64 KB: reported
+    mov es, [out_seg]
+    mov [es:bx], al
+    add bx, 1                       ; the output is this long at least
+    adc dx, 0
+    cmp dx, [out_len + 2]
+    jb .next
+    ja .longer
+    cmp bx, [out_len]
+    jbe .next
+.longer:
+    mov [out_len], bx
+    mov [out_len + 2], dx
+.next:
+    add word [wpos], 1
+    adc word [wpos + 2], 0
+    pop es
+    pop dx
+    pop bx
     ret
 
 ; db / dw: values and strings separated by commas. AX = the size.
@@ -2784,8 +3026,9 @@ ex_primary:
     cmp al, T_DOLLAR2
     jne .not_dollar2
     add word [ex_pos], TK_SIZE
-    mov ax, [org_val]
-    xor dx, dx
+    call sec_index
+    mov ax, [sec_base + bx]
+    mov dx, [sec_base + bx + 2]
     mov bx, 1
     ret
 .not_dollar2:
@@ -5300,7 +5543,11 @@ m_equ_name      db 'EQU needs a name in front: WIDTH equ 320', 0
 m_bits          db 'this machine only has 16-bit mode (bits 16)', 0
 m_cpu           db 'this machine is an 8086 (cpu 8086)', 0
 m_other_data    db "' is not supported; use db/dw (bytes and words)", 0
-m_section       db 'SECTION is not needed: the program is a single segment, like a .COM', 0
+m_section_name  db 'SECTION needs a name: .text, .data or .bss', 0
+m_section_other db 'only the .text, .data and .bss sections are supported, not ', 0
+m_section_attr  db 'section attributes (align=, start=, vstart=...) are not supported', 0
+m_bss_only      db 'only RESB and RESW go in .bss (it takes no room in the file)', 0
+m_org_text      db 'ORG goes in the .text section', 0
 m_many_operands db 'too many operands', 0
 m_missing_operand db 'missing operand', 0
 m_db_empty      db 'db needs at least one value', 0
@@ -5389,7 +5636,7 @@ s_cs            db 'cs', 0
 s_ss            db 'ss', 0
 s_ds            db 'ds', 0
 
-punct_chars     db ',[]:()+-*/%|^&~!'
+punct_chars     db ',[]:()+-*/%|^&~!='
 punct_chars_end:
 
 ; ---------- variables ----------
@@ -5434,6 +5681,11 @@ org_set         dw 0                ; the line of the ORG
 addr_lo         dw 0                ; the current address
 addr_hi         dw 0
 prev_end        dw 0, 0
+cur_sec         db 0                ; SEC_TEXT, SEC_DATA, SEC_BSS
+sec_base        dw 0, 0, 0, 0, 0, 0 ; where each section starts (dwords)
+sec_addr        dw 0, 0, 0, 0, 0, 0 ; how far each has got in this pass
+sec_size        dw 0, 0, 0, 0, 0, 0 ; their sizes in the last pass
+wpos            dw 0, 0             ; where the next byte goes
 out_len         dw 0, 0
 cur_line        dw 0
 rd_seg          dw 0                ; where the passes read the next line
@@ -5450,6 +5702,7 @@ line_start      dw 0, 0             ; $
 st_start        dw 0, 0
 st_label        dw 0                ; the statement: label token or 0
 st_kind         db 0
+st_section      db 0
 st_times_beg    dw 0
 st_times_end    dw 0
 st_rep          db 0

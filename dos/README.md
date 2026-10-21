@@ -25,7 +25,7 @@ A:\>hello
 Hello from the 8086!
 ```
 
-- **ASM** (`asm.asm`): `ASM source[.ASM] [output]`. The asm86 dialect (a NASM subset for the 8086: labels and .local labels, EQU, DB/DW/RESB/RESW, TIMES, ORG, `$`/`$$`, 32-bit expressions, BYTE/WORD/SHORT/NEAR/FAR, segment overrides, REP), with the same passes and choices as asm86, so the bytes are identical; errors are shown as `NAME.ASM(line): message`, with asm86's messages. It reads the source a piece at a time and keeps it as tokens in memory, so sources larger than 64 KB work; it assembles COS, COMMAND.COM, EDIT and itself. At the machine's 4.77 MHz, HELLO takes about a second and COS.SYS under a minute.
+- **ASM** (`asm.asm`): `ASM source[.ASM] [output]`. The asm86 dialect (a NASM subset for the 8086: labels and .local labels, EQU, DB/DW/RESB/RESW, TIMES, ORG, `$`/`$$`, the `.text`/`.data`/`.bss` sections, 32-bit expressions, BYTE/WORD/SHORT/NEAR/FAR, segment overrides, REP), with the same passes and choices as asm86, so the bytes are identical; errors are shown as `NAME.ASM(line): message`, with asm86's messages. It reads the source a piece at a time and keeps it as tokens in memory, so sources larger than 64 KB work; it assembles COS, COMMAND.COM, EDIT and itself. At the machine's 4.77 MHz, HELLO takes about a second and COS.SYS under a minute.
 - **EDIT** (`edit.asm`): `EDIT file`. Arrows, Home/End, PgUp/PgDn, Ctrl+Home/End, Ctrl+arrows; Enter keeps the indentation; Ins; Tab (columns of 4); Ctrl+Y cuts lines, F9 pastes them; F3/F4 find (any case), F5 goes to a line; F2 saves through NAME.$$$ and keeps NAME.BAK; Esc leaves. Lines live one by one in memory above the program (up to 16000 lines of 1000 characters, about 450 KB), and are compacted when memory fills; F2 always works, even out of memory.
 
 ## Making a system diskette
@@ -63,10 +63,10 @@ A:\>dir
 
 COS      SYS    12902   1-01-80  12:00a
 COMMAND  COM     7035   1-01-80  12:00a
-ASM      COM    17184   1-01-80  12:00a
+ASM      COM    17945   1-01-80  12:00a
 EDIT     COM     5410   1-01-80  12:00a
 HELLO    ASM      299   1-01-80  12:00a
-        5 File(s)   1396736 bytes free
+        5 File(s)   1395712 bytes free
 ```
 
 The manual, [doc/COS-Manual.pdf](../doc/COS-Manual.pdf), tells users how to work with COS and programmers how to write for it (every command and message, the INT 21h reference, the PSP, memory, the diskette format). Its source is [doc/manual.html](../doc/manual.html); `python3 doc/build.py` prints it again with Edge, Chrome or Chromium.

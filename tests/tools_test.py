@@ -288,14 +288,16 @@ def edit_tests(env):
         print("FAIL EDIT the old file kept as .BAK")
     # out of memory: a file that nearly fills it, every line grown; when the
     # memory runs out the cursor stays on its line, and F2 still saves it all
-    # (the largest file that still loads: a few lines less leaves less free
+    # (the largest file that still loads, found by trying: Esc leaves EDIT,
+    # or cancels the line if EDIT refused the file, and Enter brings the
+    # prompt back; a few lines less leaves less free
     # memory than the growth needs)
     for n in range(480, 300, -3):
         text = [(f"{i:04d}" + "abcdefghij" * 99)[:988] for i in range(n)]
         with open(env.path("FULL.TXT"), "wb") as f:
             f.write(b"".join(l.encode() + b"\r\n" for l in text))
         img = env.system("edit.img", [(env.path("FULL.TXT"), "FULL.TXT")])
-        if "too large" not in env.boot(img, "EDIT FULL.TXT\\n\\e"):
+        if "too large" not in env.boot(img, "EDIT FULL.TXT\\n\\e\\n"):
             break
     screen = env.boot(img, "EDIT FULL.TXT\\n" + "\\{End}x\\{ArrowDown}" * n + SAVE)
     got = (env.get(img, "FULL.TXT") or b"").split(b"\r\n")

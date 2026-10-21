@@ -1,0 +1,8 @@
+PRINT SIN(0); COS(0); ATN(1) * 4
+PRINT SQR(16); ABS(-3); SGN(-2.5); INT(-2.5); FIX(-2.5); CINT(2.5); CINT(3.5)
+PRINT EXP(1); LOG(10); 2 ^ 0.5; TAN(.5)
+PRINT 7 MOD 3; -7 \ 2; 7 / 2; 1E+20 * 10
+PRINT 32767 + 1&; &HFF; &H10 * 2
+PI# = 3.14159265#: PRINT PI#; SIN(PI# / 6)
+X = 0: FOR I = 1 TO 10: X = X + .1: NEXT: PRINT X
+PRINT 3 > 2; 2 > 3; 3 = 3 AND 2 < 1; NOT 0; 5 OR 2; 6 XOR 3

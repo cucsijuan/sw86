@@ -12,6 +12,7 @@ Like the rest of the suite, what it implements behaves like DOS, and what it doe
 | `tests/dos_test.py`: boot, commands, programs, Ctrl-C, a changed diskette, no diskette, write protection, a full diskette, the date and time, what the diskettes hold afterwards (read back on the host); MD, CD, RD, the prompt, DIR, COPY, REN, DEL, TYPE and programs with paths, and a diskette after a session in directories checked on the host like CHKDSK (chains, cross-links, lost clusters, `.` and `..`) | 37/37 |
 | `boot.asm`, `cos.asm`, `command.asm` assembled with NASM 2.16 | identical bytes to asm86 |
 | `tests/tools_test.py`: ASM on the machine assembles every sw86 source (itself included) and random programs, rejects programs with errors on the right line; EDIT edits, cuts and pastes, finds, saves 400 KB files and survives running out of memory | the same bytes as asm86; all pass |
+| `tests/basic_test.py`: BASIC programs run on the machine and their output compared: control flow, strings and the garbage collector, SUB/FUNCTION (recursion, by reference, DEF FN), arrays and TYPE records, DATA, ON ERROR/RESUME, files, INPUT, math functions, sound and timing, compile errors, a program written like GORILLA.BAS; APES.BAS starts | 13/13 |
 
 ## Writing programs on COS: EDIT and ASM
 
@@ -28,10 +29,16 @@ Hello from the 8086!
 - **ASM** (`asm.asm`): `ASM source[.ASM] [output]`. The asm86 dialect (a NASM subset for the 8086: labels and .local labels, EQU, DB/DW/RESB/RESW, TIMES, ORG, `$`/`$$`, the `.text`/`.data`/`.bss` sections, 32-bit expressions, BYTE/WORD/SHORT/NEAR/FAR, segment overrides, REP), with the same passes and choices as asm86, so the bytes are identical; errors are shown as `NAME.ASM(line): message`, with asm86's messages. It reads the source a piece at a time and keeps it as tokens in memory, so sources larger than 64 KB work; it assembles COS, COMMAND.COM, EDIT and itself. At the machine's 4.77 MHz, HELLO takes about a second and COS.SYS under a minute.
 - **EDIT** (`edit.asm`): `EDIT file`. Arrows, Home/End, PgUp/PgDn, Ctrl+Home/End, Ctrl+arrows; Enter keeps the indentation; Ins; Tab (columns of 4); Ctrl+Y cuts lines, F9 pastes them; F3/F4 find (any case), F5 goes to a line; F2 saves through NAME.$$$ and keeps NAME.BAK; Esc leaves. Lines live one by one in memory above the program (up to 16000 lines of 1000 characters, about 450 KB), and are compacted when memory fills; F2 always works, even out of memory.
 
+## CBasic
+
+`BASIC program[.BAS]` runs a program written with EDIT. The language is QBasic's: SUB and FUNCTION (recursive, parameters by reference), block IF, DO/LOOP, WHILE/WEND, FOR, SELECT CASE, GOSUB, labels and line numbers, CONST, DEFINT and friends, TYPE records, arrays of up to 8 dimensions (dynamic, REDIM, ERASE, LBOUND/UBOUND), DATA/READ/RESTORE, ON ERROR GOTO/RESUME, sequential files (OPEN, PRINT #, INPUT #, LINE INPUT #, WRITE #, EOF), INPUT and INKEY$, DEF SEG/PEEK/POKE, INP/OUT; types % & ! # $ (# is kept in single precision), with SIN, COS, TAN, ATN, SQR, EXP, LOG, ^, RND and the usual string functions. Graphics in SCREEN 1 (320x200, 4 colors, as CGA) and SCREEN 13 (320x200, 256 colors): PSET, LINE (B, BF), CIRCLE (arcs, aspect), PAINT, GET/PUT, POINT, PALETTE, COLOR, LOCATE, VIEW PRINT; sound with BEEP, SOUND and PLAY.
+
+How it works: the whole program is compiled in two passes into code for a stack machine, with the types known (each operation already knows if it works on integers, longs, reals or strings), then run. Reals are IEEE single precision done in software; strings live in a 64 KB heap with a garbage collector. Errors are shown as `NAME.BAS(line): message` when compiling and `message in line n` when running. `APES.BAS` on the system diskette is a demonstration game. The details are in the CBasic manual (`../doc/CBasic-Manual.pdf`).
+
 ## Making a system diskette
 
 ```
-make dos                        # build/cos.img: COS.SYS, COMMAND.COM, ASM, EDIT and HELLO.ASM, bootable
+make dos                        # build/cos.img: COS.SYS, COMMAND.COM, ASM, EDIT, BASIC, HELLO.ASM and APES.BAS, bootable
 ```
 
 By hand, with the pc86 tools:
@@ -42,11 +49,14 @@ asm86 dos/cos.asm -o COS.SYS
 asm86 dos/command.asm -o COMMAND.COM
 asm86 dos/asm.asm -o ASM.COM
 asm86 dos/edit.asm -o EDIT.COM
+asm86 dos/basic.asm -o BASIC.COM
 fdimage new cos.img --label COS         # or --720k
 fdimage add cos.img COS.SYS
 fdimage add cos.img COMMAND.COM
 fdimage add cos.img ASM.COM
 fdimage add cos.img EDIT.COM
+fdimage add cos.img BASIC.COM
+fdimage add cos.img dos/apes.bas APES.BAS
 fdimage boot cos.img boot.bin             # keeps the diskette's BPB
 fdimage add cos.img GAME.COM              # and any programs
 ```
@@ -158,6 +168,8 @@ cos.asm            kernel (COS.SYS)
 command.asm          command interpreter (COMMAND.COM)
 asm.asm              assembler (ASM.COM)
 edit.asm             text editor (EDIT.COM)
+basic.asm            CBasic (BASIC.COM)
+apes.bas             Ape Duel, a demonstration game for CBasic
 tests/dostest.asm    the kernel through INT 21h
 tests/child.asm      run by dostest: prints its tail, ends with code 42
 tests/testexe.asm    an .EXE written by hand, with a relocation
@@ -166,4 +178,5 @@ tests/diskfull.asm   writes until the diskette is full
 tests/unsup.asm      calls a function that is not supported
 ../tests/dos_test.py builds diskettes and runs everything on the machine
 ../tests/tools_test.py ASM and EDIT on the machine
+../tests/basic_test.py CBasic on the machine (programs in ../tests/basic)
 ```

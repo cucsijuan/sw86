@@ -1,0 +1,1842 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CBasic - BASIC Language User's Guide and Reference</title>
+<!--
+  The CBasic manual. Open it in a browser to read it, or print it to PDF with
+  build.py. It has the same layout as the COS manual. The pages are laid out by the script at the end: the content in
+  #source flows into fixed-size pages with running heads, chapter-page
+  numbers (4-12) and tabs, and the contents get their page numbers.
+-->
+<style>
+@page { size: 7in 9in; margin: 0; }
+:root {
+  --paper: #f3eddc;
+  --ink: #1b1e27;
+  --spot: #4b5e58;
+  --spot-light: #dfe2d6;
+  --rule: #1b1e27;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #8a8577; }
+body { -webkit-print-color-adjust: exact; print-color-adjust: exact; color: var(--ink);
+       font-family: "Courier New", Courier, monospace; font-size: 9.5pt; line-height: 1.32; }
+#source { display: none; }
+#book { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 24px 0; }
+@media print {
+  html, body { background: var(--paper); }
+  #book { display: block; padding: 0; gap: 0; }
+}
+
+/* ---------- the page ---------- */
+.page { width: 7in; height: 9in; position: relative; overflow: hidden; background: var(--paper); contain: strict;
+        break-after: page; page-break-after: always; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+.page:last-child { break-after: auto; page-break-after: auto; }
+@media print { .page { box-shadow: none; } }
+.page .body { position: absolute; top: 0.85in; bottom: 0.85in; overflow: hidden; }
+.page.odd .body  { left: 0.85in; right: 0.65in; }
+.page.even .body { left: 0.65in; right: 0.85in; }
+.page .head { position: absolute; top: 0.42in; height: 0.22in; font-family: Bahnschrift, "Arial Narrow", sans-serif;
+              font-stretch: 75%; font-weight: 600; font-size: 8.5pt; letter-spacing: .04em; text-transform: uppercase;
+              border-bottom: 1.2pt solid var(--rule); display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 2px; }
+.page.odd .head  { left: 0.85in; right: 0.65in; }
+.page.even .head { left: 0.65in; right: 0.85in; flex-direction: row-reverse; }
+.page .foot { position: absolute; bottom: 0.4in; height: 0.25in; display: flex; justify-content: space-between;
+              align-items: flex-start; font-size: 8pt; border-top: 0.6pt solid var(--rule); padding-top: 3px; }
+.page.odd .foot  { left: 0.85in; right: 0.65in; }
+.page.even .foot { left: 0.65in; right: 0.85in; flex-direction: row-reverse; }
+.page .foot .label { font-family: Bahnschrift, sans-serif; font-weight: 700; font-size: 10pt; letter-spacing: .03em; }
+.page .tab { position: absolute; width: 0.32in; height: 0.52in; background: var(--ink); color: var(--paper);
+             font-family: Bahnschrift, sans-serif; font-weight: 700; font-size: 12pt; display: none;
+             align-items: center; justify-content: center; }
+.page.odd .tab  { right: 0; border-radius: 4px 0 0 4px; }
+.page.even .tab { left: 0;  border-radius: 0 4px 4px 0; }
+.page.has-tab .tab { display: flex; }
+.page.blank .body { display: flex; align-items: center; justify-content: center; font-style: italic; }
+.page.plain .head, .page.plain .foot { display: none; }
+
+/* ---------- type ---------- */
+h1, h2, h3, h4, .display { font-family: Bahnschrift, "Arial Narrow", sans-serif; font-stretch: 75%; font-weight: 700;
+                           letter-spacing: .01em; margin: 0; }
+h2 { font-size: 15pt; margin: 14px 0 6px; padding-bottom: 2px; border-bottom: 2.4pt solid var(--ink); }
+h3 { font-size: 11.5pt; margin: 12px 0 4px; }
+h4 { font-size: 10pt; margin: 9px 0 2px; text-transform: uppercase; letter-spacing: .05em; color: var(--spot); }
+.body > :first-child { margin-top: 0 !important; }
+p { margin: 0 0 7px; }
+ul, ol { margin: 0 0 7px; padding-left: 1.6em; }
+li { margin-bottom: 2px; }
+b, strong { font-weight: bold; }
+i, em { font-style: italic; }
+code, kbd { font-family: inherit; }
+.key { display: inline-block; border: 0.8pt solid var(--ink); border-radius: 3px; padding: 0 3px; line-height: 1.1;
+       font-size: 8pt; font-weight: bold; box-shadow: 1px 1px 0 var(--ink); margin: 0 1px; white-space: nowrap; }
+var { font-style: italic; }
+.small { font-size: 8.5pt; }
+
+pre { font-family: "Courier New", monospace; margin: 4px 0 9px; white-space: pre; }
+pre.screen { font-size: 8pt; line-height: 1.22; padding: 6px 8px; border: 0.8pt solid var(--ink);
+             outline: 0.8pt solid var(--ink); outline-offset: 2px; background: var(--spot-light); margin: 8px 3px 12px; }
+pre.screen b { font-weight: bold; text-decoration: underline; text-underline-offset: 2px; }
+pre.screen.wide { font-size: 6.9pt; line-height: 1.18; }
+pre.screen .inv { background: var(--ink); color: var(--paper); }
+pre.listing { font-size: 8.2pt; line-height: 1.22; padding: 5px 0 5px 10px; border-left: 3pt solid var(--spot); }
+.caption { font-size: 8pt; font-style: italic; margin: -6px 0 10px 4px; }
+
+table { border-collapse: collapse; margin: 4px 0 10px; width: 100%; font-size: 8.6pt; }
+th, td { text-align: left; vertical-align: top; padding: 2px 5px; }
+table.ref th { font-family: Bahnschrift, sans-serif; font-stretch: 75%; font-weight: 700; font-size: 9pt;
+               border-bottom: 1.2pt solid var(--ink); border-top: 1.2pt solid var(--ink); }
+table.ref td { border-bottom: 0.4pt solid #b9b29e; }
+table.ref td:first-child { white-space: nowrap; font-weight: bold; }
+table.ref.wrap td:first-child { white-space: normal; }
+
+.note { border: 1pt solid var(--ink); padding: 5px 8px; margin: 6px 0 10px; }
+.note::before { content: "NOTE: "; font-weight: bold; }
+.warn { border: 2pt solid var(--ink); padding: 5px 8px; margin: 6px 0 10px; background: var(--spot-light); }
+.warn::before { content: "WARNING: "; font-weight: bold; }
+
+/* a command or function entry */
+.entry { margin-bottom: 10px; }
+dl { margin: 0 0 6px; }
+dt { font-family: Bahnschrift, sans-serif; font-stretch: 75%; font-weight: 700; font-size: 9pt;
+     text-transform: uppercase; letter-spacing: .05em; color: var(--spot); margin-top: 5px; }
+dd, .in-dd { margin: 0 0 4px 0.3in; }
+dd > :last-child { margin-bottom: 2px; }
+dd > pre.screen, pre.screen.in-dd { margin-left: 3px; }
+dd pre:not(.screen) { margin: 0; }
+h2.cmd { display: flex; justify-content: space-between; align-items: baseline; }
+h2.cmd small { font-size: 8.5pt; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.fnhead { display: flex; gap: 10px; align-items: baseline; border-top: 1.2pt solid var(--ink); padding-top: 3px; margin-top: 12px; }
+.fnhead .num { font-family: Bahnschrift, sans-serif; font-weight: 700; font-size: 12pt; background: var(--ink); color: var(--paper);
+               padding: 0 5px; }
+.fnhead h3 { margin: 0; }
+table.regs { margin: 3px 0 5px; }
+table.regs th { width: 0.9in; font-family: Bahnschrift, sans-serif; font-stretch: 75%; font-weight: 700; font-size: 8.5pt;
+                text-transform: uppercase; color: var(--spot); padding-left: 0; }
+table.regs td { font-size: 8.6pt; }
+
+/* ---------- cover and openers ---------- */
+.cover .body { inset: 0 !important; }
+.cover .stripe { position: absolute; left: 0; right: 0; height: 0.42in;
+                 background: repeating-linear-gradient(115deg, var(--ink) 0 9px, transparent 9px 15px); }
+.cover .logo { position: absolute; left: 0.55in; right: 0.55in; top: 0.95in; }
+.cover .logo img { width: 100%; mix-blend-mode: multiply; display: block; }
+.cover .titles { position: absolute; left: 0.7in; right: 0.7in; top: 5.05in; }
+.cover .titles .display { font-size: 30pt; line-height: .95; }
+.cover .titles .sub { font-family: Bahnschrift, sans-serif; font-stretch: 75%; font-weight: 600; font-size: 14pt;
+                      margin-top: 8px; letter-spacing: .02em; }
+.cover .titles .ver { margin-top: 14px; font-size: 10pt; }
+.cover .boxline { position: absolute; left: 0.7in; right: 0.7in; bottom: 1.25in; border-top: 2.4pt solid var(--ink);
+                  padding-top: 6px; display: flex; justify-content: space-between; font-family: Bahnschrift, sans-serif;
+                  font-weight: 700; font-size: 10pt; letter-spacing: .05em; text-transform: uppercase; }
+.cover .boxline span:last-child { color: var(--spot); }
+
+.opener .num { font-family: Bahnschrift, sans-serif; font-weight: 700; font-size: 96pt; line-height: .8;
+               color: var(--spot); margin: 0.2in 0 6px; }
+.opener h1 { font-size: 28pt; line-height: 1; border-bottom: 3pt solid var(--ink); padding-bottom: 6px; margin-bottom: 0.35in; }
+.opener .mini h4 { color: var(--ink); margin-bottom: 6px; }
+.toc { width: 100%; }
+.toc .row { display: flex; align-items: baseline; gap: 4px; margin: 1px 0; }
+.toc .row .t { white-space: nowrap; overflow: hidden; }
+.toc .row .dots { flex: 1; border-bottom: 1px dotted var(--ink); transform: translateY(-3px); min-width: 12px; }
+.toc .row .p { white-space: nowrap; }
+.toc .row.ch { margin-top: 8px; font-family: Bahnschrift, sans-serif; font-stretch: 75%; font-weight: 700; font-size: 10.5pt; }
+.toc .row.sec { padding-left: 1.6em; }
+.toc .row.part { margin-top: 16px; text-transform: uppercase; letter-spacing: .08em; color: var(--spot); font-size: 9.5pt; }
+#toc > .row.part:first-child { margin-top: 0; }
+.notice p { font-size: 8.5pt; }
+.quick table td { font-size: 8.2pt; }
+.cp437 { width: auto; margin: 6px auto 10px; font-size: 9pt; }
+.cp437 td, .cp437 th { width: 0.28in; text-align: center; padding: 1px 0; border: 0.4pt solid #b9b29e; }
+.cp437 th { font-family: Bahnschrift, sans-serif; font-weight: 700; font-size: 7.5pt; background: var(--spot-light); }
+.cp437 td { font-family: "Courier New", monospace; font-size: 11pt; line-height: 1.1; }
+img.shot { display: block; width: 4.4in; margin: 8px auto 10px; border: 0.8pt solid var(--ink);
+           outline: 0.8pt solid var(--ink); outline-offset: 2px; image-rendering: pixelated; }
+.keywords { columns: 4; font-size: 8.4pt; margin: 4px 0 10px; }
+.keywords div { break-inside: avoid; }
+pre.listing.full { font-size: 7.4pt; line-height: 1.16; }
+</style>
+</head>
+<body>
+<div id="book"></div>
+<div id="source">
+
+<!-- ================================================================== -->
+<!-- FRONT MATTER                                                         -->
+<!-- ================================================================== -->
+
+<section class="front" data-kind="notice">
+<div class="notice">
+<p style="margin-top:3.6in"><b>First Edition (October 1981)</b></p>
+<p>Changes are made periodically to the information herein; any such changes will be reported in subsequent revisions.</p>
+<p>This manual describes CBasic Version 1.00, the BASIC language for the COS disk operating system on the pc86 personal computer.</p>
+<p>CBasic is supplied on the COS System Diskette as the program BASIC.COM, together with the sample game APES.BAS. Read Chapter 2, "Writing and Running Programs," before you write your first program.</p>
+<p>Products are not stocked at the address below. Comments on this manual may be addressed to CucsiCorp, Personal Computer Software, Publications Department. CucsiCorp may use or distribute any of the information you supply in any way it believes appropriate without incurring any obligations whatever.</p>
+<p style="margin-top:0.25in">&copy; Copyright CucsiCorp 1981</p>
+<p class="small">CBasic, COS and CucsiCorp are trademarks of CucsiCorp.</p>
+</div>
+</section>
+
+<section class="front" data-kind="preface" data-title="Preface">
+<h2>Preface</h2>
+<p>This manual tells you how to write programs in CBasic, the BASIC language of the pc86 personal computer, and how to run them under COS. CBasic is a structured BASIC: besides the familiar PRINT, INPUT, GOTO and line numbers, it has named subprograms and functions with their own variables, block IF and SELECT CASE statements, DO loops, records, and graphics and sound statements for writing games.</p>
+<p>You do not need to know BASIC to use this manual, but you should know how to use COS: how to start it, how to name files and how to use the text editor, EDIT. These are described in the COS User's Guide.</p>
+<ul>
+<li>If you are new to BASIC, read Part One, Chapters 1 to 5, in order, and try the examples on the computer.</li>
+<li>If you already know BASIC, read Chapters 1 and 2, skim Chapter 3, and use Part Two, the reference chapters, as you need them.</li>
+</ul>
+<h3>Organization of This Manual</h3>
+<table class="ref wrap">
+<tr><td>Chapter 1</td><td>Introduction: what CBasic is and what you need to use it.</td></tr>
+<tr><td>Chapter 2</td><td>Writing and Running Programs: EDIT and BASIC, errors, stopping a program.</td></tr>
+<tr><td>Chapter 3</td><td>The Language: variables and types, expressions, control statements, arrays, records, subprograms and functions, error handling.</td></tr>
+<tr><td>Chapter 4</td><td>Text, Keyboard and Files: the screen in text mode, input from the keyboard, data files.</td></tr>
+<tr><td>Chapter 5</td><td>Graphics and Sound: the graphics modes, drawing, pictures, and music.</td></tr>
+<tr><td>Chapter 6</td><td>Statements: every statement, in alphabetic order.</td></tr>
+<tr><td>Chapter 7</td><td>Functions: every built-in function, in alphabetic order.</td></tr>
+<tr><td>Appendix A</td><td>Error Messages.</td></tr>
+<tr><td>Appendix B</td><td>Technical Information: limits, numbers, memory.</td></tr>
+<tr><td>Appendix C</td><td>The Sample Program APES.BAS.</td></tr>
+</table>
+<h3>Notation</h3>
+<table class="ref wrap">
+<tr><td>CAPITALS</td><td>Keywords. You may type them in small letters: CBasic does not mind.</td></tr>
+<tr><td><var>italics</var></td><td>Items you supply: a variable, an expression, a file name.</td></tr>
+<tr><td>[ ]</td><td>The item inside is optional. Do not type the brackets.</td></tr>
+<tr><td>{ a | b }</td><td>Choose one of the items.</td></tr>
+<tr><td>...</td><td>The item before may be repeated.</td></tr>
+<tr><td><b><u>basic hello</u></b></td><td>In the screen examples, what you type is printed in bold and underlined.</td></tr>
+<tr><td>&amp;H3D</td><td>A hexadecimal number, as it is written in CBasic.</td></tr>
+</table>
+<p>The screen examples in this manual were made on the machine itself.</p>
+</section>
+
+<section class="front" data-kind="contents" data-title="Contents">
+<h2>Contents</h2>
+<div class="toc" id="toc"></div>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 1                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="1" data-title="Introduction" data-part="Part One: Using CBasic">
+
+<h2>What CBasic Is</h2>
+<p>CBasic is a programming language. A CBasic program is a list of instructions, written in words that look like English (PRINT, INPUT, IF, THEN), that the computer carries out one after another. With CBasic you can make the computer calculate, keep lists of names and numbers, read and write files on diskettes, draw pictures on the screen and play music.</p>
+<p>You write a program with the COS text editor, EDIT, and save it in a file whose name ends in .BAS. Then you run it with the BASIC command:</p>
+<pre class="screen">
+A:\&gt;<b>edit hello.bas</b>
+A:\&gt;<b>basic hello</b>
+</pre>
+<p>BASIC reads the whole program, checks it, and translates it into a compact code that the computer runs quickly. If the program has a mistake in it, BASIC tells you the line and what is wrong before anything runs; you correct it with EDIT and try again.</p>
+
+<h2>What You Need</h2>
+<ul>
+<li>A pc86 personal computer with 640 KB of memory and the COS disk operating system.</li>
+<li>A video card and a monitor. Programs may use the text screen of 80 columns and 25 lines, or one of the two graphics modes of 320 by 200 points.</li>
+<li>The COS System Diskette, which has BASIC.COM, the editor EDIT.COM and the sample program APES.BAS.</li>
+<li>The computer's speaker, for programs that make sounds.</li>
+</ul>
+
+<h2>A Look at a Program</h2>
+<p>Here is a short program. The lines that begin with an apostrophe are remarks: they are for the people who read the program, and CBasic skips them.</p>
+<pre class="listing">
+' HELLO.BAS - a first program
+INPUT "What is your name"; N$
+PRINT "Hello, "; N$; "!"
+FOR I = 1 TO 3
+  PRINT I; "squared is"; I * I
+NEXT
+</pre>
+<p>INPUT shows a question and waits for an answer; the answer is kept in the variable N$ (the $ means that it holds text). PRINT shows text and numbers. FOR and NEXT repeat the PRINT between them, with I taking the values 1, 2 and 3. This is what you see when you run it:</p>
+<pre class="screen">
+A:\&gt;<b>basic hello</b>
+What is your name? <b>Ana</b>
+Hello, Ana!
+ 1 squared is 1
+ 2 squared is 4
+ 3 squared is 9
+A:\&gt;
+</pre>
+
+<h2>The Sample Game</h2>
+<p>The System Diskette has a game written in CBasic, APES.BAS. Two apes stand on the roofs of a city and throw bananas at each other; each player in turn chooses the angle and the speed of the throw, and the wind and the gravity do the rest. To play it:</p>
+<pre class="screen">
+A:\&gt;<b>basic apes</b>
+</pre>
+<img class="shot" src="cbasic/apes.png" alt="Ape Duel">
+<p class="caption">Ape Duel: the city, the apes, the sun and the wind arrow at the bottom.</p>
+<p>The game uses most of what CBasic can do: subprograms and functions, records, arrays, graphics, pictures moved with GET and PUT, the keyboard, music and the timer. Its listing is in Appendix C; reading it is a good way to learn CBasic once you know the basics.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 2                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="2" data-title="Writing and Running Programs" data-part="Part One: Using CBasic">
+
+<h2>Writing a Program</h2>
+<p>A CBasic program is an ordinary text file, written with EDIT. Give it a name that ends in .BAS:</p>
+<pre class="screen">
+A:\&gt;<b>edit hello.bas</b>
+</pre>
+<p>Type the program a line at a time, pressing <span class="key">Enter</span> at the end of each line. You may type keywords in small or capital letters, and indent lines with spaces to show their structure: CBasic ignores the spaces at the start of a line. Save the program with <span class="key">F2</span> and leave EDIT with <span class="key">Esc</span>.</p>
+
+<h2>Running a Program</h2>
+<dl>
+<dt>Format</dt><dd><pre>BASIC [d:][<var>path</var>]<var>filename</var>[.BAS]</pre></dd>
+</dl>
+<p>BASIC adds .BAS to the name if you do not give an extension. The program runs at once. When it ends &mdash; when it reaches an END statement, or its last line &mdash; the COS prompt comes back. A program that was drawing in a graphics mode waits for a key first, so that you can look at the picture, and then returns the screen to text.</p>
+<p>The text a program prints starts where the cursor was, below the BASIC command, and the screen scrolls up when it fills, as it does for COS.</p>
+
+<h2>When the Program Has a Mistake</h2>
+<p>Before running a program, BASIC reads all of it. If a line breaks the rules of the language, BASIC shows the name of the file, the line number and a message, and the program does not run:</p>
+<pre class="screen">
+A:\&gt;<b>basic oops</b>
+OOPS.BAS(2): Syntax error
+A:\&gt;
+</pre>
+<p>Line 2 of OOPS.BAS is PRINT 10 / (1 + &mdash; the expression is not finished. Open the program with EDIT, press <span class="key">F5</span> and type the line number to go to it, correct it and save. Appendix A lists the messages.</p>
+<p>Other mistakes can only be found while the program runs: a division by zero, an array element that does not exist, a file that is not on the diskette. Then the program stops with a message and the line:</p>
+<pre class="screen">
+A:\&gt;<b>basic zero</b>
+Ten divided by zero:
+Division by zero in line 3
+A:\&gt;
+</pre>
+<p>A program can also catch these errors itself and carry on, with ON ERROR GOTO (Chapter 3).</p>
+
+<h2>Stopping a Program</h2>
+<p>Press <span class="key">Ctrl</span>-<span class="key">C</span> to stop a program that is running: it ends with the message "Break" and the line it was on. Files the program had open are closed.</p>
+
+<h2>How CBasic Works</h2>
+<p>BASIC does not interpret your program a line at a time. It <i>compiles</i> it: it reads the whole program twice, the first time to learn the names of its subprograms, functions and records, the second to translate each statement into a code for a simple machine that BASIC carries inside it. Then it runs that code. Because the types of all the variables are known when the program is translated, each operation already knows whether it works on integers, real numbers or text, and the program runs faster than it would if every line were read again each time.</p>
+<p>This is why a program with a mistake does not run at all: the mistake is found while the program is translated, even in a part that would rarely be used.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 3                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="3" data-title="The Language" data-part="Part One: Using CBasic">
+
+<h2>Lines and Statements</h2>
+<p>A program is made of lines, and each line holds one or more <i>statements</i> separated by colons:</p>
+<pre class="listing">
+X = 1: Y = 2: PRINT X + Y
+</pre>
+<p>A line may begin with a <i>line number</i> or a <i>label</i>, which other statements use to jump to it. A line number is a whole number from 0 to 65535; a label is a name followed by a colon. Line numbers need not be in order and need not be on every line.</p>
+<pre class="listing">
+100 PRINT "a numbered line"
+Again:
+    PRINT "a labeled line"
+    GOTO Again
+</pre>
+<p>Everything after an apostrophe (') is a remark, and so is a statement that begins with REM. Remarks may be on a line of their own or at the end of a statement.</p>
+<p>Names of variables, labels, subprograms and functions begin with a letter and may have letters, digits and periods, up to 40 characters. Capitals and small letters are the same: Total, TOTAL and total are one name. A name cannot be a keyword: PRINT, NAME... see the list of keywords in Appendix B.</p>
+
+<h2>Numbers and Text</h2>
+<p>CBasic has four kinds of values, called <i>types</i>. The last character of a variable's name, its <i>type suffix</i>, tells which type it holds:</p>
+<table class="ref wrap">
+<tr><th>Suffix</th><th>Type</th><th>Holds</th></tr>
+<tr><td>%</td><td>INTEGER</td><td>Whole numbers from -32768 to 32767. The fastest type.</td></tr>
+<tr><td>&amp;</td><td>LONG</td><td>Whole numbers from -2147483648 to 2147483647.</td></tr>
+<tr><td>! or #</td><td>SINGLE</td><td>Real numbers with about 7 significant digits, from about 1.2E-38 to 3.4E+38. # is accepted for programs that ask for double precision, but the number is kept as SINGLE.</td></tr>
+<tr><td>$</td><td>STRING</td><td>Text, from 0 to 32767 characters.</td></tr>
+</table>
+<p>A variable without a suffix is SINGLE, unless a DEFINT, DEFLNG, DEFSNG, DEFDBL or DEFSTR statement says otherwise for its first letter, or it was declared with AS (see DIM). Programs that use mostly whole numbers often begin with DEFINT A-Z, which makes every variable without a suffix an INTEGER and the program faster.</p>
+<p>A% and A$ are different variables. Variables need not be declared: a variable that has not been given a value is 0, or "" (an empty string).</p>
+<h3>Constants</h3>
+<p>Numbers are written in decimal, with an optional point and exponent: 12, -3.5, .25, 1.5E+6. Whole numbers that fit are INTEGER or LONG; others are SINGLE. &amp;H and &amp;O begin hexadecimal and octal numbers: &amp;HFF is 255, &amp;O17 is 15. A suffix may be added: 5&amp; is a LONG.</p>
+<p>Strings are written between double quotation marks: "Hello". A string cannot contain a quotation mark; use CHR$(34) for it.</p>
+<p>The CONST statement gives a name to a value that does not change:</p>
+<pre class="listing">
+CONST PI = 3.141593, TRUE = -1, FALSE = 0, TITLE$ = "Ape Duel"
+</pre>
+
+<h2>Expressions</h2>
+<p>An expression computes a value from constants, variables, function results and operators. These are the operators, from the one done first to the one done last:</p>
+<table class="ref wrap">
+<tr><th>Operator</th><th>Meaning</th></tr>
+<tr><td>( )</td><td>What is inside parentheses is done first</td></tr>
+<tr><td>^</td><td>Raising to a power: 2 ^ 10 is 1024</td></tr>
+<tr><td>- (unary)</td><td>Negation: -X</td></tr>
+<tr><td>* /</td><td>Multiplication, division. / always gives a real number: 7 / 2 is 3.5</td></tr>
+<tr><td>\</td><td>Integer division, rounding towards 0: 7 \ 2 is 3, -7 \ 2 is -3</td></tr>
+<tr><td>MOD</td><td>The remainder of an integer division: 7 MOD 3 is 1</td></tr>
+<tr><td>+ -</td><td>Addition, subtraction. + also joins strings: "ab" + "cd" is "abcd"</td></tr>
+<tr><td>= &lt;&gt; &lt; &gt; &lt;= &gt;=</td><td>Comparisons: equal, not equal, less, greater, less or equal, greater or equal</td></tr>
+<tr><td>NOT</td><td>Inverts every bit</td></tr>
+<tr><td>AND</td><td>Bits that are 1 in both</td></tr>
+<tr><td>OR</td><td>Bits that are 1 in either</td></tr>
+<tr><td>XOR</td><td>Bits that are 1 in only one</td></tr>
+<tr><td>EQV, IMP</td><td>Equivalence (NOT XOR) and implication (NOT a OR b)</td></tr>
+</table>
+<p>A comparison gives -1 when it is true and 0 when it is false, and IF, WHILE and the like take any value that is not 0 as true. Since -1 has all its bits set, AND, OR and NOT work on comparisons as you expect: IF X &gt; 0 AND X &lt; 10 THEN ... Strings are compared character by character, by their codes.</p>
+<p>When an operation mixes types, the value of the smaller type is converted first: INTEGER to LONG to SINGLE. When a real number is stored in an INTEGER or LONG variable, it is rounded to the nearest whole number (halves go to the even number: 2.5 becomes 2, 3.5 becomes 4). A result too large for its type stops the program with "Overflow".</p>
+
+<h2>Making Decisions</h2>
+<p>IF does something only when a condition is true. On one line:</p>
+<pre class="listing">
+IF Score &gt; Best THEN Best = Score: PRINT "New record!"
+IF A$ = "y" THEN PRINT "Yes" ELSE PRINT "No"
+</pre>
+<p>Or as a block, which may have ELSEIF and ELSE parts and ends with END IF:</p>
+<pre class="listing">
+IF Age &lt; 13 THEN
+    PRINT "Child"
+ELSEIF Age &lt; 20 THEN
+    PRINT "Teenager"
+ELSE
+    PRINT "Adult"
+END IF
+</pre>
+<p>SELECT CASE compares one value with several: the first CASE that matches runs, and CASE ELSE runs when none does. A CASE may list values, ranges with TO, and comparisons with IS:</p>
+<pre class="listing">
+SELECT CASE Key$
+    CASE "0" TO "9": PRINT "a digit"
+    CASE "+", "-": PRINT "a sign"
+    CASE IS &lt; " ": PRINT "a control key"
+    CASE ELSE: PRINT "something else"
+END SELECT
+</pre>
+
+<h2>Loops</h2>
+<p>FOR ... NEXT repeats with a counter, from a first value to a last one, in steps of 1 or of the STEP given (which may be negative or a fraction):</p>
+<pre class="listing">
+FOR I = 10 TO 1 STEP -1: PRINT I;: NEXT I
+</pre>
+<p>DO ... LOOP repeats while a condition is true (WHILE) or until it becomes true (UNTIL), tested at the start or at the end. Without a condition it repeats forever, until an EXIT DO:</p>
+<pre class="listing">
+DO WHILE N &lt; 100: N = N * 2: LOOP
+DO
+    K$ = INKEY$
+LOOP UNTIL K$ &lt;&gt; ""
+</pre>
+<p>WHILE ... WEND is the older form of DO WHILE ... LOOP. EXIT FOR and EXIT DO leave the loop at once.</p>
+
+<h2>Jumps and Subroutines</h2>
+<p>GOTO jumps to a line number or label. GOSUB jumps to a <i>subroutine</i> and RETURN comes back to the statement after the GOSUB. ON <var>n</var> GOTO and ON <var>n</var> GOSUB jump to the first, second... of a list of labels. Subprograms and functions, described next, are usually a better way to divide a program.</p>
+
+<h2>Arrays</h2>
+<p>An array is a numbered list of variables of one type, declared with DIM:</p>
+<pre class="listing">
+DIM Score(10), Names$(1 TO 20), Board%(1 TO 8, 1 TO 8)
+Score(3) = 120
+Board%(2, 5) = 1
+</pre>
+<p>Score has the elements Score(0) to Score(10); Names$ has 20, numbered from 1. Arrays may have up to 8 dimensions, and their bounds may be any expressions, worked out when the DIM runs. An array used without a DIM gets elements 0 to 10 in each dimension (OPTION BASE 1 makes the first element 1). REDIM gives an array new bounds, and ERASE frees it; LBOUND and UBOUND tell its bounds. Using an element outside the bounds stops the program with "Subscript out of range".</p>
+
+<h2>Records</h2>
+<p>A TYPE statement describes a <i>record</i>: a group of numbers that go together. Variables and arrays of that type are declared with AS, and each field is reached with a period:</p>
+<pre class="listing">
+TYPE Building
+    X AS INTEGER
+    Width AS INTEGER
+    Height AS SINGLE
+END TYPE
+DIM City(1 TO 20) AS Building, Home AS Building
+City(3).Width = 25
+PRINT City(3).Width
+</pre>
+<p>Fields may be INTEGER, LONG, SINGLE, DOUBLE or another record type. Strings are not allowed in records.</p>
+
+<h2>Subprograms and Functions</h2>
+<p>A SUB is a part of the program with a name, which other parts call. It may take <i>parameters</i>, and its variables are its own: an I inside a SUB is not the I of the main program.</p>
+<pre class="listing">
+DECLARE SUB Box (Row, Col, Wide)
+Box 5, 10, 20
+CALL Box(8, 10, 30)          ' the same, with CALL
+
+SUB Box (Row, Col, Wide)
+    LOCATE Row, Col
+    PRINT STRING$(Wide, "*")
+END SUB
+</pre>
+<p>A FUNCTION is like a SUB, but gives back a value, which it sets by assigning to its own name. Its suffix, or AS, gives the type of the value:</p>
+<pre class="listing">
+FUNCTION Fact&amp; (N)
+    IF N &lt;= 1 THEN Fact&amp; = 1 ELSE Fact&amp; = N * Fact&amp;(N - 1)
+END FUNCTION
+</pre>
+<p>Functions and subprograms may call themselves, as Fact&amp; does. SUBs and FUNCTIONs come after the main program, each with its END SUB or END FUNCTION; the main program ends where the first of them begins. They may be called before or after the place where they are written, and the DECLARE statements that list them are accepted but not needed. EXIT SUB and EXIT FUNCTION return at once.</p>
+<h3>Parameters</h3>
+<p>Parameters are passed <i>by reference</i>: when the argument is a variable, the SUB works on the variable itself, and a change it makes is seen by the caller. When the argument is an expression, or a variable of another type, or a variable in parentheses, the SUB gets a copy:</p>
+<pre class="listing">
+SUB Bump (N)
+    N = N + 1
+END SUB
+X = 1: Bump X: PRINT X       ' prints 2
+Bump (X): PRINT X            ' prints 2: Bump changed a copy
+</pre>
+<p>A whole array is passed with empty parentheses, Total(Scores()), and declared the same way in the SUB: SUB Total (List()). Records and arrays of records are passed with AS: SUB Draw (B() AS Building).</p>
+<h3>Shared Variables</h3>
+<p>The variables of the main program are not seen inside a SUB, unless they are declared with DIM SHARED in the main program, or listed in a SHARED statement inside the SUB:</p>
+<pre class="listing">
+DIM SHARED Lives, Level
+SUB Lose
+    Lives = Lives - 1        ' the main program's Lives
+END SUB
+</pre>
+<h3>One-Line Functions</h3>
+<p>DEF FN defines a function in one line, in the main program. Its name begins with FN; its parameters are its own, but every other name in it is a variable of the main program:</p>
+<pre class="listing">
+DEF FnRand (N) = INT(RND(1) * N) + 1
+PRINT FnRand(6)              ' a die
+</pre>
+
+<h2>Handling Errors</h2>
+<p>ON ERROR GOTO <var>label</var> asks that, instead of stopping, a program that meets an error jump to <var>label</var>, in the main program. There, ERR tells which error it was (Appendix A) and ERL the line. RESUME runs the statement that failed again, RESUME NEXT continues with the one after it, and RESUME <var>label</var> continues at a label. ON ERROR GOTO 0 turns the handling off again.</p>
+<pre class="listing">
+ON ERROR GOTO NoScreen
+Mode = 13
+SCREEN Mode
+ON ERROR GOTO 0
+...
+NoScreen:
+    Mode = 1                 ' try the other graphics mode
+    RESUME
+</pre>
+<p>An error inside a SUB or FUNCTION goes back to the main program: the handler runs there, and RESUME runs again the statement of the main program that had called the SUB. ERROR <var>n</var> makes the error <var>n</var> happen, to test a handler.</p>
+
+<h2>DATA</h2>
+<p>DATA statements hold numbers and strings inside the program, and READ takes them in order. RESTORE starts again from the first DATA, or from the first after a label:</p>
+<pre class="listing">
+RESTORE Prices
+FOR I = 1 TO 3: READ Item$, Cost: PRINT Item$, Cost: NEXT
+Prices:
+DATA "Bread", 1.25, "Milk", .9, "Eggs", 2.1
+</pre>
+<p>Strings in DATA need quotation marks only when they contain commas, colons or spaces at their ends.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 4                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="4" data-title="Text, Keyboard and Files" data-part="Part One: Using CBasic">
+
+<h2>The Text Screen</h2>
+<p>When a program starts, the screen is in text mode, 80 columns by 25 lines, as COS leaves it. PRINT writes at the cursor and moves it on. The rows are numbered 1 to 25 from the top, and the columns 1 to 80 from the left.</p>
+<h3>PRINT</h3>
+<p>PRINT shows a list of items. A semicolon between two items puts them together; a comma moves to the next <i>print zone</i>, every 14 columns. At the end of a PRINT the cursor goes to the next line, unless the list ends with a semicolon or comma:</p>
+<pre class="listing">
+PRINT "A"; "B", "C"
+PRINT 1; -2; 3.5
+PRINT "same line";
+PRINT " - continued"
+</pre>
+<pre class="screen">
+AB            C
+ 1 -2  3.5
+same line - continued
+</pre>
+<p>Numbers are printed with a space before them, or a minus sign, and a space after. Real numbers show up to 7 digits, without zeros at the end; very large and very small ones are shown with an exponent: 1E+10, 2.5E-05. TAB(<var>n</var>) moves to column <var>n</var>, SPC(<var>n</var>) prints <var>n</var> spaces. CLS clears the screen, and LOCATE <var>row</var>, <var>col</var> moves the cursor:</p>
+<pre class="listing">
+CLS
+LOCATE 12, 35: PRINT "In the middle";
+</pre>
+<h3>Colors</h3>
+<p>COLOR <var>foreground</var>, <var>background</var> chooses the colors of what is printed next. In text mode there are 16 foreground colors and 8 background colors; adding 16 to the foreground makes it blink.</p>
+<table class="ref">
+<tr><th>Color</th><th>Name</th><th>Color</th><th>Name</th></tr>
+<tr><td>0</td><td>Black</td><td>8</td><td>Gray</td></tr>
+<tr><td>1</td><td>Blue</td><td>9</td><td>Light blue</td></tr>
+<tr><td>2</td><td>Green</td><td>10</td><td>Light green</td></tr>
+<tr><td>3</td><td>Cyan</td><td>11</td><td>Light cyan</td></tr>
+<tr><td>4</td><td>Red</td><td>12</td><td>Light red</td></tr>
+<tr><td>5</td><td>Magenta</td><td>13</td><td>Light magenta</td></tr>
+<tr><td>6</td><td>Brown</td><td>14</td><td>Yellow</td></tr>
+<tr><td>7</td><td>White</td><td>15</td><td>Bright white</td></tr>
+</table>
+<h3>Text Windows</h3>
+<p>VIEW PRINT <var>top</var> TO <var>bottom</var> makes only those rows scroll, so that a title or a score at the top of the screen stays where it is. VIEW PRINT alone gives back the whole screen. CSRLIN and POS(0) tell the row and column of the cursor.</p>
+
+<h2>The Keyboard</h2>
+<h3>INPUT</h3>
+<p>INPUT shows a question mark, or a prompt and a question mark, and waits for the user to type a line and press <span class="key">Enter</span>. Several variables are given in one answer, separated by commas. When the answer does not fit the variables &mdash; a word where a number was asked, or too many items &mdash; INPUT says "Redo from start" and asks again:</p>
+<pre class="listing">
+INPUT "Width and height"; W, H
+PRINT "Area:"; W * H
+</pre>
+<pre class="screen">
+Width and height? <b>3,x</b>
+Redo from start
+Width and height? <b>3,4</b>
+Area: 12
+</pre>
+<p>A comma after the prompt, instead of a semicolon, leaves out the question mark. LINE INPUT reads a whole line into a string variable, commas and all, without a question mark.</p>
+<h3>INKEY$</h3>
+<p>INKEY$ does not wait: it gives the key that was pressed, or "" when none was. It is how games read the keyboard while things move. The special keys (arrows, function keys) give two characters: CHR$(0) and the key's scan code. For example, the up arrow gives CHR$(0) + "H".</p>
+<pre class="listing">
+DO
+    K$ = INKEY$
+    IF K$ = CHR$(0) + "H" THEN Y = Y - 1
+    IF K$ = CHR$(0) + "P" THEN Y = Y + 1
+LOOP UNTIL K$ = CHR$(27)            ' Esc
+</pre>
+<p>INPUT$(<var>n</var>) waits for <var>n</var> keys and gives them without showing them. SLEEP <var>n</var> waits <var>n</var> seconds, or until a key is pressed; SLEEP alone waits for a key.</p>
+
+<h2>Files</h2>
+<p>A program keeps information from one run to the next in files on the diskette. A file is opened with a number, used with that number, and closed:</p>
+<pre class="listing">
+OPEN "SCORES.TXT" FOR OUTPUT AS #1
+PRINT #1, "Ana"; 120
+WRITE #1, "Luis", 95
+CLOSE #1
+OPEN "SCORES.TXT" FOR INPUT AS #1
+DO UNTIL EOF(1)
+    INPUT #1, Who$, Points
+    PRINT Who$, Points
+LOOP
+CLOSE #1
+</pre>
+<table class="ref wrap">
+<tr><th>Mode</th><th>Use</th></tr>
+<tr><td>OUTPUT</td><td>A new file, written from the start. A file that existed loses what it had.</td></tr>
+<tr><td>APPEND</td><td>Writing at the end of a file; a new file if there is none.</td></tr>
+<tr><td>INPUT</td><td>Reading from the start. The file must exist ("File not found").</td></tr>
+</table>
+<p>PRINT # writes as PRINT does on the screen. WRITE # writes items separated by commas, with strings in quotation marks, which is the form INPUT # reads back most safely. INPUT # reads items separated by commas or line ends (numbers also end at a space); LINE INPUT # reads a whole line. EOF(<var>n</var>) is true when there is nothing more to read. Up to 8 files may be open at once, with numbers 1 to 8; FREEFILE gives the first number not in use. CLOSE alone closes them all, and so does the end of the program. KILL erases a file.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 5                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="5" data-title="Graphics and Sound" data-part="Part One: Using CBasic">
+
+<h2>The Graphics Modes</h2>
+<p>SCREEN changes the mode of the display. Both graphics modes have 320 points across and 200 down; the point (0, 0) is the top left corner and (319, 199) the bottom right.</p>
+<table class="ref wrap">
+<tr><th>Mode</th><th>What it is</th></tr>
+<tr><td>SCREEN 0</td><td>Text, 80 columns by 25 rows, 16 colors. The mode programs start in.</td></tr>
+<tr><td>SCREEN 1</td><td>Graphics, 320 by 200, 4 colors at a time, chosen from two palettes. Text is 40 columns by 25 rows.</td></tr>
+<tr><td>SCREEN 13</td><td>Graphics, 320 by 200, 256 colors at a time. Text is 40 columns by 25 rows.</td></tr>
+</table>
+<p>Changing the mode clears the screen. Asking for a mode the display does not have stops the program with "Illegal function call", which a program can catch with ON ERROR GOTO to choose another mode. PRINT, LOCATE and INPUT work in the graphics modes too; the text is drawn over the picture in the color chosen with COLOR.</p>
+
+<h2>Colors</h2>
+<p>In SCREEN 1 the points have colors 0 to 3. Color 0 is the background; COLOR <var>background</var>, <var>palette</var> sets it to one of the 16 text colors and chooses the other three:</p>
+<table class="ref">
+<tr><th>Color</th><th>Palette 0</th><th>Palette 1</th></tr>
+<tr><td>1</td><td>Green</td><td>Cyan</td></tr>
+<tr><td>2</td><td>Red</td><td>Magenta</td></tr>
+<tr><td>3</td><td>Brown</td><td>White</td></tr>
+</table>
+<p>In SCREEN 13 the colors are 0 to 255. The first 16 are the text colors, then come 16 grays and a range of hues. PALETTE <var>color</var>, <var>value</var> changes what a color looks like: <var>value</var> is red + 256 * green + 65536 * blue, each from 0 to 63. In SCREEN 1, the value is one of the 16 text colors. PALETTE alone puts the colors back.</p>
+<pre class="listing">
+SCREEN 13
+PALETTE 0, 42 * 65536       ' color 0, the background, becomes blue
+</pre>
+
+<h2>Drawing</h2>
+<p>Coordinates are written in parentheses, (<var>x</var>, <var>y</var>). With STEP before them they are counted from the last point drawn. Real numbers are rounded, and points outside the screen are simply not drawn. Where the color is left out, the foreground color is used (3 in SCREEN 1, 15 in SCREEN 13).</p>
+<table class="ref wrap">
+<tr><td>PSET (<var>x</var>, <var>y</var>), <var>color</var></td><td>A point. PRESET is the same with the background color as the default.</td></tr>
+<tr><td>LINE (<var>x1</var>, <var>y1</var>)-(<var>x2</var>, <var>y2</var>), <var>color</var></td><td>A line. With ,B at the end, a box; with ,BF, a filled box.</td></tr>
+<tr><td>CIRCLE (<var>x</var>, <var>y</var>), <var>r</var>, <var>color</var></td><td>A circle, or an arc, an ellipse, a slice (see CIRCLE in Chapter 6).</td></tr>
+<tr><td>PAINT (<var>x</var>, <var>y</var>), <var>color</var>, <var>border</var></td><td>Fills the area around the point, up to the border color.</td></tr>
+<tr><td>POINT(<var>x</var>, <var>y</var>)</td><td>The color of a point, or -1 off the screen.</td></tr>
+</table>
+<pre class="listing">
+SCREEN 13
+LINE (10, 10)-(100, 60), 14, B
+LINE (200, 10)-(300, 60), 9, BF
+CIRCLE (160, 100), 50, 15
+CIRCLE (60, 150), 30, 12, 0, 3.14159
+CIRCLE (250, 150), 30, 10
+PAINT (250, 150), 10
+</pre>
+<img class="shot" src="cbasic/shapes.png" alt="Shapes in SCREEN 13">
+<p class="caption">Lines, boxes, circles, an arc and a painted circle in SCREEN 13.</p>
+<p>Circles look round on the screen although its points are not square: CIRCLE draws them 5/6 as tall as they are wide. Its last parameter, the <i>aspect</i>, changes that: 2 makes an ellipse twice as tall as it is wide.</p>
+
+<h2>Pictures That Move</h2>
+<p>GET copies a rectangle of the screen into an array, and PUT draws it again anywhere. This is how a game moves a figure without drawing it point by point each time:</p>
+<pre class="listing">
+DIM Ship%(100)
+CIRCLE (10, 10), 8, 14: PAINT (10, 10), 14
+GET (0, 0)-(20, 20), Ship%
+CLS
+FOR X = 0 TO 300 STEP 4
+    PUT (X, 90), Ship%, XOR          ' draw it
+    T! = TIMER: DO: LOOP UNTIL TIMER &lt;&gt; T!   ' a moment
+    PUT (X, 90), Ship%, XOR          ' and erase it
+NEXT
+</pre>
+<p>With XOR, drawing the same picture twice in the same place leaves the screen as it was, so the background is not spoiled. The other ways of drawing are PSET (the picture as it is), PRESET (its colors inverted), AND and OR. The array must be large enough: 4 bytes plus, in SCREEN 13, one byte for each point, or in SCREEN 1 a quarter byte for each point, each row rounded up to a whole byte. An INTEGER array has 2 bytes per element, a LONG array 4.</p>
+<p>Pictures may also be written in DATA statements and read into a LONG array: the first value holds the width (in bits: points times 2 in SCREEN 1, times 8 in SCREEN 13) and the height (times 65536), and the rest the points, four to a byte in SCREEN 1.</p>
+<img class="shot" src="cbasic/screen1.png" alt="SCREEN 1">
+<p class="caption">SCREEN 1 with palette 1: arcs, a slice, an ellipse, pictures put with PSET and XOR, and a row of bananas read from DATA.</p>
+
+<h2>Sound</h2>
+<p>BEEP sounds the speaker for a quarter of a second. SOUND <var>frequency</var>, <var>duration</var> plays a tone of the frequency given in hertz (37 to 32767) for the duration given in clock ticks, of which there are 18.2 in a second.</p>
+<p>PLAY plays a tune written as a string, in a little music language:</p>
+<pre class="listing">
+PLAY "T120 O3 L8 CDEFGAB > C"        ' a scale
+PLAY "MS L16 EFGEFDC"                ' short, separated notes
+</pre>
+<table class="ref wrap">
+<tr><th>Command</th><th>Meaning</th></tr>
+<tr><td>A to G</td><td>A note, with # or + for sharp and - for flat after it, then optionally its length: C4, F#8.</td></tr>
+<tr><td>N <var>n</var></td><td>The note number <var>n</var>, 1 to 84 (7 octaves of 12 notes); N0 is a rest.</td></tr>
+<tr><td>O <var>n</var></td><td>The octave, 0 to 6. Octave 3 begins with middle C. The first octave is 4.</td></tr>
+<tr><td>&lt; &gt;</td><td>One octave down, one octave up.</td></tr>
+<tr><td>L <var>n</var></td><td>The length of the notes that follow: 1 a whole note, 2 a half, 4 a quarter (the first length)... up to 64.</td></tr>
+<tr><td>P <var>n</var></td><td>A pause of length <var>n</var>.</td></tr>
+<tr><td>.</td><td>After a note or pause: half as long again. Two dots: three quarters again.</td></tr>
+<tr><td>T <var>n</var></td><td>The tempo: quarter notes in a minute, 32 to 255 (the first is 120).</td></tr>
+<tr><td>MN, ML, MS</td><td>Normal (each note sounds 7/8 of its length), legato (all of it), staccato (3/4).</td></tr>
+<tr><td>MF, MB</td><td>Accepted, for tunes written for other computers; the music always plays to the end before the program goes on.</td></tr>
+</table>
+<p>The octave, length, tempo and style stay set from one PLAY to the next.</p>
+
+<h2>Time and Chance</h2>
+<p>TIMER gives the seconds since midnight, with a resolution of about a twentieth of a second; a program waits a moment by looping until TIMER has moved on. RND gives a random number from 0 up to (but not including) 1; INT(RND * 6) + 1 is a die. The numbers come in the same order each time the program runs, unless RANDOMIZE TIMER, at the start, makes them begin somewhere different.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 6                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="6" data-title="Statements" data-part="Part Two: Reference">
+
+<h2>How to Read This Chapter</h2>
+<p>The statements are in alphabetic order. Each one has its format, what it does, and the details to know. Statements that belong together, like FOR and NEXT, are described together under the first one.</p>
+
+<h2 class="cmd">BEEP <small>Sound</small></h2>
+<dl><dt>Format</dt><dd><pre>BEEP</pre></dd>
+<dt>Remarks</dt><dd><p>Sounds the speaker at 800 hertz for about a quarter of a second. PRINT CHR$(7) does the same.</p></dd></dl>
+
+<h2 class="cmd">CALL <small>Subprograms</small></h2>
+<dl><dt>Format</dt><dd><pre>CALL <var>name</var> [(<var>argument</var>, ...)]
+<var>name</var> [<var>argument</var>, ...]</pre></dd>
+<dt>Remarks</dt><dd><p>Runs the SUB <var>name</var>. With CALL the arguments are in parentheses; without it they are not. See SUB, and "Subprograms and Functions" in Chapter 3.</p></dd></dl>
+
+<h2 class="cmd">CIRCLE <small>Graphics</small></h2>
+<dl><dt>Format</dt><dd><pre>CIRCLE [STEP] (<var>x</var>, <var>y</var>), <var>radius</var> [, [<var>color</var>] [, [<var>start</var>] [, [<var>end</var>] [, <var>aspect</var>]]]]</pre></dd>
+<dt>Remarks</dt><dd><p>Draws a circle with its center at (<var>x</var>, <var>y</var>). <var>start</var> and <var>end</var> are angles in radians, from 0 to 2&pi; (6.283185), counted counterclockwise from the right: with them, only the arc from <var>start</var> to <var>end</var> is drawn. A negative angle also draws a line from the center to that end of the arc, so that -0.5 and -2 draw a slice. <var>aspect</var> is the height divided by the width: by default 5/6, which makes circles look round; with a larger aspect the ellipse is taller. The last point becomes the center.</p></dd>
+<dt>Example</dt><dd><pre>CIRCLE (160, 100), 40, 14, , , 2          ' a tall ellipse
+CIRCLE (160, 100), 40, 12, -.785, -2.356  ' a slice</pre></dd></dl>
+
+<h2 class="cmd">CLOSE <small>Files</small></h2>
+<dl><dt>Format</dt><dd><pre>CLOSE [[#]<var>n</var> [, [#]<var>n</var>] ...]</pre></dd>
+<dt>Remarks</dt><dd><p>Closes the files with those numbers, writing what was still waiting to be written. CLOSE alone closes every open file.</p></dd></dl>
+
+<h2 class="cmd">CLS <small>Screen</small></h2>
+<dl><dt>Format</dt><dd><pre>CLS [{0 | 1 | 2}]</pre></dd>
+<dt>Remarks</dt><dd><p>Clears the screen and puts the cursor at the top left. In text mode, CLS clears the text window set with VIEW PRINT; CLS 0 always clears the whole screen. In graphics modes the whole screen is cleared and the last point becomes the center of the screen.</p></dd></dl>
+
+<h2 class="cmd">COLOR <small>Screen</small></h2>
+<dl><dt>Format</dt><dd><pre>COLOR [<var>foreground</var>] [, <var>background</var>]     (SCREEN 0)
+COLOR [<var>background</var>] [, <var>palette</var>]        (SCREEN 1)
+COLOR [<var>foreground</var>]                    (SCREEN 13)</pre></dd>
+<dt>Remarks</dt><dd><p>Chooses the colors of the text printed from then on. See Chapter 4 for the colors of text mode and Chapter 5 for the graphics modes.</p></dd></dl>
+
+<h2 class="cmd">CONST <small>Declarations</small></h2>
+<dl><dt>Format</dt><dd><pre>CONST <var>name</var> = <var>value</var> [, <var>name</var> = <var>value</var>] ...</pre></dd>
+<dt>Remarks</dt><dd><p>Gives names to values that do not change. A value may be an expression of numbers and other constants (CONST TRUE = NOT FALSE), or a string in quotation marks. Constants are known everywhere in the program, also inside SUBs and FUNCTIONs.</p></dd></dl>
+
+<h2 class="cmd">DATA <small>Data</small></h2>
+<dl><dt>Format</dt><dd><pre>DATA <var>constant</var> [, <var>constant</var>] ...</pre></dd>
+<dt>Remarks</dt><dd><p>Holds numbers and strings that READ takes, in the order they are written in the program. DATA statements may be anywhere in the main program, also after its END. See READ and RESTORE.</p></dd></dl>
+
+<h2 class="cmd">DECLARE <small>Declarations</small></h2>
+<dl><dt>Format</dt><dd><pre>DECLARE {SUB | FUNCTION} <var>name</var> [(<var>parameters</var>)]</pre></dd>
+<dt>Remarks</dt><dd><p>Lists a subprogram or function at the start of a program. CBasic finds every SUB and FUNCTION by itself before the program runs, so DECLARE is accepted but not needed.</p></dd></dl>
+
+<h2 class="cmd">DEF FN <small>Functions</small></h2>
+<dl><dt>Format</dt><dd><pre>DEF FN<var>name</var>[(<var>parameter</var>, ...)] = <var>expression</var></pre></dd>
+<dt>Remarks</dt><dd><p>Defines a one-line function in the main program. Its parameters are its own variables; every other name in the expression is a variable of the main program. It may be used anywhere, also inside SUBs.</p></dd></dl>
+
+<h2 class="cmd">DEF SEG <small>Memory</small></h2>
+<dl><dt>Format</dt><dd><pre>DEF SEG [= <var>segment</var>]</pre></dd>
+<dt>Remarks</dt><dd><p>Sets the segment of memory that PEEK and POKE use. DEF SEG alone sets it back to CBasic's own data. DEF SEG = 0 reaches the interrupt vectors and the BIOS data, for example the keyboard flags at address 1047 (417h).</p></dd></dl>
+
+<h2 class="cmd">DEFINT, DEFLNG, DEFSNG, DEFDBL, DEFSTR <small>Declarations</small></h2>
+<dl><dt>Format</dt><dd><pre>DEFINT <var>letter</var>[-<var>letter</var>] [, <var>letter</var>[-<var>letter</var>]] ...</pre></dd>
+<dt>Remarks</dt><dd><p>Variables, arrays and functions without a type suffix whose names begin with those letters are INTEGER (DEFINT), LONG, SINGLE, SINGLE (DEFDBL) or STRING from then on. DEFINT A-Z makes them all INTEGER.</p></dd></dl>
+
+<h2 class="cmd">DIM <small>Declarations</small></h2>
+<dl><dt>Format</dt><dd><pre>DIM [SHARED] <var>name</var>[(<var>bounds</var>)] [AS <var>type</var>] [, ...]</pre></dd>
+<dt>Remarks</dt><dd><p>Declares arrays and variables. <var>bounds</var> are, for each dimension, [<var>lower</var> TO] <var>upper</var>; the lower bound is 0 when it is not given (or 1 after OPTION BASE 1). <var>type</var> is INTEGER, LONG, SINGLE, DOUBLE, STRING or a record type. A name declared AS a type needs no suffix. SHARED, in the main program, makes the names known inside every SUB and FUNCTION. A DIM inside a SUB makes arrays of its own, freed when the SUB ends. Running DIM again for an array that already has its elements stops the program with "Duplicate definition"; use REDIM.</p></dd>
+<dt>Example</dt><dd><pre>DIM SHARED Grid(1 TO 10, 1 TO 10) AS INTEGER, Lives
+DIM Speed AS SINGLE, Who AS STRING</pre></dd></dl>
+
+<h2 class="cmd">DO ... LOOP <small>Control</small></h2>
+<dl><dt>Format</dt><dd><pre>DO [{WHILE | UNTIL} <var>condition</var>]
+    <var>statements</var>
+LOOP [{WHILE | UNTIL} <var>condition</var>]</pre></dd>
+<dt>Remarks</dt><dd><p>Repeats the statements. WHILE goes on while the condition is true, UNTIL until it becomes true; a condition at DO is tested before the statements, one at LOOP after them. EXIT DO leaves the loop.</p></dd></dl>
+
+<h2 class="cmd">END <small>Control</small></h2>
+<dl><dt>Format</dt><dd><pre>END
+END {IF | SELECT | SUB | FUNCTION | TYPE}</pre></dd>
+<dt>Remarks</dt><dd><p>END alone ends the program, closing its files. The other forms close a block.</p></dd></dl>
+
+<h2 class="cmd">ERASE <small>Arrays</small></h2>
+<dl><dt>Format</dt><dd><pre>ERASE <var>array</var> [, <var>array</var>] ...</pre></dd>
+<dt>Remarks</dt><dd><p>Frees the elements of the arrays. They may be given new bounds with DIM afterwards.</p></dd></dl>
+
+<h2 class="cmd">ERROR <small>Errors</small></h2>
+<dl><dt>Format</dt><dd><pre>ERROR <var>n</var></pre></dd>
+<dt>Remarks</dt><dd><p>Makes the error number <var>n</var> (1 to 255) happen, as if the program had met it. See ON ERROR GOTO and Appendix A.</p></dd></dl>
+
+<h2 class="cmd">EXIT <small>Control</small></h2>
+<dl><dt>Format</dt><dd><pre>EXIT {FOR | DO | SUB | FUNCTION | DEF}</pre></dd>
+<dt>Remarks</dt><dd><p>Leaves the innermost FOR or DO loop, or returns from the SUB or FUNCTION at once.</p></dd></dl>
+
+<h2 class="cmd">FOR ... NEXT <small>Control</small></h2>
+<dl><dt>Format</dt><dd><pre>FOR <var>counter</var> = <var>first</var> TO <var>last</var> [STEP <var>step</var>]
+    <var>statements</var>
+NEXT [<var>counter</var> [, <var>counter</var>] ...]</pre></dd>
+<dt>Remarks</dt><dd><p>Runs the statements with <var>counter</var> set to <var>first</var>, then to <var>first</var> + <var>step</var>, and so on while it has not gone past <var>last</var> (with a negative step, while it is not below <var>last</var>). If <var>first</var> is already past <var>last</var>, the statements do not run at all. <var>last</var> and <var>step</var> are worked out once, at the start. After the loop, <var>counter</var> has the first value past <var>last</var>. NEXT J, I ends two loops at once. EXIT FOR leaves the loop.</p></dd></dl>
+
+<h2 class="cmd">FUNCTION <small>Functions</small></h2>
+<dl><dt>Format</dt><dd><pre>FUNCTION <var>name</var>[<var>suffix</var>] [(<var>parameter</var> [AS <var>type</var>], ...)] [STATIC]
+    <var>statements</var>
+    <var>name</var> = <var>value</var>
+END FUNCTION</pre></dd>
+<dt>Remarks</dt><dd><p>A function written in CBasic, used in expressions like the built-in ones. The value given back is the last one assigned to <var>name</var> (0 or "" if none). A parameter written with () is an array. See "Subprograms and Functions" in Chapter 3. STATIC is accepted; the variables of a FUNCTION start at 0 each time it is called.</p></dd></dl>
+
+<h2 class="cmd">GET <small>Graphics</small></h2>
+<dl><dt>Format</dt><dd><pre>GET [STEP] (<var>x1</var>, <var>y1</var>)-[STEP] (<var>x2</var>, <var>y2</var>), <var>array</var>[(<var>index</var>)]</pre></dd>
+<dt>Remarks</dt><dd><p>Copies the rectangle into a numeric array, from its first element or from the element given. The whole rectangle must be on the screen. See "Pictures That Move" in Chapter 5 for the size of the array.</p></dd></dl>
+
+<h2 class="cmd">GOSUB ... RETURN <small>Control</small></h2>
+<dl><dt>Format</dt><dd><pre>GOSUB {<var>line number</var> | <var>label</var>}
+...
+RETURN</pre></dd>
+<dt>Remarks</dt><dd><p>Jumps to a subroutine; RETURN goes back to the statement after the GOSUB. A RETURN without a GOSUB stops the program with "RETURN without GOSUB".</p></dd></dl>
+
+<h2 class="cmd">GOTO <small>Control</small></h2>
+<dl><dt>Format</dt><dd><pre>GOTO {<var>line number</var> | <var>label</var>}</pre></dd>
+<dt>Remarks</dt><dd><p>Continues at the line given, which must be in the same part of the program (the main program, or the same SUB or FUNCTION).</p></dd></dl>
+
+<h2 class="cmd">IF <small>Control</small></h2>
+<dl><dt>Format</dt><dd><pre>IF <var>condition</var> THEN <var>statements</var> [ELSE <var>statements</var>]
+IF <var>condition</var> THEN {<var>line number</var> | GOTO <var>label</var>}
+IF <var>condition</var> THEN
+    <var>statements</var>
+[ELSEIF <var>condition</var> THEN
+    <var>statements</var>] ...
+[ELSE
+    <var>statements</var>]
+END IF</pre></dd>
+<dt>Remarks</dt><dd><p>Runs statements only when the condition is true (not 0). In the one-line form, the statements after THEN, separated by colons, run when it is true, and those after ELSE when it is false. The block form begins with a line that ends with THEN.</p></dd></dl>
+
+<h2 class="cmd">INPUT <small>Keyboard</small></h2>
+<dl><dt>Format</dt><dd><pre>INPUT [;] ["<var>prompt</var>" {; | ,}] <var>variable</var> [, <var>variable</var>] ...</pre></dd>
+<dt>Remarks</dt><dd><p>Shows the prompt and a question mark (none after a comma), and reads a line: one item for each variable, separated by commas. Strings may be in quotation marks. If the answer is wrong, "Redo from start" and the question again. With ; right after INPUT, the cursor stays on the line after the answer.</p></dd></dl>
+
+<h2 class="cmd">INPUT # <small>Files</small></h2>
+<dl><dt>Format</dt><dd><pre>INPUT #<var>n</var>, <var>variable</var> [, <var>variable</var>] ...</pre></dd>
+<dt>Remarks</dt><dd><p>Reads items from a file opened FOR INPUT. Items are separated by commas or by the ends of lines; a number also ends at a space; a string in quotation marks may contain commas. Reading past the end stops the program with "Input past end of file".</p></dd></dl>
+
+<h2 class="cmd">KILL <small>Files</small></h2>
+<dl><dt>Format</dt><dd><pre>KILL <var>filespec</var></pre></dd>
+<dt>Remarks</dt><dd><p>Erases a file from the diskette, like the COS command DEL.</p></dd></dl>
+
+<h2 class="cmd">LET <small>Assignment</small></h2>
+<dl><dt>Format</dt><dd><pre>[LET] <var>variable</var> = <var>expression</var></pre></dd>
+<dt>Remarks</dt><dd><p>Gives a variable a value. The word LET is usually left out. A number is converted to the variable's type; a string can only be given to a string variable.</p></dd></dl>
+
+<h2 class="cmd">LINE <small>Graphics</small></h2>
+<dl><dt>Format</dt><dd><pre>LINE [[STEP] (<var>x1</var>, <var>y1</var>)]-[STEP] (<var>x2</var>, <var>y2</var>) [, [<var>color</var>] [, B[F]]]</pre></dd>
+<dt>Remarks</dt><dd><p>Draws a line; with B, a box with those corners; with BF, a filled box. Without the first point the line starts at the last point drawn. The second point becomes the last point.</p></dd></dl>
+
+<h2 class="cmd">LINE INPUT <small>Keyboard, Files</small></h2>
+<dl><dt>Format</dt><dd><pre>LINE INPUT [;] ["<var>prompt</var>";] <var>string variable</var>
+LINE INPUT #<var>n</var>, <var>string variable</var></pre></dd>
+<dt>Remarks</dt><dd><p>Reads a whole line, commas included, from the keyboard (no question mark is shown) or from a file.</p></dd></dl>
+
+<h2 class="cmd">LOCATE <small>Screen</small></h2>
+<dl><dt>Format</dt><dd><pre>LOCATE [<var>row</var>] [, [<var>column</var>] [, <var>cursor</var>]]</pre></dd>
+<dt>Remarks</dt><dd><p>Moves the cursor: rows 1 to 25, columns 1 to 80 (1 to 40 in the graphics modes). <var>cursor</var> 0 hides the blinking cursor and 1 shows it.</p></dd></dl>
+
+<h2 class="cmd">ON ERROR GOTO <small>Errors</small></h2>
+<dl><dt>Format</dt><dd><pre>ON ERROR GOTO {<var>label</var> | 0}</pre></dd>
+<dt>Remarks</dt><dd><p>From then on, an error makes the program jump to <var>label</var>, in the main program, instead of stopping. ERR and ERL tell the error and the line. The handler ends with RESUME. ON ERROR GOTO 0 turns this off. An error in the handler itself stops the program. See "Handling Errors" in Chapter 3.</p></dd></dl>
+
+<h2 class="cmd">ON ... GOTO, ON ... GOSUB <small>Control</small></h2>
+<dl><dt>Format</dt><dd><pre>ON <var>n</var> {GOTO | GOSUB} <var>label</var> [, <var>label</var>] ...</pre></dd>
+<dt>Remarks</dt><dd><p>Jumps to the first label when <var>n</var> is 1, the second when it is 2, and so on; when there is no such label the program goes on with the next statement.</p></dd></dl>
+
+<h2 class="cmd">OPEN <small>Files</small></h2>
+<dl><dt>Format</dt><dd><pre>OPEN <var>filespec</var> FOR {INPUT | OUTPUT | APPEND} AS [#]<var>n</var></pre></dd>
+<dt>Remarks</dt><dd><p>Opens a file with the number <var>n</var>, 1 to 8. See "Files" in Chapter 4.</p></dd></dl>
+
+<h2 class="cmd">OPTION BASE <small>Arrays</small></h2>
+<dl><dt>Format</dt><dd><pre>OPTION BASE {0 | 1}</pre></dd>
+<dt>Remarks</dt><dd><p>The lower bound of arrays declared without one, and of arrays used without DIM.</p></dd></dl>
+
+<h2 class="cmd">OUT <small>Hardware</small></h2>
+<dl><dt>Format</dt><dd><pre>OUT <var>port</var>, <var>value</var></pre></dd>
+<dt>Remarks</dt><dd><p>Sends a byte to an input/output port. INP reads one. Use with care: a wrong value can confuse the hardware until the computer is restarted.</p></dd></dl>
+
+<h2 class="cmd">PAINT <small>Graphics</small></h2>
+<dl><dt>Format</dt><dd><pre>PAINT [STEP] (<var>x</var>, <var>y</var>) [, [<var>color</var>] [, <var>border</var>]]</pre></dd>
+<dt>Remarks</dt><dd><p>Fills the area that contains the point with <var>color</var>, as far as points of the <var>border</var> color (by default, <var>color</var> itself) or the edges of the screen. The border must be closed, or the paint leaks out.</p></dd></dl>
+
+<h2 class="cmd">PALETTE <small>Graphics</small></h2>
+<dl><dt>Format</dt><dd><pre>PALETTE [<var>color</var>, <var>value</var>]</pre></dd>
+<dt>Remarks</dt><dd><p>Changes what a color looks like; see "Colors" in Chapter 5. In text mode, <var>value</var> is one of 64 display colors. PALETTE alone puts back the standard colors.</p></dd></dl>
+
+<h2 class="cmd">PLAY <small>Sound</small></h2>
+<dl><dt>Format</dt><dd><pre>PLAY <var>string</var></pre></dd>
+<dt>Remarks</dt><dd><p>Plays the music written in the string, in the language described under "Sound" in Chapter 5. The program waits until the music ends.</p></dd></dl>
+
+<h2 class="cmd">POKE <small>Memory</small></h2>
+<dl><dt>Format</dt><dd><pre>POKE <var>address</var>, <var>value</var></pre></dd>
+<dt>Remarks</dt><dd><p>Writes a byte, 0 to 255, at an address (0 to 65535) of the segment set with DEF SEG. PEEK reads one.</p></dd></dl>
+
+<h2 class="cmd">PRINT <small>Screen, Files</small></h2>
+<dl><dt>Format</dt><dd><pre>PRINT [#<var>n</var>,] [<var>item</var> [{; | ,} <var>item</var>] ...] [{; | ,}]</pre></dd>
+<dt>Remarks</dt><dd><p>Shows numbers and strings on the screen, or writes them to a file opened for OUTPUT or APPEND. An item may also be TAB(<var>column</var>) or SPC(<var>n</var>). See "PRINT" in Chapter 4. A question mark may be typed instead of the word PRINT.</p></dd></dl>
+
+<h2 class="cmd">PSET, PRESET <small>Graphics</small></h2>
+<dl><dt>Format</dt><dd><pre>{PSET | PRESET} [STEP] (<var>x</var>, <var>y</var>) [, <var>color</var>]</pre></dd>
+<dt>Remarks</dt><dd><p>Draws a point. Without a color, PSET uses the foreground color and PRESET the background (0).</p></dd></dl>
+
+<h2 class="cmd">PUT <small>Graphics</small></h2>
+<dl><dt>Format</dt><dd><pre>PUT [STEP] (<var>x</var>, <var>y</var>), <var>array</var>[(<var>index</var>)] [, {PSET | PRESET | AND | OR | XOR}]</pre></dd>
+<dt>Remarks</dt><dd><p>Draws the picture kept by GET, or read from DATA, with its top left corner at (<var>x</var>, <var>y</var>). XOR, the default, combines its points with those on the screen so that a second PUT in the same place erases it. The parts of the picture outside the screen are not drawn.</p></dd></dl>
+
+<h2 class="cmd">RANDOMIZE <small>Numbers</small></h2>
+<dl><dt>Format</dt><dd><pre>RANDOMIZE [<var>seed</var>]</pre></dd>
+<dt>Remarks</dt><dd><p>Starts the random numbers of RND at a place that depends on <var>seed</var>. RANDOMIZE TIMER, or RANDOMIZE alone, uses the time of day, so that each run is different.</p></dd></dl>
+
+<h2 class="cmd">READ <small>Data</small></h2>
+<dl><dt>Format</dt><dd><pre>READ <var>variable</var> [, <var>variable</var>] ...</pre></dd>
+<dt>Remarks</dt><dd><p>Takes the next items of the DATA statements. Reading a string into a numeric variable stops the program with "Syntax error", and reading past the last item with "Out of DATA". Whole numbers are read exactly into LONG variables.</p></dd></dl>
+
+<h2 class="cmd">REDIM <small>Arrays</small></h2>
+<dl><dt>Format</dt><dd><pre>REDIM [SHARED] <var>array</var>(<var>bounds</var>) [AS <var>type</var>] [, ...]</pre></dd>
+<dt>Remarks</dt><dd><p>Gives an array new bounds. Its old elements are lost: the new ones are 0 or "".</p></dd></dl>
+
+<h2 class="cmd">REM <small>Remarks</small></h2>
+<dl><dt>Format</dt><dd><pre>REM <var>remark</var>
+' <var>remark</var></pre></dd>
+<dt>Remarks</dt><dd><p>The rest of the line is a remark, for the reader of the program.</p></dd></dl>
+
+<h2 class="cmd">RESTORE <small>Data</small></h2>
+<dl><dt>Format</dt><dd><pre>RESTORE [{<var>line number</var> | <var>label</var>}]</pre></dd>
+<dt>Remarks</dt><dd><p>The next READ takes the first item of the first DATA statement, or of the first one after the line given.</p></dd></dl>
+
+<h2 class="cmd">RESUME <small>Errors</small></h2>
+<dl><dt>Format</dt><dd><pre>RESUME [{0 | NEXT | <var>label</var>}]</pre></dd>
+<dt>Remarks</dt><dd><p>Ends an error handler: RESUME or RESUME 0 runs the statement that failed again, RESUME NEXT continues after it, RESUME <var>label</var> at the label. A RESUME outside a handler stops the program with "RESUME without error".</p></dd></dl>
+
+<h2 class="cmd">SCREEN <small>Screen</small></h2>
+<dl><dt>Format</dt><dd><pre>SCREEN <var>mode</var></pre></dd>
+<dt>Remarks</dt><dd><p>0 is the text mode, 1 and 13 the graphics modes; see Chapter 5. Other modes stop the program with "Illegal function call". Asking for the mode the screen is already in changes nothing.</p></dd></dl>
+
+<h2 class="cmd">SELECT CASE <small>Control</small></h2>
+<dl><dt>Format</dt><dd><pre>SELECT CASE <var>expression</var>
+CASE <var>test</var> [, <var>test</var>] ...
+    <var>statements</var>
+[CASE ELSE
+    <var>statements</var>]
+END SELECT</pre></dd>
+<dt>Remarks</dt><dd><p>Runs the statements of the first CASE that matches the value. A <var>test</var> is a value, a range <var>low</var> TO <var>high</var>, or IS followed by a comparison: IS &gt;= 10. The value may be a number or a string.</p></dd></dl>
+
+<h2 class="cmd">SHARED <small>Declarations</small></h2>
+<dl><dt>Format</dt><dd><pre>SHARED <var>variable</var>[()] [AS <var>type</var>] [, ...]</pre></dd>
+<dt>Remarks</dt><dd><p>Inside a SUB or FUNCTION: uses these variables or arrays of the main program instead of its own.</p></dd></dl>
+
+<h2 class="cmd">SLEEP <small>Time</small></h2>
+<dl><dt>Format</dt><dd><pre>SLEEP [<var>seconds</var>]</pre></dd>
+<dt>Remarks</dt><dd><p>Waits the seconds given or until a key is pressed; SLEEP alone waits for a key. The key is not taken: INKEY$ still gives it.</p></dd></dl>
+
+<h2 class="cmd">SOUND <small>Sound</small></h2>
+<dl><dt>Format</dt><dd><pre>SOUND <var>frequency</var>, <var>duration</var></pre></dd>
+<dt>Remarks</dt><dd><p>A tone of <var>frequency</var> hertz (37 to 32767) for <var>duration</var> clock ticks (18.2 in a second).</p></dd></dl>
+
+<h2 class="cmd">STOP, SYSTEM <small>Control</small></h2>
+<dl><dt>Format</dt><dd><pre>STOP
+SYSTEM</pre></dd>
+<dt>Remarks</dt><dd><p>End the program, like END.</p></dd></dl>
+
+<h2 class="cmd">SUB <small>Subprograms</small></h2>
+<dl><dt>Format</dt><dd><pre>SUB <var>name</var> [(<var>parameter</var>[()] [AS <var>type</var>], ...)] [STATIC]
+    <var>statements</var>
+END SUB</pre></dd>
+<dt>Remarks</dt><dd><p>A subprogram, run with CALL or by its name. Its variables are its own and start at 0 each time. See "Subprograms and Functions" in Chapter 3.</p></dd></dl>
+
+<h2 class="cmd">SWAP <small>Assignment</small></h2>
+<dl><dt>Format</dt><dd><pre>SWAP <var>variable1</var>, <var>variable2</var></pre></dd>
+<dt>Remarks</dt><dd><p>Exchanges the values of two variables of the same type.</p></dd></dl>
+
+<h2 class="cmd">TYPE <small>Declarations</small></h2>
+<dl><dt>Format</dt><dd><pre>TYPE <var>name</var>
+    <var>field</var> AS <var>type</var>
+    ...
+END TYPE</pre></dd>
+<dt>Remarks</dt><dd><p>Describes a record; see "Records" in Chapter 3. The fields may be INTEGER, LONG, SINGLE, DOUBLE or a record type declared before.</p></dd></dl>
+
+<h2 class="cmd">VIEW PRINT <small>Screen</small></h2>
+<dl><dt>Format</dt><dd><pre>VIEW PRINT [<var>top</var> TO <var>bottom</var>]</pre></dd>
+<dt>Remarks</dt><dd><p>Sets the rows that PRINT uses and scrolls; the cursor goes to the top row. VIEW PRINT alone gives back the whole screen.</p></dd></dl>
+
+<h2 class="cmd">WHILE ... WEND <small>Control</small></h2>
+<dl><dt>Format</dt><dd><pre>WHILE <var>condition</var>
+    <var>statements</var>
+WEND</pre></dd>
+<dt>Remarks</dt><dd><p>Repeats the statements while the condition is true, testing it first.</p></dd></dl>
+
+<h2 class="cmd">WIDTH <small>Screen</small></h2>
+<dl><dt>Format</dt><dd><pre>WIDTH <var>columns</var> [, <var>rows</var>]</pre></dd>
+<dt>Remarks</dt><dd><p>Accepted for programs written for other displays. The text screen is always 80 columns by 25 rows.</p></dd></dl>
+
+<h2 class="cmd">WRITE <small>Screen, Files</small></h2>
+<dl><dt>Format</dt><dd><pre>WRITE [#<var>n</var>,] <var>item</var> [, <var>item</var>] ...</pre></dd>
+<dt>Remarks</dt><dd><p>Like PRINT, but separates the items with commas, puts strings in quotation marks and numbers without spaces around them, so that INPUT # can read them back.</p></dd></dl>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 7                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="7" data-title="Functions" data-part="Part Two: Reference">
+
+<h2>Numeric Functions</h2>
+<table class="ref wrap">
+<tr><th>Function</th><th>Gives</th></tr>
+<tr><td>ABS(<var>x</var>)</td><td>The absolute value: ABS(-3) is 3.</td></tr>
+<tr><td>ATN(<var>x</var>)</td><td>The arctangent, in radians, from -&pi;/2 to &pi;/2. 4 * ATN(1) is &pi;.</td></tr>
+<tr><td>CDBL(<var>x</var>), CSNG(<var>x</var>)</td><td><var>x</var> as a SINGLE.</td></tr>
+<tr><td>CINT(<var>x</var>)</td><td><var>x</var> rounded to an INTEGER (halves to the even number).</td></tr>
+<tr><td>CLNG(<var>x</var>)</td><td><var>x</var> rounded to a LONG.</td></tr>
+<tr><td>COS(<var>x</var>)</td><td>The cosine of an angle in radians.</td></tr>
+<tr><td>EXP(<var>x</var>)</td><td><i>e</i> (2.718282) raised to <var>x</var>; <var>x</var> up to about 88.</td></tr>
+<tr><td>FIX(<var>x</var>)</td><td><var>x</var> without its fraction: FIX(-2.5) is -2.</td></tr>
+<tr><td>INT(<var>x</var>)</td><td>The largest whole number not above <var>x</var>: INT(-2.5) is -3.</td></tr>
+<tr><td>LOG(<var>x</var>)</td><td>The natural logarithm of <var>x</var>, which must be above 0.</td></tr>
+<tr><td>RND[(<var>x</var>)]</td><td>A random number from 0 to less than 1. With <var>x</var> negative, starts the numbers again from a place given by <var>x</var>; with <var>x</var> = 0, the last number again.</td></tr>
+<tr><td>SGN(<var>x</var>)</td><td>-1, 0 or 1 for a negative number, 0 and a positive number.</td></tr>
+<tr><td>SIN(<var>x</var>)</td><td>The sine of an angle in radians.</td></tr>
+<tr><td>SQR(<var>x</var>)</td><td>The square root; <var>x</var> must not be negative.</td></tr>
+<tr><td>TAN(<var>x</var>)</td><td>The tangent of an angle in radians.</td></tr>
+</table>
+<p>Angles in degrees are turned into radians by multiplying by &pi; / 180. As an example, here is how to work with a vector in space, its length and its angle with another:</p>
+<pre class="listing">
+TYPE Vec
+    X AS SINGLE
+    Y AS SINGLE
+    Z AS SINGLE
+END TYPE
+DIM A AS Vec, B AS Vec
+A.X = 1: A.Y = 2: A.Z = 2
+B.X = 0: B.Y = 0: B.Z = 3
+Dot = A.X * B.X + A.Y * B.Y + A.Z * B.Z
+LA = SQR(A.X ^ 2 + A.Y ^ 2 + A.Z ^ 2)
+LB = SQR(B.X ^ 2 + B.Y ^ 2 + B.Z ^ 2)
+C = Dot / (LA * LB)
+Angle = ATN(SQR(1 - C * C) / C) * 180 / (4 * ATN(1))
+PRINT LA; LB; Angle               '  3  3  48.18968
+</pre>
+
+<h2>String Functions</h2>
+<table class="ref wrap">
+<tr><th>Function</th><th>Gives</th></tr>
+<tr><td>ASC(<var>s$</var>)</td><td>The code of the first character: ASC("A") is 65.</td></tr>
+<tr><td>CHR$(<var>n</var>)</td><td>The character with code <var>n</var>, 0 to 255.</td></tr>
+<tr><td>HEX$(<var>n</var>), OCT$(<var>n</var>)</td><td><var>n</var> written in hexadecimal or octal: HEX$(255) is "FF".</td></tr>
+<tr><td>INSTR([<var>start</var>,] <var>s$</var>, <var>find$</var>)</td><td>Where <var>find$</var> first appears in <var>s$</var>, from position <var>start</var>; 0 if it does not.</td></tr>
+<tr><td>LCASE$(<var>s$</var>), UCASE$(<var>s$</var>)</td><td><var>s$</var> in small or capital letters.</td></tr>
+<tr><td>LEFT$(<var>s$</var>, <var>n</var>)</td><td>The first <var>n</var> characters.</td></tr>
+<tr><td>LEN(<var>s$</var>)</td><td>The number of characters.</td></tr>
+<tr><td>LTRIM$(<var>s$</var>), RTRIM$(<var>s$</var>)</td><td><var>s$</var> without the spaces at its start, or at its end.</td></tr>
+<tr><td>MID$(<var>s$</var>, <var>start</var> [, <var>n</var>])</td><td><var>n</var> characters from position <var>start</var> (1 is the first), or all of them to the end.</td></tr>
+<tr><td>RIGHT$(<var>s$</var>, <var>n</var>)</td><td>The last <var>n</var> characters.</td></tr>
+<tr><td>SPACE$(<var>n</var>)</td><td><var>n</var> spaces.</td></tr>
+<tr><td>STR$(<var>x</var>)</td><td>The number as PRINT shows it, without the space after it: STR$(42) is " 42".</td></tr>
+<tr><td>STRING$(<var>n</var>, {<var>code</var> | <var>s$</var>})</td><td><var>n</var> times the character with that code, or the first character of <var>s$</var>.</td></tr>
+<tr><td>VAL(<var>s$</var>)</td><td>The number written at the start of <var>s$</var>: VAL("12.5 kg") is 12.5; 0 if there is none.</td></tr>
+</table>
+
+<h2>Input and Screen Functions</h2>
+<table class="ref wrap">
+<tr><th>Function</th><th>Gives</th></tr>
+<tr><td>CSRLIN</td><td>The row of the cursor.</td></tr>
+<tr><td>INKEY$</td><td>The key pressed, or "" (Chapter 4).</td></tr>
+<tr><td>INPUT$(<var>n</var>)</td><td><var>n</var> keys, waiting for them, not shown.</td></tr>
+<tr><td>POINT(<var>x</var>, <var>y</var>)</td><td>The color of the point, or -1 off the screen.</td></tr>
+<tr><td>POS(0)</td><td>The column of the cursor.</td></tr>
+</table>
+
+<h2>File Functions</h2>
+<table class="ref wrap">
+<tr><th>Function</th><th>Gives</th></tr>
+<tr><td>EOF(<var>n</var>)</td><td>-1 when the file has nothing more to read, else 0.</td></tr>
+<tr><td>FREEFILE</td><td>The first file number not in use.</td></tr>
+</table>
+
+<h2>System Functions</h2>
+<table class="ref wrap">
+<tr><th>Function</th><th>Gives</th></tr>
+<tr><td>DATE$</td><td>The date kept by COS, as "mm-dd-yyyy".</td></tr>
+<tr><td>ERL</td><td>The line where the last error happened.</td></tr>
+<tr><td>ERR</td><td>The number of the last error (Appendix A).</td></tr>
+<tr><td>FRE(<var>x</var>)</td><td>The free room for strings, in bytes.</td></tr>
+<tr><td>INP(<var>port</var>)</td><td>A byte read from an input/output port.</td></tr>
+<tr><td>LBOUND(<var>array</var> [, <var>dim</var>]), UBOUND(...)</td><td>The lower and upper bound of a dimension of an array (the first by default).</td></tr>
+<tr><td>PEEK(<var>address</var>)</td><td>The byte at an address of the DEF SEG segment.</td></tr>
+<tr><td>TIME$</td><td>The time kept by COS, as "hh:mm:ss".</td></tr>
+<tr><td>TIMER</td><td>The seconds since midnight.</td></tr>
+</table>
+</section>
+
+<!-- ================================================================== -->
+<!-- APPENDIXES                                                           -->
+<!-- ================================================================== -->
+
+<section class="chapter appendix" data-num="A" data-title="Error Messages" data-part="Appendixes">
+
+<h2>Messages When Compiling</h2>
+<p>These messages are shown before the program runs, as <var>NAME</var>.BAS(<var>line</var>): <var>message</var>. Only the first mistake is shown; correct it and run the program again.</p>
+<table class="ref wrap">
+<tr><th>Message</th><th>Meaning</th></tr>
+<tr><td>Syntax error</td><td>The statement does not follow the rules: a word missing or out of place, an unfinished expression.</td></tr>
+<tr><td>Expected: end of statement</td><td>Something follows a complete statement on the same line.</td></tr>
+<tr><td>Type mismatch</td><td>A string where a number is needed, or the other way round.</td></tr>
+<tr><td>Overflow</td><td>A number written in the program is too large.</td></tr>
+<tr><td>Duplicate definition</td><td>A name declared twice, or used as two different things.</td></tr>
+<tr><td>Duplicate label</td><td>Two lines with the same number or label.</td></tr>
+<tr><td>Label not defined</td><td>A jump to a label or line number that is not in the program.</td></tr>
+<tr><td>Block IF without END IF, FOR without NEXT, DO without LOOP, WHILE without WEND, SELECT without END SELECT</td><td>A block was not closed.</td></tr>
+<tr><td>NEXT without FOR, LOOP without DO, WEND without WHILE, ELSE, ELSEIF or END IF without block IF, CASE or END SELECT without SELECT</td><td>The end of a block that was not opened.</td></tr>
+<tr><td>SUB or FUNCTION without END, SUB or FUNCTION inside another</td><td>Each SUB and FUNCTION needs its END SUB or END FUNCTION before the next one.</td></tr>
+<tr><td>TYPE without END TYPE, Unknown type, Element not defined, Strings are not allowed in TYPE</td><td>Mistakes with records.</td></tr>
+<tr><td>Wrong number of dimensions</td><td>An array used with a different number of indexes than in its DIM.</td></tr>
+<tr><td>Subprogram not defined</td><td>CALL of a name that is not a SUB.</td></tr>
+<tr><td>Argument-count mismatch</td><td>A record or array passed where the SUB wants something else.</td></tr>
+<tr><td>FOR needs a simple variable</td><td>The counter of a FOR cannot be an array element or a field.</td></tr>
+<tr><td>Invalid constant</td><td>A CONST whose value cannot be worked out.</td></tr>
+<tr><td>Program too big, Too many names, Too many string constants, Too many variables, Too much DATA, Blocks nested too deeply, Too many parameters</td><td>The program is beyond a limit of CBasic (Appendix B).</td></tr>
+</table>
+
+<h2>Messages When Running</h2>
+<p>These errors stop the program with <var>message</var> in line <var>n</var>, unless it handles them with ON ERROR GOTO. The number is the value of ERR.</p>
+<table class="ref wrap">
+<tr><th>ERR</th><th>Message and meaning</th></tr>
+<tr><td>1</td><td><b>NEXT without FOR</b><br>A NEXT that does not close a FOR.</td></tr>
+<tr><td>2</td><td><b>Syntax error</b><br>When running: a READ found a string where it wanted a number.</td></tr>
+<tr><td>3</td><td><b>RETURN without GOSUB</b><br>A RETURN was reached without a GOSUB.</td></tr>
+<tr><td>4</td><td><b>Out of DATA</b><br>A READ found no more DATA items. Add DATA, or RESTORE.</td></tr>
+<tr><td>5</td><td><b>Illegal function call</b><br>A value outside what a statement or function accepts: SQR or LOG of a negative number, a screen mode the display does not have, a graphics statement in text mode, LOCATE outside the screen...</td></tr>
+<tr><td>6</td><td><b>Overflow</b><br>A number too large for its type: 32767 + 1 in an INTEGER, a real above 3.4E+38.</td></tr>
+<tr><td>7</td><td><b>Out of memory</b><br>Not enough memory for an array, or for the frames of SUBs calling one another.</td></tr>
+<tr><td>9</td><td><b>Subscript out of range</b><br>An array element outside the bounds of the array, or the wrong number of indexes.</td></tr>
+<tr><td>10</td><td><b>Duplicate definition</b><br>DIM of an array that already has its elements, or a name declared twice.</td></tr>
+<tr><td>11</td><td><b>Division by zero</b><br>/, \ or MOD by zero, or 0 raised to a negative power.</td></tr>
+<tr><td>13</td><td><b>Type mismatch</b><br>A string where a number is needed, or the other way round.</td></tr>
+<tr><td>14</td><td><b>Out of string space</b><br>The strings do not fit in their 64 KB, even after the unused ones are cleared away.</td></tr>
+<tr><td>15</td><td><b>String too long</b><br>A string of more than 32767 characters.</td></tr>
+<tr><td>16</td><td><b>String formula too complex</b><br>Too many strings in use in one statement, or SUB calls nested too deeply.</td></tr>
+<tr><td>20</td><td><b>RESUME without error</b><br>A RESUME outside an error handler.</td></tr>
+<tr><td>28</td><td><b>Out of stack space</b><br>SUBs and FUNCTIONs calling one another too deeply.</td></tr>
+<tr><td>52</td><td><b>Bad file name or number</b><br>A file number outside 1 to 8, or a name COS does not accept.</td></tr>
+<tr><td>53</td><td><b>File not found</b><br>OPEN FOR INPUT or KILL of a file that is not there.</td></tr>
+<tr><td>54</td><td><b>Bad file mode</b><br>PRINT # to a file opened for INPUT, or INPUT # to one opened for OUTPUT.</td></tr>
+<tr><td>55</td><td><b>File already open</b><br>OPEN with the number of a file that is open.</td></tr>
+<tr><td>61</td><td><b>Disk full</b><br>The diskette has no room for what PRINT # writes.</td></tr>
+<tr><td>62</td><td><b>Input past end of file</b><br>INPUT # or LINE INPUT # with nothing more to read. Test EOF first.</td></tr>
+<tr><td>64</td><td><b>Bad file name or number</b><br>A file number outside 1 to 8, or a name COS does not accept.</td></tr>
+<tr><td>76</td><td><b>Path not found</b><br>A directory in the file name does not exist.</td></tr>
+<tr><td>&mdash;</td><td><b>Break</b><br>Ctrl-C was pressed. It cannot be caught with ON ERROR.</td></tr>
+</table>
+</section>
+
+<section class="chapter appendix" data-num="B" data-title="Technical Information" data-part="Appendixes">
+
+<h2>Limits</h2>
+<table class="ref wrap">
+<tr><th>Item</th><th>Limit</th></tr>
+<tr><td>Program</td><td>A source file of up to 64 KB; up to 8192 statements; its compiled code up to 64 KB.</td></tr>
+<tr><td>Variables</td><td>Up to 48 KB of variables in the main program; each SUB call gets its own room for its variables.</td></tr>
+<tr><td>Strings</td><td>Up to 32767 characters each; about 32 KB for the constants of the program, and the rest of a 64 KB area for the strings made while it runs.</td></tr>
+<tr><td>Arrays</td><td>Up to 8 dimensions and 65535 elements each. Numeric arrays share all the memory left (about 200 KB on a 640 KB computer); arrays of strings share the room of the variables.</td></tr>
+<tr><td>Names</td><td>40 characters.</td></tr>
+<tr><td>Blocks</td><td>IF, FOR, DO, WHILE and SELECT nested up to 32 deep.</td></tr>
+<tr><td>Parameters</td><td>16 for each SUB or FUNCTION.</td></tr>
+<tr><td>DATA</td><td>About 32 KB of items.</td></tr>
+<tr><td>Files</td><td>8 open at once.</td></tr>
+</table>
+
+<h2>Numbers</h2>
+<p>INTEGER values take 2 bytes, LONG and SINGLE 4. SINGLE numbers have 24 bits of precision, about 7 decimal digits, and are rounded to the nearest at each operation. DOUBLE and the # suffix are accepted and kept as SINGLE. The functions SIN, COS, TAN, ATN, EXP and LOG are accurate to about one unit in the last digit shown.</p>
+<p>The computer has no arithmetic chip, so real numbers are computed by CBasic itself; INTEGER arithmetic is many times faster. A program whose variables hold whole numbers should begin with DEFINT A-Z.</p>
+
+<h2>Memory</h2>
+<p>BASIC.COM takes the first 64 KB of the memory COS gives it; then come the program's source, its compiled code, its variables, its strings, its line table and DATA items, and, above them all, the numeric arrays. A string is kept once: assigning a string variable to another makes a copy, but the strings made in an expression are handed over without copying, and the unused ones are cleared away when the room runs out.</p>
+
+<h2>Keywords</h2>
+<p>These words have a meaning in CBasic and cannot be used as names:</p>
+<div class="keywords"><div>ABS</div><div>AND</div><div>APPEND</div><div>AS</div><div>ASC</div><div>ATN</div><div>BASE</div><div>BEEP</div><div>CALL</div><div>CASE</div><div>CDBL</div><div>CHR$</div><div>CINT</div><div>CIRCLE</div><div>CLNG</div><div>CLOSE</div><div>CLS</div><div>COLOR</div><div>CONST</div><div>COS</div><div>CSNG</div><div>CSRLIN</div><div>DATA</div><div>DATE$</div><div>DECLARE</div><div>DEF</div><div>DEFDBL</div><div>DEFINT</div><div>DEFLNG</div><div>DEFSNG</div><div>DEFSTR</div><div>DIM</div><div>DO</div><div>DOUBLE</div><div>ELSE</div><div>ELSEIF</div><div>END</div><div>EOF</div><div>EQV</div><div>ERASE</div><div>ERL</div><div>ERR</div><div>ERROR</div><div>EXIT</div><div>EXP</div><div>FIX</div><div>FOR</div><div>FRE</div><div>FREEFILE</div><div>FUNCTION</div><div>GET</div><div>GOSUB</div><div>GOTO</div><div>HEX$</div><div>IF</div><div>IMP</div><div>INKEY$</div><div>INP</div><div>INPUT</div><div>INPUT$</div><div>INSTR</div><div>INT</div><div>INTEGER</div><div>IS</div><div>KILL</div><div>LBOUND</div><div>LCASE$</div><div>LEFT$</div><div>LEN</div><div>LET</div><div>LINE</div><div>LOCATE</div><div>LOG</div><div>LONG</div><div>LOOP</div><div>LTRIM$</div><div>MID$</div><div>MOD</div><div>NEXT</div><div>NOT</div><div>OCT$</div><div>ON</div><div>OPEN</div><div>OPTION</div><div>OR</div><div>OUT</div><div>OUTPUT</div><div>PAINT</div><div>PALETTE</div><div>PEEK</div><div>PLAY</div><div>POINT</div><div>POKE</div><div>POS</div><div>PRESET</div><div>PRINT</div><div>PSET</div><div>PUT</div><div>RANDOMIZE</div><div>READ</div><div>REDIM</div><div>REM</div><div>RESTORE</div><div>RESUME</div><div>RETURN</div><div>RIGHT$</div><div>RND</div><div>RTRIM$</div><div>SCREEN</div><div>SEG</div><div>SELECT</div><div>SGN</div><div>SHARED</div><div>SIN</div><div>SINGLE</div><div>SLEEP</div><div>SOUND</div><div>SPACE$</div><div>SPC</div><div>SQR</div><div>STATIC</div><div>STEP</div><div>STOP</div><div>STR$</div><div>STRING</div><div>STRING$</div><div>SUB</div><div>SWAP</div><div>SYSTEM</div><div>TAB</div><div>TAN</div><div>THEN</div><div>TIME$</div><div>TIMER</div><div>TO</div><div>TYPE</div><div>UBOUND</div><div>UCASE$</div><div>UNTIL</div><div>VAL</div><div>VIEW</div><div>WEND</div><div>WHILE</div><div>WIDTH</div><div>WRITE</div><div>XOR</div></div>
+</section>
+
+<section class="chapter appendix" data-num="C" data-title="The Sample Program APES.BAS" data-part="Appendixes">
+
+<h2>Ape Duel</h2>
+<p>This is the listing of APES.BAS, on the System Diskette. The main program, at the start, sets up the game and plays the rounds; the work is done by the SUBs and FUNCTIONs after it, in alphabetic order. Some places worth a look:</p>
+<ul>
+<li>Pictures draws each ape once and keeps it with GET; afterwards the apes are drawn with PUT, PSET.</li>
+<li>Fly works out where the banana is at each moment from the angle, the speed, the wind and the gravity, draws it with PUT, XOR, and looks at the color under it with POINT to know what it hit.</li>
+<li>City keeps each building in an array of records, Roofs, so that PlaceApes can stand the apes on the roofs.</li>
+<li>AskNum reads a number with INKEY$, so that the screen does not scroll in graphics mode.</li>
+</ul>
+<h2>The Listing</h2>
+<pre class="listing full">&#x27; APES.BAS - Ape Duel, a CucsiCorp CBasic demonstration
+&#x27;
+&#x27; Two apes stand on the roofs of a city and throw bananas at each
+&#x27; other. Each player chooses the angle and the speed of the throw; the
+&#x27; wind and the gravity do the rest. Run it with: BASIC APES
+&#x27;
+DECLARE SUB Intro ()
+DECLARE SUB Setup (P1$, P2$, Goal, Grav!)
+DECLARE SUB Pictures ()
+DECLARE SUB City ()
+DECLARE SUB PlaceApes ()
+DECLARE SUB DrawApe (X, Y, Up)
+DECLARE SUB Sun (Shocked)
+DECLARE SUB Banner (Row, T$)
+DECLARE SUB Boom (X, Y, R)
+DECLARE SUB Dance (P)
+DECLARE SUB ShowScore ()
+DECLARE SUB Pause (S!)
+DECLARE SUB GameOver ()
+DECLARE FUNCTION Throw (P)
+DECLARE FUNCTION Fly (P, Ang!, Vel!)
+DECLARE FUNCTION AskNum! (Row, Col, Label$)
+DEFINT A-Z
+
+TYPE Roof
+  X AS INTEGER
+  W AS INTEGER
+  Y AS INTEGER
+END TYPE
+
+CONST FALSE = 0, TRUE = NOT FALSE
+CONST SKY = 0, GRASS = 2, FIRE = 4, FUR = 6, DARK = 8, LIGHT = 14
+CONST BLACK = 16, WHITE = 15
+
+DIM SHARED Roofs(1 TO 20) AS Roof, Count
+DIM SHARED ApeX(1 TO 2), ApeY(1 TO 2), Wins(1 TO 2)
+DIM SHARED Gravity!, Wind, SunHit, MaxCol
+DIM SHARED ApeUp&amp;(50), ApeDown&amp;(50), Ban&amp;(6), Colors(1 TO 3)
+DIM SHARED Names$(1 TO 2)
+
+DEF FnRand (N) = INT(RND(1) * N) + 1
+
+RANDOMIZE TIMER
+Intro
+Setup Names$(1), Names$(2), Goal, Gravity!
+SCREEN 13
+PALETTE SKY, 42 * 65536 + 10 * 256 &#x27; a blue sky behind the text too
+COLOR WHITE
+MaxCol = 40
+Colors(1) = 4: Colors(2) = 7: Colors(3) = 3   &#x27; red, gray and teal walls
+Pictures
+P = 1
+DO
+  City
+  PlaceApes
+  Sun FALSE
+  ShowScore
+  DO
+    Hit = Throw(P)
+    IF SunHit THEN Sun FALSE
+    IF Hit = 0 THEN P = 3 - P
+  LOOP UNTIL Hit
+  IF Hit = P THEN Winner = 3 - P ELSE Winner = P
+  Wins(Winner) = Wins(Winner) + 1
+  ShowScore
+  Dance Winner
+  P = 3 - Winner                    &#x27; the loser starts the next round
+LOOP UNTIL Wins(Winner) &gt;= Goal
+GameOver
+END</pre><pre class="listing full">
+&#x27; Asks for a number at (Row, Col), typed with the digit keys
+FUNCTION AskNum! (Row, Col, Label$)
+  LOCATE Row, Col: PRINT Label$;
+  T$ = &quot;&quot;
+  DO
+    LOCATE Row, Col + LEN(Label$): PRINT T$; &quot;_ &quot;;
+    DO: K$ = INKEY$: LOOP WHILE K$ = &quot;&quot;
+    SELECT CASE K$
+      CASE &quot;0&quot; TO &quot;9&quot;, &quot;.&quot;
+        IF LEN(T$) &lt; 5 THEN T$ = T$ + K$
+      CASE CHR$(8)
+        IF LEN(T$) &gt; 0 THEN T$ = LEFT$(T$, LEN(T$) - 1)
+      CASE CHR$(13)
+        IF LEN(T$) &gt; 0 THEN EXIT DO
+      CASE ELSE
+        BEEP
+    END SELECT
+  LOOP
+  LOCATE Row, Col + LEN(Label$): PRINT T$; &quot;  &quot;;
+  AskNum! = VAL(T$)
+END FUNCTION
+
+&#x27; Centers T$ on Row
+SUB Banner (Row, T$)
+  LOCATE Row, (MaxCol - LEN(T$)) \ 2 + 1
+  PRINT T$;
+END SUB
+
+&#x27; An explosion of radius R that leaves a hole
+SUB Boom (X, Y, R)
+  PLAY &quot;MBO0L32EFGEFDC&quot;
+  FOR I = 1 TO R
+    CIRCLE (X, Y), I, FIRE
+  NEXT
+  FOR I = R TO 0 STEP -1
+    CIRCLE (X, Y), I, SKY
+    Pause .01
+  NEXT
+END SUB
+
+&#x27; The city: buildings with lit windows, the grass and the wind
+SUB City
+  CLS
+  X = 0: Count = 0
+  Slope = FnRand(3)
+  H = 40 + FnRand(30)
+  DO
+    Count = Count + 1
+    W = 22 + FnRand(14)
+    IF X + W &gt; 319 OR Count = 20 THEN W = 320 - X
+    SELECT CASE Slope
+      CASE 1: H = H + FnRand(14) - 5
+      CASE 2: H = H - FnRand(14) + 5
+      CASE ELSE
+        IF X &lt; 140 THEN H = H + FnRand(16) - 4 ELSE H = H - FnRand(16) + 4
+    END SELECT
+    IF H &lt; 25 THEN H = 25
+    IF H &gt; 125 THEN H = 125
+    Top = 190 - H
+    LINE (X, Top)-(X + W - 2, 189), Colors(FnRand(3)), BF
+    FOR WY = Top + 3 TO 184 STEP 7
+      FOR WX = X + 3 TO X + W - 6 STEP 5
+        IF FnRand(4) &gt; 1 THEN C = LIGHT ELSE C = DARK
+        LINE (WX, WY)-(WX + 1, WY + 3), C, BF
+      NEXT
+    NEXT
+    Roofs(Count).X = X: Roofs(Count).W = W - 1: Roofs(Count).Y = Top
+    X = X + W
+  LOOP UNTIL X &gt;= 319</pre><pre class="listing full">  LINE (0, 190)-(319, 199), GRASS, BF
+  Wind = FnRand(11) - 6
+  IF FnRand(3) = 1 THEN Wind = Wind * 2
+  IF Wind &lt;&gt; 0 THEN
+    LINE (160, 195)-(160 + Wind * 4, 195), LIGHT
+    IF Wind &gt; 0 THEN D = -2 ELSE D = 2
+    LINE (160 + Wind * 4, 195)-(160 + Wind * 4 + D, 193), LIGHT
+    LINE (160 + Wind * 4, 195)-(160 + Wind * 4 + D, 197), LIGHT
+  END IF
+END SUB
+
+&#x27; The winner jumps for joy
+SUB Dance (P)
+  FOR I = 1 TO 4
+    PUT (ApeX(P), ApeY(P)), ApeUp&amp;, PSET
+    PLAY &quot;MBO2L32EGEC&quot;
+    Pause .2
+    PUT (ApeX(P), ApeY(P)), ApeDown&amp;, PSET
+    Pause .2
+  NEXT
+END SUB
+
+&#x27; An ape in a 12 x 16 box, arms up or down
+SUB DrawApe (X, Y, Up)
+  LINE (X + 4, Y)-(X + 7, Y + 3), FUR, BF            &#x27; head
+  PSET (X + 5, Y + 1), BLACK: PSET (X + 6, Y + 1), BLACK
+  LINE (X + 3, Y + 4)-(X + 8, Y + 10), FUR, BF       &#x27; body
+  PSET (X + 5, Y + 6), BLACK: PSET (X + 6, Y + 6), BLACK
+  LINE (X + 3, Y + 11)-(X + 4, Y + 15), FUR, BF      &#x27; legs
+  LINE (X + 7, Y + 11)-(X + 8, Y + 15), FUR, BF
+  IF Up THEN                                        &#x27; arms
+    LINE (X + 1, Y)-(X + 2, Y + 6), FUR, BF
+    LINE (X + 9, Y)-(X + 10, Y + 6), FUR, BF
+  ELSE
+    LINE (X + 1, Y + 4)-(X + 2, Y + 11), FUR, BF
+    LINE (X + 9, Y + 4)-(X + 10, Y + 11), FUR, BF
+  END IF
+END SUB
+
+&#x27; Throws a banana: TRUE (the ape hit) or 0
+FUNCTION Fly (P, Ang!, Vel!)
+  IF P = 2 THEN Ang! = 180 - Ang!
+  R! = Ang! * 3.141593 / 180
+  VX! = COS(R!) * Vel!
+  VY! = SIN(R!) * Vel!
+  PUT (ApeX(P), ApeY(P)), ApeUp&amp;, PSET
+  PLAY &quot;MBO2L64CEG&quot;
+  X0! = ApeX(P) + 4
+  Y0! = ApeY(P) - 7
+  Shown = FALSE: Down = FALSE: Victim = 0: T! = 0
+  DO
+    Pause .02
+    X! = X0! + VX! * T! + .25 * Wind * T! * T!
+    Y! = Y0! - (VY! * T! - .5 * Gravity! * T! * T!) * .6
+    IF Shown THEN PUT (OX, OY), Ban&amp;, XOR: Shown = FALSE
+    IF T! &gt; .4 AND NOT Down THEN
+      PUT (ApeX(P), ApeY(P)), ApeDown&amp;, PSET
+      Down = TRUE
+    END IF
+    CX = X! + 2: CY = Y! + 2
+    IF CX &lt; 0 OR CX &gt; 319 OR CY &gt; 199 THEN EXIT DO
+    IF CY &gt;= 0 THEN
+      FOR Q = 1 TO 2
+        IF CX &gt;= ApeX(Q) AND CX &lt;= ApeX(Q) + 11 THEN
+          IF CY &gt;= ApeY(Q) AND CY &lt;= ApeY(Q) + 15 THEN Victim = Q
+        END IF
+      NEXT
+      IF Victim THEN EXIT DO
+      IF ABS(CX - 160) &lt; 12 AND CY &lt; 30 THEN
+        IF NOT SunHit THEN Sun TRUE</pre><pre class="listing full">      ELSEIF POINT(CX, CY) &lt;&gt; SKY THEN
+        Boom CX, CY, 5
+        EXIT DO
+      ELSE
+        OX = X!: OY = Y!
+        PUT (OX, OY), Ban&amp;, XOR
+        Shown = TRUE
+      END IF
+    END IF
+    T! = T! + .1
+  LOOP
+  IF NOT Down THEN PUT (ApeX(P), ApeY(P)), ApeDown&amp;, PSET
+  IF Victim THEN
+    Boom ApeX(Victim) + 6, ApeY(Victim) + 8, 14
+    LINE (ApeX(Victim), ApeY(Victim))-(ApeX(Victim) + 11, ApeY(Victim) + 15), SKY, BF
+  END IF
+  Fly = Victim
+END FUNCTION
+
+SUB GameOver
+  SCREEN 0
+  MaxCol = 80
+  COLOR 15, 1
+  CLS
+  Banner 8, &quot;G A M E   O V E R&quot;
+  COLOR 7, 1
+  Banner 11, &quot;Score:&quot;
+  Banner 13, Names$(1) + STR$(Wins(1)) + &quot;   &quot; + Names$(2) + STR$(Wins(2))
+  COLOR 14, 1
+  Banner 22, &quot;Press any key&quot;
+  PLAY &quot;MBT160O1L8CDEDCDL4ECC&quot;
+  DO: LOOP WHILE INKEY$ = &quot;&quot;
+  COLOR 7, 0
+  CLS
+END SUB
+
+&#x27; The title screen
+SUB Intro
+  SCREEN 0
+  MaxCol = 80
+  COLOR 15, 1
+  CLS
+  Banner 5, &quot;A P E   D U E L&quot;
+  COLOR 7, 1
+  Banner 7, &quot;A CucsiCorp CBasic demonstration&quot;
+  Banner 10, &quot;Two apes, a city and a lot of bananas.&quot;
+  Banner 12, &quot;Throw yours at the other ape: choose the angle&quot;
+  Banner 13, &quot;(in degrees) and the speed. Mind the wind!&quot;
+  COLOR 14, 1
+  Banner 22, &quot;Press any key&quot;
+  PLAY &quot;MBT160O2L8CDEDCDL4ECC&quot;
+  DO: LOOP WHILE INKEY$ = &quot;&quot;
+END SUB
+
+&#x27; Waits S! seconds
+SUB Pause (S!)
+  T! = TIMER
+  DO
+  LOOP UNTIL TIMER - T! &gt;= S! OR TIMER &lt; T!
+END SUB
+
+&#x27; The apes and the banana are drawn once and kept with GET
+SUB Pictures
+  DrawApe 0, 0, FALSE
+  GET (0, 0)-(11, 15), ApeDown&amp;
+  CLS
+  DrawApe 0, 0, TRUE
+  GET (0, 0)-(11, 15), ApeUp&amp;
+  CLS
+  PSET (1, 0), LIGHT                &#x27; the banana</pre><pre class="listing full">  LINE (0, 1)-(0, 2), LIGHT
+  PSET (1, 3), LIGHT
+  LINE (2, 4)-(3, 4), LIGHT
+  GET (0, 0)-(3, 4), Ban&amp;
+  CLS
+END SUB
+
+&#x27; Each ape on a roof near its end of the city
+SUB PlaceApes
+  FOR P = 1 TO 2
+    IF P = 1 THEN B = FnRand(2) ELSE B = Count - FnRand(2)
+    IF B &lt; 1 THEN B = 1
+    ApeX(P) = Roofs(B).X + Roofs(B).W \ 2 - 6
+    ApeY(P) = Roofs(B).Y - 16
+    PUT (ApeX(P), ApeY(P)), ApeDown&amp;, PSET
+  NEXT
+END SUB
+
+&#x27; Names, points to win and gravity
+SUB Setup (P1$, P2$, Goal, Grav!)
+  COLOR 7, 0
+  CLS
+  LOCATE 8, 12
+  LINE INPUT &quot;Name of player 1 (Enter = &#x27;Ape 1&#x27;): &quot;; P1$
+  IF P1$ = &quot;&quot; THEN P1$ = &quot;Ape 1&quot; ELSE P1$ = LEFT$(P1$, 10)
+  LOCATE 10, 12
+  LINE INPUT &quot;Name of player 2 (Enter = &#x27;Ape 2&#x27;): &quot;; P2$
+  IF P2$ = &quot;&quot; THEN P2$ = &quot;Ape 2&quot; ELSE P2$ = LEFT$(P2$, 10)
+  DO
+    LOCATE 12, 12
+    INPUT &quot;Points to win (Enter = 3)&quot;; G$
+    Goal = VAL(G$)
+  LOOP UNTIL Goal &gt; 0 OR G$ = &quot;&quot;
+  IF Goal = 0 THEN Goal = 3
+  LOCATE 14, 12
+  INPUT &quot;Gravity in m/s2 (Enter = 9.8)&quot;; G$
+  Grav! = VAL(G$)
+  IF Grav! &lt;= 0 THEN Grav! = 9.8
+END SUB
+
+SUB ShowScore
+  LOCATE 1, 1: PRINT Names$(1);
+  LOCATE 1, MaxCol - LEN(Names$(2)): PRINT Names$(2);
+  Banner 24, LTRIM$(STR$(Wins(1))) + &quot;&gt;Score&lt;&quot; + LTRIM$(STR$(Wins(2)))
+END SUB
+
+&#x27; The sun, smiling or surprised
+SUB Sun (Shocked)
+  LINE (144, 4)-(176, 32), SKY, BF
+  CIRCLE (160, 18), 8, LIGHT
+  PAINT (160, 18), LIGHT, LIGHT
+  LINE (147, 18)-(173, 18), LIGHT
+  LINE (160, 6)-(160, 30), LIGHT
+  LINE (150, 9)-(170, 27), LIGHT
+  LINE (150, 27)-(170, 9), LIGHT
+  PSET (157, 16), BLACK: PSET (163, 16), BLACK
+  IF Shocked THEN
+    CIRCLE (160, 21), 2, BLACK
+  ELSE
+    CIRCLE (160, 17), 5, BLACK, 3.6652, 5.7596
+  END IF
+  SunHit = Shocked
+END SUB
+
+&#x27; One turn: the player types the angle and the speed
+FUNCTION Throw (P)
+  IF P = 1 THEN C = 1 ELSE C = 27
+  A! = AskNum!(2, C, &quot;Angle:&quot;)
+  V! = AskNum!(3, C, &quot;Speed:&quot;)
+  LOCATE 2, C: PRINT SPACE$(13);</pre><pre class="listing full">  LOCATE 3, C: PRINT SPACE$(13);
+  Throw = Fly(P, A!, V!)
+END FUNCTION</pre>
+</section>
+
+<section class="back quick" data-kind="quick" data-title="Quick Reference">
+<h2>Quick Reference</h2>
+<table class="ref wrap">
+<tr><th>Task</th><th>Statements and functions</th></tr>
+<tr><td>Run a program</td><td>BASIC <var>name</var> &mdash; stop it with <span class="key">Ctrl</span>-<span class="key">C</span></td></tr>
+<tr><td>Types</td><td>% INTEGER, &amp; LONG, ! # SINGLE, $ STRING; DEFINT A-Z; DIM <var>x</var> AS <var>type</var>; CONST</td></tr>
+<tr><td>Decisions</td><td>IF ... THEN ... ELSE; IF ... ELSEIF ... END IF; SELECT CASE ... CASE ... END SELECT</td></tr>
+<tr><td>Loops</td><td>FOR ... TO ... STEP ... NEXT; DO [WHILE | UNTIL] ... LOOP [WHILE | UNTIL]; WHILE ... WEND; EXIT FOR, EXIT DO</td></tr>
+<tr><td>Jumps</td><td>GOTO, GOSUB ... RETURN, ON <var>n</var> GOTO</td></tr>
+<tr><td>Procedures</td><td>SUB ... END SUB, FUNCTION ... END FUNCTION, CALL, DEF FN, SHARED, DIM SHARED</td></tr>
+<tr><td>Data</td><td>DIM, REDIM, ERASE, LBOUND, UBOUND, TYPE ... END TYPE, DATA, READ, RESTORE, SWAP</td></tr>
+<tr><td>Text</td><td>PRINT, CLS, LOCATE, COLOR, VIEW PRINT, CSRLIN, POS, TAB, SPC, WRITE</td></tr>
+<tr><td>Keyboard</td><td>INPUT, LINE INPUT, INKEY$, INPUT$, SLEEP</td></tr>
+<tr><td>Files</td><td>OPEN ... FOR INPUT | OUTPUT | APPEND AS #<var>n</var>, PRINT #, WRITE #, INPUT #, LINE INPUT #, EOF, CLOSE, KILL, FREEFILE</td></tr>
+<tr><td>Graphics</td><td>SCREEN 0 | 1 | 13, PSET, PRESET, LINE (B, BF), CIRCLE, PAINT, GET, PUT, POINT, PALETTE, COLOR</td></tr>
+<tr><td>Sound</td><td>BEEP, SOUND, PLAY</td></tr>
+<tr><td>Numbers</td><td>ABS, SGN, INT, FIX, CINT, CLNG, SQR, SIN, COS, TAN, ATN, EXP, LOG, RND, RANDOMIZE, TIMER</td></tr>
+<tr><td>Strings</td><td>LEN, LEFT$, RIGHT$, MID$, INSTR, UCASE$, LCASE$, LTRIM$, RTRIM$, STR$, VAL, CHR$, ASC, STRING$, SPACE$, HEX$, OCT$</td></tr>
+<tr><td>Errors</td><td>ON ERROR GOTO, RESUME [NEXT], ERR, ERL, ERROR</td></tr>
+<tr><td>Machine</td><td>DEF SEG, PEEK, POKE, INP, OUT, DATE$, TIME$, FRE</td></tr>
+</table>
+</section>
+
+</div>
+<script>
+// ---------------------------------------------------------------------
+// Pagination: flows the sections of #source into 7 x 9 inch pages, with
+// chapter-page numbers, running heads, tabs and a table of contents.
+// ---------------------------------------------------------------------
+const book = document.getElementById("book");
+const src = document.getElementById("source");
+const pages = [];
+const ROMAN = ["", "i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", "xi", "xii", "xiii", "xiv"];
+const BLANK = "This page intentionally left blank.";
+
+// ---------- code page 437 table (before the layout: it takes room) ----------
+(function () {
+  const CP = " ☺☻♥♦♣♠•◘○◙♂♀♪♫☼►◄↕‼¶§▬↨↑↓→←∟↔▲▼" +
+    " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~⌂" +
+    "ÇüéâäàåçêëèïîìÄÅÉæÆôöòûùÿÖÜ¢£¥₧ƒáíóúñÑªº¿⌐¬½¼¡«»░▒▓│┤╡╢╖╕╣║╗╝╜╛┐└┴┬├─┼╞╟╚╔╩╦╠═╬╧╨╤╥╙╘╒╓╫╪┘┌█▄▌▐▀αßΓπΣσµτΦΘΩδ∞φε∩≡±≥≤⌠⌡÷≈°∙·√ⁿ²■ ";
+  const host = document.getElementById("cp437");
+  if (!host) return;
+  let html = "<tr><th></th>";
+  for (let c = 0; c < 16; c++) html += "<th>" + c.toString(16).toUpperCase() + "</th>";
+  html += "</tr>";
+  for (let r = 0; r < 16; r++) {
+    html += "<tr><th>" + r.toString(16).toUpperCase() + "</th>";
+    for (let c = 0; c < 16; c++) {
+      const ch = CP[r * 16 + c];
+      html += "<td>" + (ch === "<" ? "&lt;" : ch === "&" ? "&amp;" : ch) + "</td>";
+    }
+    html += "</tr>";
+  }
+  const t = document.createElement("table");
+  t.className = "cp437";
+  t.innerHTML = html;
+  host.replaceWith(t);
+})();
+
+// ---------- pages ----------
+function newPage(opts) {
+  const p = document.createElement("div");
+  p.className = "page odd";
+  p.innerHTML = '<div class="head"><span class="l"></span><span class="r"></span></div>' +
+                '<div class="body"></div><div class="foot"><span class="label"></span><span class="ed"></span></div>' +
+                '<div class="tab"></div>';
+  Object.assign(p, opts || {});
+  book.appendChild(p);
+  pages.push(p);
+  return p;
+}
+function blankPage(chap) {
+  const p = newPage({ kind: "blank", chap });
+  p.classList.add("blank");
+  bodyOf(p).textContent = BLANK;
+  return p;
+}
+const bodyOf = p => p.querySelector(".body");
+const fits = b => b.scrollHeight <= b.clientHeight + 1;
+const isHead = el => /^(H[1-4]|DT)$/.test(el.tagName) || el.classList.contains("fnhead");
+
+let cur = null;
+function startPage(opts) { cur = newPage(opts); return cur; }
+
+// A new page; headings left at the bottom of the old one go with it.
+function breakPage() {
+  const old = bodyOf(cur), moving = [];
+  while (old.children.length > 1 && isHead(old.lastElementChild)) moving.unshift(old.removeChild(old.lastElementChild));
+  startPage({ chap: cur.chap, kind: cur.kind === "opener" ? undefined : cur.kind });
+  for (const m of moving) bodyOf(cur).appendChild(m);
+}
+
+// Splits a block where the page ends: [what fits, the rest], or null.
+function split(el, body) {
+  const tag = el.tagName;
+  let items, make, fill;
+  if (tag === "PRE") {
+    items = el.innerHTML.replace(/\n$/, "").split("\n");
+    if (items.length < 6) return null;
+    make = () => el.cloneNode(false);
+    fill = (box, list) => { box.innerHTML = list.join("\n"); };
+  } else if (tag === "TABLE") {
+    const rows = [...el.querySelectorAll(":scope > tbody > tr, :scope > tr")];
+    const head = rows.length && rows[0].querySelector("th") ? rows[0] : null;
+    items = head ? rows.slice(1) : rows;
+    if (items.length < 4) return null;
+    make = () => el.cloneNode(false);
+    fill = (box, list) => {
+      box.innerHTML = "";
+      const tb = document.createElement("tbody");
+      if (head) tb.appendChild(head.cloneNode(true));
+      for (const r of list) tb.appendChild(r.cloneNode(true));
+      box.appendChild(tb);
+    };
+  } else if (tag === "UL" || tag === "OL" || tag === "DIV" && el.classList.contains("toc")) {
+    items = [...el.children];
+    if (items.length < 2) return null;
+    make = () => el.cloneNode(false);
+    fill = (box, list) => { box.innerHTML = ""; for (const li of list) box.appendChild(li.cloneNode(true)); };
+  } else if (tag === "DL") {
+    items = [];                                  // dt + dd pairs
+    for (const k of el.children) {
+      if (k.tagName === "DT" || !items.length) items.push([k]);
+      else items[items.length - 1].push(k);
+    }
+    if (items.length < 2) return null;
+    make = () => el.cloneNode(false);
+    fill = (box, list) => { box.innerHTML = ""; for (const g of list) for (const k of g) box.appendChild(k.cloneNode(true)); };
+  } else return null;
+
+  const min = tag === "PRE" ? 3 : tag === "TABLE" ? 2 : 1;
+  const a = make();
+  body.appendChild(a);
+  let best = 0, lo = min, hi = items.length - 1;      // the most items that fit
+  while (lo <= hi) {
+    const k = (lo + hi) >> 1;
+    fill(a, items.slice(0, k));
+    if (fits(body)) { best = k; lo = k + 1; } else hi = k - 1;
+  }
+  body.removeChild(a);
+  if (!best || best >= items.length) return null;
+  fill(a, items.slice(0, best));
+  const b = make();
+  fill(b, items.slice(best));
+  if (tag === "OL") b.setAttribute("start", String(best + parseInt(el.getAttribute("start") || "1")));
+  return [a, b];
+}
+
+// Boxes that may be opened up when they do not fit: their children flow.
+const container = el => el.tagName === "DIV" && el.classList.contains("entry") ||
+                        (el.tagName === "DD" || el.tagName === "DL") && el.children.length > 0;
+
+let placed = 0;
+function place(el, retried) {
+  if (++placed > 20000) throw new Error("layout loop at: " + (el.textContent || "").slice(0, 80));
+  const body = bodyOf(cur);
+  body.appendChild(el);
+  if (fits(body)) return;
+  body.removeChild(el);
+  const parts = split(el, body);
+  if (parts) {
+    body.appendChild(parts[0]);
+    breakPage();
+    place(parts[1]);
+    return;
+  }
+  if (container(el)) {
+    for (const k of [...el.children]) {
+      if (el.tagName === "DD") k.classList.add("in-dd");
+      place(k);
+    }
+    return;
+  }
+  if (body.children.length && !retried) {      // again on a new page, where it may split
+    breakPage();
+    place(el, true);
+    return;
+  }
+  bodyOf(cur).appendChild(el);
+  if (!fits(bodyOf(cur))) console.warn("too tall for a page:", el.tagName, el.className, el.textContent.slice(0, 60));
+}
+
+function flowSection(sec, opts) {
+  startPage(opts);
+  for (const el of [...sec.children]) place(el);
+}
+
+const front = [...src.querySelectorAll(":scope > section.front")];
+const chapters = [...src.querySelectorAll(":scope > section.chapter")];
+const back = [...src.querySelectorAll(":scope > section.back")];
+const frontOf = kind => front.find(s => s.dataset.kind === kind);
+
+// ---------- the cover and its back ----------
+const cover = startPage({ kind: "cover" });
+cover.classList.add("cover", "plain");
+bodyOf(cover).innerHTML =
+  '<div class="stripe" style="top:0.35in"></div>' +
+  '<div class="logo"><img src="cbasic-logo.jpg" alt="CucsiCorp CBasic"></div>' +
+  '<div class="titles"><div class="display">CBasic<br>BASIC Language</div>' +
+  '<div class="sub">User\'s Guide and Reference</div>' +
+  '<div class="ver">Version 1.00<br>for the pc86 Personal Computer</div></div>' +
+  '<div class="boxline"><span>CucsiCorp</span><span>Personal Computer Software</span></div>' +
+  '<div class="stripe" style="bottom:0.45in"></div>';
+flowSection(frontOf("notice"), { kind: "notice" });
+
+// ---------- the chapters: their page numbers do not depend on the front matter ----------
+const frontStart = pages.length;           // the preface and contents go here later
+const chapterInfo = [];
+for (const ch of chapters) {
+  if (pages.length % 2 === 1) blankPage(cur.chap);       // a chapter starts on a right-hand page
+  const chap = { num: ch.dataset.num, title: ch.dataset.title, part: ch.dataset.part,
+                 appendix: ch.classList.contains("appendix") };
+  const op = startPage({ chap, kind: "opener" });
+  op.classList.add("opener");
+  bodyOf(op).innerHTML = '<div class="num">' + chap.num + '</div><h1>' +
+    (chap.appendix ? "Appendix " + chap.num + ". " : "") + chap.title +
+    '</h1><div class="mini"><h4>Contents</h4><div class="toc"></div></div>';
+  startPage({ chap });
+  const heads = [...ch.querySelectorAll("h2")];
+  for (const el of [...ch.children]) place(el);
+  chapterInfo.push({ chap, heads, op });
+}
+for (const b of back) {
+  if (pages.length % 2 === 1) blankPage(cur.chap);
+  flowSection(b, { kind: "back", chap: { title: b.dataset.title } });
+}
+
+// ---------- chapter-page labels ----------
+const count = {};
+for (const p of pages) {
+  if (!p.chap || !p.chap.num) continue;
+  count[p.chap.num] = (count[p.chap.num] || 0) + 1;
+  p.label = p.chap.num + "-" + count[p.chap.num];
+}
+const labelOf = el => { let p = el; while (p && !(p.classList && p.classList.contains("page"))) p = p.parentNode; return p ? p.label : ""; };
+const headText = h => h.childNodes[0].textContent.trim();
+
+function tocRow(box, text, label, cls) {
+  const r = document.createElement("div");
+  r.className = "row " + (cls || "");
+  r.innerHTML = '<span class="t"></span><span class="dots"></span><span class="p"></span>';
+  r.querySelector(".t").textContent = text;
+  r.querySelector(".p").textContent = label;
+  if (!label) r.querySelector(".dots").style.visibility = "hidden";
+  box.appendChild(r);
+}
+for (const { heads, op } of chapterInfo) {
+  const t = op.querySelector(".toc");
+  for (const h of heads) tocRow(t, headText(h), labelOf(h));
+}
+
+// ---------- the front matter, laid out last and moved in front ----------
+const toc = document.getElementById("toc");
+let part = "";
+for (const { chap, heads } of chapterInfo) {
+  if (chap.part !== part) { part = chap.part; tocRow(toc, part, "", "ch part"); }
+  tocRow(toc, (chap.appendix ? "Appendix " : "Chapter ") + chap.num + ". " + chap.title, chap.num + "-1", "ch");
+  for (const h of heads) tocRow(toc, headText(h), labelOf(h), "sec");
+}
+tocRow(toc, "Quick Reference", "", "ch");
+
+const mark = pages.length;
+for (const s of [frontOf("preface"), frontOf("contents")]) {
+  if ((frontStart + pages.length - mark) % 2 === 1) blankPage(null);
+  flowSection(s, { kind: "front", chap: { title: s.dataset.title } });
+}
+if ((frontStart + pages.length - mark) % 2 === 1) blankPage(null);   // chapter 1 on the right
+const moved = pages.splice(mark);
+const anchor = pages[frontStart];
+for (const p of moved) book.insertBefore(p, anchor);
+pages.splice(frontStart, 0, ...moved);
+
+// ---------- sides, heads, feet, tabs ----------
+const tabOrder = ["1", "2", "3", "4", "5", "6", "7", "A", "B", "C"];
+pages.forEach((p, i) => {
+  p.classList.remove("odd", "even");
+  p.classList.add(i % 2 === 0 ? "odd" : "even");
+  if (p.kind === "cover") return;
+  const chap = p.chap || {};
+  if (!chap.num && p.kind !== "back") p.label = ROMAN[i + 1];
+  const head = p.querySelector(".head"), foot = p.querySelector(".foot");
+  head.querySelector(".l").textContent = chap.num ?
+    (chap.appendix ? "Appendix " : "Chapter ") + chap.num + ". " + chap.title : (chap.title || "");
+  head.querySelector(".r").textContent = chap.part || "CBasic Version 1.00";
+  foot.querySelector(".label").textContent = p.label || "";
+  foot.querySelector(".ed").textContent = "CucsiCorp CBasic User's Guide";
+  if (p.kind === "opener" || p.kind === "blank" || p.kind === "notice") head.style.visibility = "hidden";
+  if (p.kind === "notice") foot.style.visibility = "hidden";
+  if (chap.num) {
+    p.classList.add("has-tab");
+    const t = p.querySelector(".tab");
+    t.textContent = chap.num;
+    t.style.top = (0.95 + tabOrder.indexOf(chap.num) * 0.6) + "in";
+  }
+});
+src.remove();
+window.MANUAL_READY = pages.length;
+</script>
+</body>
+</html>

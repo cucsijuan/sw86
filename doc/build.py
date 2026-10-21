@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Prints the COS manual (manual.html) to COS-Manual.pdf with a Chromium-based
-browser in headless mode: Microsoft Edge, Google Chrome or Chromium.
+Prints the manuals to PDF with a Chromium-based browser in headless mode:
+Microsoft Edge, Google Chrome or Chromium. manual.html becomes
+COS-Manual.pdf and cbasic.html CBasic-Manual.pdf.
 
-Usage: python3 build.py [--browser PATH] [--out COS-Manual.pdf]
+Usage: python3 build.py [--browser PATH] [cos | cbasic ...]
 """
 import argparse, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
@@ -27,19 +28,30 @@ def find_browser():
     sys.exit("no Chromium-based browser found: use --browser")
 
 
+MANUALS = {"cos": ("manual.html", "COS-Manual.pdf"), "cbasic": ("cbasic.html", "CBasic-Manual.pdf")}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--browser")
-    ap.add_argument("--out", default=str(HERE / "COS-Manual.pdf"))
+    ap.add_argument("manuals", nargs="*", help="cos, cbasic (by default, both)")
     args = ap.parse_args()
+    for name in args.manuals:
+        if name not in MANUALS:
+            sys.exit(f"unknown manual {name}: use " + " or ".join(MANUALS))
     browser = args.browser or find_browser()
-    out = Path(args.out).resolve()
+    for name in args.manuals or list(MANUALS):
+        build(browser, *MANUALS[name])
+
+
+def build(browser, source, pdf):
+    out = (HERE / pdf).resolve()
     if out.exists():
         out.unlink()
     profile = tempfile.mkdtemp(prefix="cosman-")
     cmd = [browser, "--headless=new", "--disable-gpu", "--no-first-run", "--user-data-dir=" + profile,
            "--no-pdf-header-footer", "--virtual-time-budget=20000", "--print-to-pdf=" + str(out),
-           (HERE / "manual.html").as_uri()]
+           (HERE / source).as_uri()]
     subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=180)
     for _ in range(60):                     # some builds return before the file is written
         if out.exists() and out.stat().st_size > 0:

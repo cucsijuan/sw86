@@ -1,0 +1,44 @@
+' control flow
+FOR I% = 1 TO 10 STEP 3: PRINT I%;: NEXT
+PRINT
+FOR X = 1 TO 0: PRINT "never": NEXT X
+FOR X = 2 TO 1 STEP -.5: PRINT X;: NEXT X
+PRINT
+N = 0
+DO WHILE N < 3: N = N + 1: LOOP
+PRINT N
+DO: N = N - 1: LOOP UNTIL N = 0
+PRINT N
+WHILE N < 5: N = N + 2: WEND
+PRINT N
+IF N > 5 THEN PRINT "big" ELSE PRINT "small"
+IF N = 6 THEN
+  PRINT "six"
+ELSEIF N = 7 THEN
+  PRINT "seven"
+ELSE
+  PRINT "other"
+END IF
+FOR K = 1 TO 4
+  SELECT CASE K
+    CASE 1: PRINT "one";
+    CASE 2, 3: PRINT "two-three";
+    CASE IS > 3: PRINT "more";
+  END SELECT
+NEXT
+PRINT
+GOSUB 100
+PRINT "back"
+FOR I = 1 TO 10
+  IF I = 4 THEN EXIT FOR
+NEXT
+PRINT I
+DO
+  I = I + 1
+  IF I > 6 THEN EXIT DO
+LOOP
+PRINT I
+GOTO 200
+PRINT "skipped"
+100 PRINT "sub": RETURN
+200 PRINT "end"

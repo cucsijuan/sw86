@@ -1,0 +1,19 @@
+READ A, B$, C&
+PRINT A; B$; C&
+RESTORE Second
+READ X, Y: PRINT X + Y
+RESTORE
+READ A: PRINT A
+RESTORE Second: FOR I = 1 TO 2: READ V: PRINT V;: NEXT: PRINT
+ON ERROR GOTO Handler
+X = 1 / 0
+PRINT "after"; ERR
+ERROR 5
+PRINT "done"
+END
+Handler:
+  PRINT "error"; ERR
+  RESUME NEXT
+DATA 1.5, "hi, there", -252645316
+Second:
+DATA 10, 20

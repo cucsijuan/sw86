@@ -11,11 +11,27 @@ Like the rest of the suite, what it implements behaves like DOS, and what it doe
 | `tests/dostest.asm` on the machine: files across clusters and tracks, seek, truncate, find with wildcards, rename, attributes, duplicate handles, memory blocks, EXEC of a `.COM` (tail, return code) and of an `.EXE` (relocation, its own stack), IOCTL, FCB parsing, drive B:, free space | 20/20, on 1.44 MB and on 720 KB diskettes |
 | `tests/dos_test.py`: boot, commands, programs, Ctrl-C, a changed diskette, no diskette, write protection, a full diskette, the date and time, what the diskettes hold afterwards (read back on the host) | 27/27 |
 | `boot.asm`, `cos.asm`, `command.asm` assembled with NASM 2.16 | identical bytes to asm86 |
+| `tests/tools_test.py`: ASM on the machine assembles every sw86 source (itself included) and random programs, rejects programs with errors on the right line; EDIT edits, cuts and pastes, finds, saves 400 KB files and survives running out of memory | the same bytes as asm86; all pass |
+
+## Writing programs on COS: EDIT and ASM
+
+The system diskette has a full-screen editor and an assembler, so programs are written, assembled and run on the machine itself:
+
+```
+A:\>edit hello.asm             write or change the source (F2 saves, Esc leaves)
+A:\>asm hello                  HELLO.ASM -> HELLO.COM
+HELLO.COM: 31 bytes
+A:\>hello
+Hello from the 8086!
+```
+
+- **ASM** (`asm.asm`): `ASM source[.ASM] [output]`. The asm86 dialect (a NASM subset for the 8086: labels and .local labels, EQU, DB/DW/RESB/RESW, TIMES, ORG, `$`/`$$`, 32-bit expressions, BYTE/WORD/SHORT/NEAR/FAR, segment overrides, REP), with the same passes and choices as asm86, so the bytes are identical; errors are shown as `NAME.ASM(line): message`, with asm86's messages. It reads the source a piece at a time and keeps it as tokens in memory, so sources larger than 64 KB work; it assembles COS, COMMAND.COM, EDIT and itself. At the machine's 4.77 MHz, HELLO takes about a second and COS.SYS under a minute.
+- **EDIT** (`edit.asm`): `EDIT file`. Arrows, Home/End, PgUp/PgDn, Ctrl+Home/End, Ctrl+arrows; Enter keeps the indentation; Ins; Tab (columns of 4); Ctrl+Y cuts lines, F9 pastes them; F3/F4 find (any case), F5 goes to a line; F2 saves through NAME.$$$ and keeps NAME.BAK; Esc leaves. Lines live one by one in memory above the program (up to 16000 lines of 1000 characters, about 450 KB), and are compacted when memory fills; F2 always works, even out of memory.
 
 ## Making a system diskette
 
 ```
-make dos                        # build/cos.img: COS.SYS and COMMAND.COM, bootable
+make dos                        # build/cos.img: COS.SYS, COMMAND.COM, ASM, EDIT and HELLO.ASM, bootable
 ```
 
 By hand, with the pc86 tools:
@@ -24,9 +40,13 @@ By hand, with the pc86 tools:
 asm86 dos/boot.asm -o boot.bin
 asm86 dos/cos.asm -o COS.SYS
 asm86 dos/command.asm -o COMMAND.COM
+asm86 dos/asm.asm -o ASM.COM
+asm86 dos/edit.asm -o EDIT.COM
 fdimage new cos.img --label COS         # or --720k
 fdimage add cos.img COS.SYS
 fdimage add cos.img COMMAND.COM
+fdimage add cos.img ASM.COM
+fdimage add cos.img EDIT.COM
 fdimage boot cos.img boot.bin             # keeps the diskette's BPB
 fdimage add cos.img GAME.COM              # and any programs
 ```
@@ -43,7 +63,10 @@ A:\>dir
 
 COS      SYS    11188   1-01-80  12:00a
 COMMAND  COM     5460   1-01-80  12:00a
-        2 File(s)   1440768 bytes free
+ASM      COM    17171   1-01-80  12:00a
+EDIT     COM     5400   1-01-80  12:00a
+HELLO    ASM      299   1-01-80  12:00a
+        5 File(s)   1417216 bytes free
 ```
 
 The manual, [doc/COS-Manual.pdf](../doc/COS-Manual.pdf), tells users how to work with COS and programmers how to write for it (every command and message, the INT 21h reference, the PSP, memory, the diskette format). Its source is [doc/manual.html](../doc/manual.html); `python3 doc/build.py` prints it again with Edge, Chrome or Chromium.
@@ -132,6 +155,8 @@ A000:0000  top of memory (640 KB)
 boot.asm             boot sector
 cos.asm            kernel (COS.SYS)
 command.asm          command interpreter (COMMAND.COM)
+asm.asm              assembler (ASM.COM)
+edit.asm             text editor (EDIT.COM)
 tests/dostest.asm    the kernel through INT 21h
 tests/child.asm      run by dostest: prints its tail, ends with code 42
 tests/testexe.asm    an .EXE written by hand, with a relocation
@@ -139,4 +164,5 @@ tests/readline.asm   reads a line from standard input
 tests/diskfull.asm   writes until the diskette is full
 tests/unsup.asm      calls a function that is not supported
 ../tests/dos_test.py builds diskettes and runs everything on the machine
+../tests/tools_test.py ASM and EDIT on the machine
 ```

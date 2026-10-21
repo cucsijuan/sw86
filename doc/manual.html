@@ -78,6 +78,8 @@ pre { font-family: "Courier New", monospace; margin: 4px 0 9px; white-space: pre
 pre.screen { font-size: 8pt; line-height: 1.22; padding: 6px 8px; border: 0.8pt solid var(--ink);
              outline: 0.8pt solid var(--ink); outline-offset: 2px; background: var(--spot-light); margin: 8px 3px 12px; }
 pre.screen b { font-weight: bold; text-decoration: underline; text-underline-offset: 2px; }
+pre.screen.wide { font-size: 6.9pt; line-height: 1.18; }
+pre.screen .inv { background: var(--ink); color: var(--paper); }
 pre.listing { font-size: 8.2pt; line-height: 1.22; padding: 5px 0 5px 10px; border-left: 3pt solid var(--spot); }
 .caption { font-size: 8pt; font-style: italic; margin: -6px 0 10px 4px; }
 
@@ -163,11 +165,11 @@ table.regs td { font-size: 8.6pt; }
 <div class="notice">
 <p style="margin-top:3.6in"><b>First Edition (October 1981)</b></p>
 <p>Changes are made periodically to the information herein; any such changes will be reported in subsequent revisions.</p>
-<p>This manual describes COS Version 1.00, the disk operating system for the pc86 personal computer, and its command processor, COMMAND.COM.</p>
+<p>This manual describes COS Version 1.00, the disk operating system for the pc86 personal computer, its command processor, COMMAND.COM, its text editor, EDIT, and its assembler, ASM.</p>
 <p>The programs described in this manual are supplied on the COS System Diskette. Read the whole of Chapter 2, "Getting Started," before you use COS for the first time.</p>
 <p>Products are not stocked at the address below. Comments on this manual may be addressed to CucsiCorp, Personal Computer Software, Publications Department. CucsiCorp may use or distribute any of the information you supply in any way it believes appropriate without incurring any obligations whatever.</p>
 <p style="margin-top:0.25in">&copy; Copyright CucsiCorp 1981</p>
-<p class="small">COS and CucsiCorp are trademarks of CucsiCorp. MS-DOS is a trademark of Microsoft Corporation.</p>
+<p class="small">COS and CucsiCorp are trademarks of CucsiCorp.</p>
 </div>
 </section>
 
@@ -176,7 +178,7 @@ table.regs td { font-size: 8.6pt; }
 <p>This manual tells you how to use COS, the CucsiCorp disk operating system, and how to write programs for it. It is written for two kinds of readers:</p>
 <ul>
 <li>If you want to <b>use</b> COS &mdash; start it, look after your diskettes, copy and erase files, run programs &mdash; read Part One, Chapters 1 to 5. You do not need to know anything about programming.</li>
-<li>If you want to <b>write programs</b> for COS in 8086 assembly language, read Part One first and then Part Two, Chapters 6 to 8, and the appendixes.</li>
+<li>If you want to <b>write programs</b> for COS in 8086 assembly language, read Part One first, then Part Three, Chapters 9 and 10, which show how to write programs with the editor and the assembler on the computer itself, and Part Two, Chapters 6 to 8, and the appendixes.</li>
 </ul>
 <h3>Organization of This Manual</h3>
 <table class="ref wrap">
@@ -188,6 +190,8 @@ table.regs td { font-size: 8.6pt; }
 <tr><td>Chapter 6</td><td>Programming COS: writing, assembling and running .COM and .EXE programs; the program segment prefix, memory, files and errors.</td></tr>
 <tr><td>Chapter 7</td><td>Interrupt and Function Reference: INT 20h to 2Fh and every INT 21h function.</td></tr>
 <tr><td>Chapter 8</td><td>Technical Information: memory map, diskette format, directory entries, disk buffers, compatibility.</td></tr>
+<tr><td>Chapter 9</td><td>EDIT, the Text Editor: writing and changing programs and other text files.</td></tr>
+<tr><td>Chapter 10</td><td>ASM, the Assembler: turning a program into a .COM file, and the assembly language it accepts.</td></tr>
 <tr><td>Appendix A</td><td>Error Codes.</td></tr>
 <tr><td>Appendix B</td><td>The Keyboard: keys, Ctrl combinations and extended codes.</td></tr>
 <tr><td>Appendix C</td><td>The Character Set: code page 437.</td></tr>
@@ -251,6 +255,9 @@ table.regs td { font-size: 8.6pt; }
 <table class="ref wrap">
 <tr><td>COS.SYS</td><td>The operating system.</td></tr>
 <tr><td>COMMAND.COM</td><td>The command processor.</td></tr>
+<tr><td>EDIT.COM</td><td>The text editor (Chapter 9).</td></tr>
+<tr><td>ASM.COM</td><td>The assembler (Chapter 10).</td></tr>
+<tr><td>HELLO.ASM</td><td>A short program to try the editor and the assembler with.</td></tr>
 <tr><td><i>Programs</i></td><td>Your System Diskette may also hold sample programs, for example HELLO.COM, NUMBERS.COM, FACTOR.COM and SORT.COM. Type their names at the prompt to run them.</td></tr>
 </table>
 <div class="warn">Never erase or rename COS.SYS or COMMAND.COM on your System Diskette. Without them the computer cannot start COS.</div>
@@ -284,7 +291,6 @@ A:\>
 <tr><td>COS.SYS is missing</td><td>The diskette has the COS boot record but not COS.SYS. Use another System Diskette.</td></tr>
 <tr><td>Disk error</td><td>The diskette could not be read. Try again; if it fails again, the diskette is damaged.</td></tr>
 </table>
-<div class="note">The pc86 workbench, the version of the computer that runs in a web browser, has a button labeled <b>COS system diskette</b>. It makes a new System Diskette in drive A: and starts the computer from it, in one step.</div>
 
 <h2>The Prompt</h2>
 <p>The prompt, <b>A:\&gt;</b>, means that COS is waiting for a command. The letter tells you the <i>default drive</i>: the drive COS uses when you do not name one. To make drive B: the default drive, type <b>b:</b> and press <span class="key">Enter</span>:</p>
@@ -329,13 +335,16 @@ A:\&gt;<b>dir</b>
 
 COS      SYS    11188   1-01-80  12:00a
 COMMAND  COM     5460   1-01-80  12:00a
+ASM      COM    17171   1-01-80  12:00a
+EDIT     COM     5400   1-01-80  12:00a
+HELLO    ASM      299   1-01-80  12:00a
 HELLO    COM       31   1-01-80  12:00a
 NUMBERS  COM       69   1-01-80  12:00a
 FACTOR   COM       81   1-01-80  12:00a
 SORT     COM      124   1-01-80  12:00a
 README   TXT       94   1-01-80  12:00a
 LETTER   TXT       47   1-01-80  12:00a
-        8 File(s)   1437696 bytes free
+       11 File(s)   1414144 bytes free
 </pre>
 <p>Each line shows a file's name, its extension, its size in bytes, and the date and time it was last written. The last line tells you how much room is left on the diskette.</p>
 
@@ -449,11 +458,7 @@ COPY *.* B:         every file, to drive B:
 </table>
 <p>Space on a diskette is given to files in <i>allocation units</i>, so a file of 10 bytes uses 512 bytes on a 1.44 MB diskette. The free space DIR shows is a multiple of the allocation unit.</p>
 <h3>Preparing Diskettes</h3>
-<p>COS works with diskettes that have been <i>formatted</i>: prepared with tracks, sectors, an empty directory and a file allocation table. COS Version 1.00 does not format diskettes itself. Use one of these:</p>
-<ul>
-<li>In the workbench, <b>New diskette</b> puts a formatted 1.44 MB diskette in drive A:, and <b>COS system diskette</b> one with COS on it. <b>Save image</b> keeps a diskette on your computer, and <b>Open image</b> brings it back.</li>
-<li>On a development computer, the <b>fdimage</b> program of the pc86 tools makes and fills diskette images: <b>fdimage new work.img</b> makes a blank formatted diskette, <b>fdimage add work.img GAME.COM</b> copies a file onto it. Chapter 6 explains how to make a System Diskette.</li>
-</ul>
+<p>COS works with diskettes that have been <i>formatted</i>: prepared with tracks, sectors, an empty directory and a file allocation table. COS Version 1.00 does not format diskettes itself: use the formatted blank diskettes supplied for the pc86, or a diskette COS has already used, after erasing its files with DEL *.*. To make a new System Diskette, copy COS.SYS, COMMAND.COM and the programs you want onto a diskette that already has the COS boot record, such as a copy of your System Diskette.</p>
 <h3>Write Protection</h3>
 <p>A diskette has a write-protect tab. When the tab is open, COS can read the diskette but cannot change it, so files on it cannot be erased by mistake. If you try to write to a protected diskette, COS says:</p>
 <pre class="screen">
@@ -482,6 +487,9 @@ A:\&gt;<b>dir b:</b>
 
 COS      SYS    11188   1-01-80  12:00a
 COMMAND  COM     5460   1-01-80  12:00a
+ASM      COM    17171   1-01-80  12:00a
+EDIT     COM     5400   1-01-80  12:00a
+HELLO    ASM      299   1-01-80  12:00a
 HELLO    COM       31   1-01-80  12:00a
 </pre>
 <div class="warn">Do not change a diskette while a program is using it. A file that is still open is written to whatever diskette is in the drive.</div>
@@ -559,11 +567,13 @@ A:\&gt;<b>copy letter.txt b:note.txt</b>
 
 A:\&gt;<b>copy *.com b:</b>
 A:COMMAND.COM
+A:ASM.COM
+A:EDIT.COM
 A:HELLO.COM
 A:NUMBERS.COM
 A:FACTOR.COM
 A:SORT.COM
-        5 File(s) copied
+        7 File(s) copied
 </pre></dd>
 </dl>
 </div>
@@ -631,16 +641,17 @@ A:\&gt;<b>dir *.txt</b>
 
 README   TXT       94   1-01-80  12:00a
 LETTER   TXT       47   1-01-80  12:00a
-        2 File(s)   1437696 bytes free
+        2 File(s)   1414144 bytes free
 
 A:\&gt;<b>dir /w</b>
 
  Volume in drive A is COS
  Directory of  A:\
 
-COS      SYS    COMMAND  COM    HELLO    COM    NUMBERS  COM    FACTOR   COM
-SORT     COM    README   TXT    LETTER   TXT
-        8 File(s)   1437696 bytes free
+COS      SYS    COMMAND  COM    ASM      COM    EDIT     COM    HELLO    ASM
+HELLO    COM    NUMBERS  COM    FACTOR   COM    SORT     COM    README   TXT
+LETTER   TXT
+       11 File(s)   1414144 bytes free
 </pre></dd>
 </dl>
 </div>
@@ -889,29 +900,13 @@ Abort, Retry, Fail?
 <p>A program asks for a service by loading a function number into register AH, and the other parameters into other registers, and executing an INT 21h instruction. COS does the work and returns, with results in registers. When a function fails, COS sets the carry flag (CF) and puts an error code in AX. Chapter 7 describes every function; Appendix A lists the error codes.</p>
 
 <h2>Tools</h2>
-<p>COS programs are written in 8086 assembly language with the syntax of the Netwide Assembler, and assembled with <b>asm86</b>, the assembler of the pc86 tools, which produces exactly the same bytes. The assembler runs on a development computer, or inside the pc86 workbench, which has an editor:</p>
+<p>COS programs are written in 8086 assembly language. Everything you need is on the System Diskette:</p>
 <ol>
-<li>Write the program in the workbench's editor.</li>
-<li>Type its name in <b>Copy the program as</b>, for example GAME.COM, and press <b>Copy</b>. The program is assembled and copied onto the diskette in drive A:.</li>
-<li>Type its name at the COS prompt.</li>
+<li>Write the program with the editor: <b>EDIT GAME.ASM</b> (Chapter 9).</li>
+<li>Assemble it: <b>ASM GAME</b> makes GAME.COM (Chapter 10).</li>
+<li>Run it: <b>GAME</b>.</li>
 </ol>
-<p>On a development computer:</p>
-<pre class="listing">
-asm86 game.asm -o GAME.COM          assemble
-fdimage add work.img GAME.COM       copy onto a diskette image
-</pre>
-<h3>Making a System Diskette</h3>
-<p>The parts of COS are assembled the same way, from the source files boot.asm, cos.asm and command.asm:</p>
-<pre class="listing">
-asm86 boot.asm -o boot.bin
-asm86 cos.asm -o COS.SYS
-asm86 command.asm -o COMMAND.COM
-fdimage new system.img --label COS
-fdimage add system.img COS.SYS
-fdimage add system.img COMMAND.COM
-fdimage boot system.img boot.bin     install the boot record
-</pre>
-<p>COS.SYS can be anywhere on the diskette; the boot record finds it in the directory.</p>
+<p>COS itself is written in the same language, and ASM assembles it: Chapter 10 shows how. COS.SYS can be anywhere on the System Diskette; the boot record finds it in the directory.</p>
 
 <h2>Your First Program</h2>
 <p>This program displays a message and ends:</p>
@@ -1532,12 +1527,341 @@ Date:  bits 15-9 year - 1980, 8-5 month (1-12), 4-0 day (1-31)
 <li>File control block (FCB) file functions, and absolute disk access (INT 25h and 26h).</li>
 <li>Batch files, redirection (&gt; and &lt;) and pipes (|) in COMMAND.COM.</li>
 <li>Installable device drivers, CONFIG.SYS, and the printer and serial devices.</li>
-<li>Commands such as FORMAT, DISKCOPY, CHKDSK and SYS: diskettes are prepared with the workbench or fdimage.</li>
+<li>Commands such as FORMAT, DISKCOPY, CHKDSK and SYS.</li>
 <li>Loading high: an .EXE file that asks for no memory above it is loaded low.</li>
 <li>A check that a diskette changed while a file was open on it ("Invalid disk change").</li>
 </ul>
 <p>Programs that ask for a missing function are stopped with a message rather than given a wrong result.</p>
 </section>
+
+<!-- PART THREE -->
+<!-- ================================================================== -->
+<!-- CHAPTER 9                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="9" data-title="EDIT, the Text Editor" data-part="Part Three: Program Development">
+
+<h2>Introduction</h2>
+<p>EDIT is the COS text editor. With it you write and change <i>text files</i>: programs in assembly language, letters, notes, lists. The file fills the screen; you move the cursor to where you want to work and type. What you type goes into the text at the cursor, and the screen always shows the text as it is.</p>
+<p>EDIT works on a copy of the file in memory. Nothing changes on the diskette until you <i>save</i> the text with <span class="key">F2</span>, and the old version of the file is kept, with the extension .BAK, in case you change your mind.</p>
+
+<h2 class="cmd">EDIT</h2>
+<dl>
+<dt>Purpose</dt><dd>Creates a text file, or changes one.</dd>
+<dt>Format</dt><dd><pre>EDIT [d:]<var>filename</var>[.<var>ext</var>]</pre></dd>
+<dt>Remarks</dt><dd>
+<p>Give the whole name of the file, with its extension: EDIT does not add one. If the file does not exist, EDIT starts with an empty screen and the message "New file"; the file is created when you save it.</p>
+<p>When you leave EDIT, the screen is cleared and the COS prompt comes back.</p>
+</dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>edit hello.asm</b>
+</pre></dd>
+</dl>
+
+<h2>The Screen</h2>
+<p>This is what you see after EDIT HELLO.ASM, with the cursor moved to the fourth line:</p>
+<pre class="screen wide">
+<span class="inv"> COS Edit  HELLO.ASM                          Line 4 of 9       Col 51    Insert</span>
+; hello.asm - the classic: print a string with COS service 09h
+org 100h
+
+    mov dx, message     ; DS:DX points to the text
+    mov ah, 09h         ; &quot;display a string ending in $&quot;
+    int 21h
+    ret                 ; a .COM program may end with RET
+
+message db &#x27;Hello from the 8086!&#x27;, 13, 10, &#x27;$&#x27;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<span class="inv"> F1 Help  F2 Save  F3 Find  F4 Again  F5 Line  Ctrl+Y Cut  F9 Paste  Esc Exit   </span>
+</pre>
+<p>The top line, in reverse video, shows the name of the file, followed by an asterisk (*) once you have changed the text and not yet saved it; where the cursor is, as a line number and a column number; and <b>Insert</b> or <b>Over</b>, the typing mode. The next 23 lines show the text. The bottom line lists the most used keys, and is where EDIT shows its messages and asks its questions.</p>
+
+<h2>Moving the Cursor</h2>
+<table class="ref wrap">
+<tr><th>Key</th><th>Moves the cursor</th></tr>
+<tr><td><span class="key">&uarr;</span> <span class="key">&darr;</span></td><td>One line up or down. The cursor keeps its column when it can.</td></tr>
+<tr><td><span class="key">&larr;</span> <span class="key">&rarr;</span></td><td>One character left or right; past the start or the end of a line it goes to the line before or after.</td></tr>
+<tr><td><span class="key">Ctrl</span>-<span class="key">&larr;</span> <span class="key">Ctrl</span>-<span class="key">&rarr;</span></td><td>To the start of the word before or after.</td></tr>
+<tr><td><span class="key">Home</span> <span class="key">End</span></td><td>To the start or the end of the line.</td></tr>
+<tr><td><span class="key">PgUp</span> <span class="key">PgDn</span></td><td>One screen (22 lines) up or down.</td></tr>
+<tr><td><span class="key">Ctrl</span>-<span class="key">Home</span> <span class="key">Ctrl</span>-<span class="key">End</span></td><td>To the first or the last line of the text.</td></tr>
+<tr><td><span class="key">F5</span></td><td>To a line by its number. EDIT asks "Go to line:"; type the number and press Enter. This is the quickest way to the line of an error reported by ASM.</td></tr>
+</table>
+<p>The screen follows the cursor: when it goes past the top or the bottom, the text moves up or down; when it goes past column 80, the text moves sideways, so that long lines can be seen and changed.</p>
+
+<h2>Typing and Changing Text</h2>
+<table class="ref wrap">
+<tr><th>Key</th><th>What it does</th></tr>
+<tr><td><i>Characters</i></td><td>Go into the text at the cursor. In Insert mode the rest of the line moves right; in Over mode they replace the characters under the cursor.</td></tr>
+<tr><td><span class="key">Ins</span></td><td>Changes between Insert and Over. The cursor is a line in Insert mode and a block in Over mode.</td></tr>
+<tr><td><span class="key">Enter</span></td><td>Ends the line: what is after the cursor goes to a new line below. The new line starts with as many spaces as the line above starts with, so indented programs stay indented.</td></tr>
+<tr><td><span class="key">Backspace</span></td><td>Erases the character before the cursor. At the start of a line, joins the line to the one above.</td></tr>
+<tr><td><span class="key">Del</span></td><td>Erases the character at the cursor. At the end of a line, joins the next line to it.</td></tr>
+<tr><td><span class="key">Tab</span></td><td>Moves to the next column that is a multiple of 4, putting spaces in.</td></tr>
+</table>
+
+<h2>Moving Lines</h2>
+<p><span class="key">Ctrl</span>-<span class="key">Y</span> cuts the line the cursor is on: the line leaves the text and is kept. Press it several times in a row and the lines pile up, in order. <span class="key">F9</span> puts copies of the cut lines back into the text, before the line the cursor is on. The cut lines are kept until you cut again, so F9 can put them in several places.</p>
+<p>To move a group of lines: put the cursor on the first, press Ctrl-Y once for each line, move the cursor to the line that must come after them, and press F9. To copy lines, cut them, press F9 where they were, then F9 again in the new place.</p>
+
+<h2>Finding Text</h2>
+<p><span class="key">F3</span> asks "Find:" on the bottom line. Type the text you are looking for and press Enter (or Esc to give up). EDIT moves the cursor to the next place after the cursor where that text appears; capital and small letters are the same for the search. When it reaches the end of the text, it goes on from the top. <span class="key">F4</span> finds the same text again. If the text is not there, EDIT says "Not found".</p>
+<pre class="screen wide">
+<span class="inv"> Find: message                                                                  </span>
+</pre>
+
+<h2>Saving and Leaving</h2>
+<p><span class="key">F2</span> saves the text. EDIT writes it to a new file, NAME.$$$; only when that has been written completely does the old file become NAME.BAK and the new one take the name of the file. If the diskette is full or write-protected, the old file is not touched, and EDIT says "Cannot save the file". The bottom line shows "Saved" when it is done, and you can go on working.</p>
+<p><span class="key">Esc</span> (or <span class="key">F10</span>) leaves EDIT. If the text has changed since it was last saved, EDIT asks first:</p>
+<pre class="screen wide">
+<span class="inv"> Save the changes (Y/N)?                                                        </span>
+</pre>
+<p>Press Y to save the text and leave, N to leave without saving it (the file stays as it was on the diskette), or Esc to go back to the text.</p>
+<p><span class="key">F1</span> shows a page with all the keys; press any key to go back to the text.</p>
+
+<h2>Text Files</h2>
+<p>EDIT reads any file and treats it as lines of text. When it saves, every line ends with a carriage return and a line feed (0Dh 0Ah), the form COS and its programs expect. A tab character (09h) in a file becomes spaces, to the next column that is a multiple of 8. A Ctrl-Z character (1Ah) marks the end of the text: anything after it is not read.</p>
+<p>A line can hold up to 1,000 characters; a longer line in a file is divided into lines of 1,000. The text can have up to 16,000 lines, and as many characters as fit in memory: about 450 KB on a computer with 640 KB.</p>
+
+<h2>EDIT Messages</h2>
+<table class="ref wrap">
+<tr><th>Message</th><th>Meaning</th></tr>
+<tr><td>New file</td><td>There is no file with that name. EDIT starts with an empty text; the file is created when you save.</td></tr>
+<tr><td>Saved</td><td>The text is on the diskette.</td></tr>
+<tr><td>Cannot save the file (the diskette is full or protected?)</td><td>The text could not be written. The old file is as it was. Make room on the diskette, or remove the write-protect tab, and press F2 again.</td></tr>
+<tr><td>Not found</td><td>The text you asked F3 or F4 for is not in the file.</td></tr>
+<tr><td>The line would be longer than 1000 characters</td><td>The character, or the joining of two lines, was not done.</td></tr>
+<tr><td>Too many lines (16000 at most)</td><td>Enter or F9 would make the text longer than EDIT can hold.</td></tr>
+<tr><td>Too many cut lines (500 at most)</td><td>Put the cut lines back with F9 before cutting more.</td></tr>
+<tr><td>Lines longer than 1000 characters were split</td><td>The file had longer lines; each was divided. Saving the text saves them divided.</td></tr>
+<tr><td>Out of memory: save your work</td><td>The text has filled the memory: the line you are on cannot grow and the cursor cannot leave it. Press F2 to save, which always works, then leave.</td></tr>
+<tr><td>EDIT: the file is too large</td><td>The file does not fit in memory, or has more than 16,000 lines. EDIT ends without changing it.</td></tr>
+<tr><td>EDIT: cannot open <var>name</var></td><td>The name is not a valid file name, or the drive does not exist.</td></tr>
+<tr><td>Usage: EDIT file</td><td>You did not give a file name.</td></tr>
+</table>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 10                                                           -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="10" data-title="ASM, the Assembler" data-part="Part Three: Program Development">
+
+<h2>Introduction</h2>
+<p>A program for the 8086 is a sequence of instructions in machine code: bytes. Writing the bytes by hand is slow and full of mistakes, so programs are written instead in <i>assembly language</i>, where each instruction has a name (MOV, ADD, JMP) and each place in the program a label. ASM, the COS assembler, reads a program in assembly language from a text file, the <i>source file</i>, and writes the bytes, ready to run, to a .COM file.</p>
+<p>COS itself, COMMAND.COM, EDIT and ASM are written in the language ASM accepts, and ASM can assemble all of them, itself included.</p>
+
+<h2>Writing a Program</h2>
+<p>A program is made in three steps: write it with EDIT, assemble it with ASM, and run it. The System Diskette has a small program to try, HELLO.ASM:</p>
+<pre class="listing">
+; hello.asm - the classic: print a string with COS service 09h
+org 100h
+
+    mov dx, message     ; DS:DX points to the text
+    mov ah, 09h         ; &quot;display a string ending in $&quot;
+    int 21h
+    ret                 ; a .COM program may end with RET
+
+message db &#x27;Hello from the 8086!&#x27;, 13, 10, &#x27;$&#x27;
+</pre>
+<p>Assemble it and run it:</p>
+<pre class="screen">
+A:\&gt;<b>asm hello</b>
+HELLO.COM: 31 bytes
+
+A:\&gt;<b>hello</b>
+Hello from the 8086!
+
+A:\&gt;<b>dir hello.*</b>
+
+ Volume in drive A is COS
+ Directory of  A:\
+
+HELLO    ASM      299   1-01-80  12:00a
+HELLO    COM       31   1-01-80  12:00a
+        2 File(s)   1416192 bytes free
+
+A:\&gt;
+</pre>
+<p>To make the program say something else, type <b>edit hello.asm</b>, change the text between the quotes, press F2 and Esc, and assemble and run it again. Chapter 6 explains how a COS program is organized, and Chapter 7 lists the services it can ask COS for.</p>
+
+<h2 class="cmd">ASM</h2>
+<dl>
+<dt>Purpose</dt><dd>Assembles a program.</dd>
+<dt>Format</dt><dd><pre>ASM [d:]<var>source</var>[.<var>ext</var>] [[d:]<var>output</var>[.<var>ext</var>]]</pre></dd>
+<dt>Remarks</dt><dd>
+<p>If the source has no extension, ASM adds .ASM. Without an output name, the bytes go to a file with the name of the source and the extension .COM, on the same drive. Give an output name to choose another, for example COS.SYS.</p>
+<p>When the program has no errors, ASM writes the output file and displays its name and size. Otherwise it writes no file, displays each error with the line where it is, and tells how many errors it found; the first 100 are shown. An error is reported as:</p>
+<pre class="listing">
+<var>NAME.ASM</var>(<var>line</var>): <var>what is wrong</var>
+</pre>
+<p>Go to that line with F5 in EDIT, correct it, and assemble again. ASM ends with return code 0 when it made the file, 1 when the program has errors, and 2 when it could not run (no source file, not enough memory, a full diskette).</p>
+</dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>asm bad</b>
+BAD.ASM(4): undefined symbol: &#x27;mesage&#x27;
+BAD.ASM(7): value 300 does not fit in a byte (-128..255)
+2 errors
+
+A:\&gt;
+</pre><p>Line 4 says <b>mesage</b> instead of <b>message</b>, and line 7 puts 300 in AL, which holds numbers up to 255.</p></dd>
+</dl>
+
+<h2>How ASM Works</h2>
+<p>ASM reads the source file once, a piece at a time, and keeps it in memory in a compact form, with every name looked up. Then it goes through the program several times, or <i>passes</i>. In each pass it works out the address of every line; a jump to a label further on may need 2 bytes or 3, depending on how far the label turns out to be, so the passes go on until no address changes. ASM always chooses the shortest form of each instruction. The last pass writes the bytes.</p>
+<p>Assembling HELLO.ASM takes about a second. Larger programs take longer: COS.SYS, about 4,900 lines, takes under a minute. A source file can be of any size that fits on a diskette; the program it makes can be up to 64 KB.</p>
+
+<h2>Assembling COS</h2>
+<p>The source files of COS are text files like any other. With them on a diskette in drive B:, COS can be assembled on COS. Drive B: is made the default drive, so that the files are read and written there, and ASM is run from drive A: by typing <b>a:asm</b>:</p>
+<pre class="screen">
+B:\&gt;<b>a:asm cos.asm cos.sys</b>
+COS.SYS: 11188 bytes
+
+B:\&gt;<b>a:asm command.asm</b>
+COMMAND.COM: 5460 bytes
+
+B:\&gt;<b>a:asm asm.asm</b>
+ASM.COM: 17171 bytes
+
+B:\&gt;<b>dir</b>
+
+ Volume in drive B is SOURCES
+ Directory of  B:\
+
+COS      ASM    97184   1-01-80  12:00a
+COMMAND  ASM    32658   1-01-80  12:00a
+BOOT     ASM     4149   1-01-80  12:00a
+ASM      ASM   125007   1-01-80  12:00a
+EDIT     ASM    40703   1-01-80  12:00a
+COS      SYS    11188   1-01-80  12:00a
+COMMAND  COM     5460   1-01-80  12:01a
+ASM      COM    17171   1-01-80  12:02a
+        8 File(s)   1122304 bytes free
+
+B:\&gt;
+</pre>
+<p>The three take between two and three minutes in all. The files made are byte for byte the same as those on the System Diskette. A new System Diskette is then made by copying COS.SYS, COMMAND.COM, EDIT.COM and ASM.COM onto a diskette that has the COS boot record, for example a copy of the System Diskette.</p>
+
+<h2>The Source File</h2>
+<p>A source file is a text file. Each line holds at most one instruction or directive, in this order, each part optional:</p>
+<pre class="listing">
+<var>label</var>:    <var>instruction</var>   <var>operands</var>      ; <var>comment</var>
+</pre>
+<ul>
+<li>A <b>label</b> names the address of the line, so that other lines can use it. It starts with a letter, _, ?, @ or a period, and goes on with letters, digits and _ ? @ $ # ~ .; capital and small letters are different (Start and start are two labels). The colon may be left out when an instruction follows.</li>
+<li>A label that starts with a period is <b>local</b>: it belongs to the last label before it without a period, so .loop after <b>print:</b> is really <b>print.loop</b>, and each routine can have its own .loop. A label that starts with two periods is not local.</li>
+<li>The <b>instruction</b> is an 8086 instruction or a directive. Instruction names, register names and directives may be written in capital or small letters.</li>
+<li>Operands are separated by commas.</li>
+<li>A semicolon starts a <b>comment</b>: the rest of the line is for the reader.</li>
+</ul>
+
+<h3>Numbers, Characters and Strings</h3>
+<table class="ref wrap">
+<tr><th>Written</th><th>Meaning</th></tr>
+<tr><td>200, 0d200, 200d</td><td>Decimal.</td></tr>
+<tr><td>0C8h, 0xC8, $0C8</td><td>Hexadecimal. A number must start with a digit: write 0FFh, not FFh, which would be a label.</td></tr>
+<tr><td>11001000b, 0b11001000</td><td>Binary. An underscore may separate the digits: 1100_1000b.</td></tr>
+<tr><td>310o, 310q</td><td>Octal.</td></tr>
+<tr><td>'A', "A"</td><td>A character: its code, 41h. Two characters, 'AB', make a word (41h, then 42h in memory).</td></tr>
+<tr><td>'Hello, world'</td><td>A string, in DB and DW.</td></tr>
+</table>
+
+<h3>Expressions</h3>
+<p>Wherever a number goes, an expression may go. ASM computes it with 32 bits. The operators, from the first done to the last:</p>
+<table class="ref wrap">
+<tr><th>Operator</th><th>Meaning</th></tr>
+<tr><td>( )</td><td>Grouping</td></tr>
+<tr><td>- + ~ !</td><td>Negative, positive, NOT of each bit, logical NOT (1 if zero, else 0)</td></tr>
+<tr><td>* / % // %%</td><td>Multiply; divide and remainder without sign; divide and remainder with sign</td></tr>
+<tr><td>+ -</td><td>Add, subtract</td></tr>
+<tr><td>&lt;&lt; &gt;&gt;</td><td>Shift left, right</td></tr>
+<tr><td>&amp;</td><td>AND</td></tr>
+<tr><td>^</td><td>Exclusive OR</td></tr>
+<tr><td>|</td><td>OR</td></tr>
+</table>
+<p>Two symbols have a special meaning: <b>$</b> is the address of the start of the current line, and <b>$$</b> the address where the program starts (the ORG). So <b>$ - message</b> is the number of bytes from the label message to here, and <b>times 510 - ($ - $$) db 0</b> fills a boot sector up to byte 510.</p>
+
+<h3>Directives</h3>
+<table class="ref wrap">
+<tr><th>Directive</th><th>What it does</th></tr>
+<tr><td>ORG <var>address</var></td><td>The address of the first byte: 100h for a .COM program, 0 for COS.SYS, 7C00h for a boot sector. Once, before any code. Without it, the program starts at 0.</td></tr>
+<tr><td>DB <var>values</var></td><td>Bytes: numbers from -128 to 255, characters and strings, separated by commas. <b>db 'Hello', 13, 10, '$'</b></td></tr>
+<tr><td>DW <var>values</var></td><td>Words (two bytes, the low one first), and strings padded to a whole number of words. <b>dw table, 1000</b></td></tr>
+<tr><td>RESB <var>n</var>, RESW <var>n</var></td><td><var>n</var> bytes or words of zeros.</td></tr>
+<tr><td><var>name</var> EQU <var>value</var></td><td>Gives a name to a number. The name has no colon. <b>WIDTH equ 80</b></td></tr>
+<tr><td>TIMES <var>n</var> <var>line</var></td><td>Repeats an instruction or DB/DW <var>n</var> times. <b>times 16 db 0</b></td></tr>
+<tr><td>BITS 16, CPU 8086</td><td>Say that the program is for the 16-bit 8086. They are accepted and change nothing.</td></tr>
+</table>
+
+<h3>Operands</h3>
+<table class="ref wrap">
+<tr><th>Operand</th><th>Example</th></tr>
+<tr><td>Registers</td><td>AL CL DL BL AH CH DH BH (8 bits); AX CX DX BX SP BP SI DI (16 bits); ES CS SS DS (segments)</td></tr>
+<tr><td>Immediate: a value</td><td>mov cx, 10 &middot; mov dx, message &middot; mov al, 'A'</td></tr>
+<tr><td>Memory: an address in brackets, made of BX or BP, SI or DI, and a displacement, in any order</td><td>mov al, [bx] &middot; mov ax, [count] &middot; mov [bp+si+4], cx &middot; mov al, [table+di]</td></tr>
+<tr><td>A segment other than the usual one, inside the brackets</td><td>mov al, [es:di] &middot; mov ax, [cs:saved]</td></tr>
+<tr><td>BYTE or WORD, when the size cannot be told from a register</td><td>inc byte [count] &middot; mov word [bx], 0</td></tr>
+<tr><td>SHORT, NEAR, FAR on jumps</td><td>jmp short again &middot; call far [vector] &middot; jmp 0F000h:0FFF0h</td></tr>
+</table>
+
+<h3>Instructions</h3>
+<p>ASM accepts every 8086 instruction that the pc86 computer runs:</p>
+<table class="ref wrap">
+<tr><td>Moving data</td><td>MOV XCHG LEA LDS LES PUSH POP PUSHF POPF LAHF SAHF CBW CWD IN OUT</td></tr>
+<tr><td>Arithmetic</td><td>ADD ADC SUB SBB CMP INC DEC NEG MUL IMUL DIV IDIV</td></tr>
+<tr><td>Logic and shifts</td><td>AND OR XOR NOT TEST SHL SAL SHR SAR ROL ROR RCL RCR</td></tr>
+<tr><td>Jumps</td><td>JMP CALL RET RETN RETF; JO JNO JB JC JNAE JAE JNB JNC JE JZ JNE JNZ JBE JNA JA JNBE JS JNS JP JPE JNP JPO JL JNGE JGE JNL JLE JNG JG JNLE; LOOP LOOPE LOOPZ LOOPNE LOOPNZ JCXZ</td></tr>
+<tr><td>Strings</td><td>MOVSB MOVSW CMPSB CMPSW STOSB STOSW LODSB LODSW SCASB SCASW, with REP REPE REPZ REPNE REPNZ</td></tr>
+<tr><td>Interrupts</td><td>INT INT3 IRET CLI STI</td></tr>
+<tr><td>Flags and others</td><td>CLC STC CMC CLD STD NOP HLT</td></tr>
+</table>
+<p>On the 8086 a shift or rotate moves by 1 or by CL (<b>mov cl, 4</b> / <b>shl ax, cl</b>); PUSH takes a register or memory, not a number; and a conditional jump reaches only 128 bytes back or 127 forward: to go further, jump on the opposite condition over a JMP. ASM says so when a program tries otherwise.</p>
+<p>The decimal arithmetic instructions (AAA, AAD, AAM, AAS, DAA, DAS), XLAT, LOCK, WAIT and ESC are not supported by the pc86 processor, and ASM rejects them, as it rejects the instructions of later processors (PUSHA, ENTER, MOVZX...).</p>
+
+<h3>What ASM Does Not Have</h3>
+<p>ASM Version 1.00 has no macros, no INCLUDE, no conditional assembly and no sections: a program is one source file, assembled into one segment, like a .COM file. DD and the other directives for larger data are not supported; use DB and DW.</p>
+
+<h2>ASM Messages</h2>
+<p>These are the messages you are most likely to see. Each error message is preceded by the name of the source file and the line, as shown above.</p>
+<table class="ref wrap">
+<tr><th>Message</th><th>Meaning</th></tr>
+<tr><td>undefined symbol: '<var>name</var>'</td><td>There is no label or EQU with that name. Check the spelling, and capital and small letters.</td></tr>
+<tr><td>'<var>name</var>' is already defined on line <var>n</var></td><td>Two lines have the same label.</td></tr>
+<tr><td>unknown instruction: <var>name</var></td><td>The word is not an instruction or a directive. A label alone on a line needs its colon.</td></tr>
+<tr><td>conditional jump out of range: target is <var>n</var> bytes away and the limit is -128..127</td><td>Jump on the opposite condition over a JMP to the label.</td></tr>
+<tr><td>value <var>n</var> does not fit in a byte (-128..255)</td><td>Also: in a word (-32768..65535).</td></tr>
+<tr><td>operation size not specified: use 'byte [...]' or 'word [...]'</td><td>Nothing tells ASM whether the memory operand is a byte or a word.</td></tr>
+<tr><td>operand sizes do not match</td><td>For example MOV AX,BL: one operand is a word, the other a byte.</td></tr>
+<tr><td>invalid combination of operands for <var>name</var></td><td>The 8086 has no form of the instruction with those operands.</td></tr>
+<tr><td>the 8086 can only address memory through BX, BP, SI and DI</td><td>Only these registers can be used in brackets; also: only BX or BP with SI or DI.</td></tr>
+<tr><td>the 8086 can only shift by 1 or by CL</td><td>Load the count into CL first.</td></tr>
+<tr><td><var>name</var> does not exist on the 8086 (it is from a later CPU)</td><td>Write it with 8086 instructions.</td></tr>
+<tr><td>instruction not supported on this machine: <var>name</var></td><td>The pc86 processor does not run it.</td></tr>
+<tr><td>invalid number: <var>text</var></td><td>A word that starts with a digit is not a number: a hexadecimal number needs its h.</td></tr>
+<tr><td>unterminated string (missing ')</td><td>The quote that ends the string is missing.</td></tr>
+<tr><td>the program does not fit in a 64 KB segment</td><td>The program is too large for one segment.</td></tr>
+<tr><td><var>n</var> errors</td><td>The program has errors; no file was written.</td></tr>
+<tr><td>ASM: cannot open <var>name</var></td><td>There is no source file with that name.</td></tr>
+<tr><td>ASM: cannot write <var>name</var></td><td>The output file could not be written: the diskette is full or write-protected.</td></tr>
+<tr><td>ASM: not enough memory</td><td>ASM needs 256 KB of free memory.</td></tr>
+<tr><td>Usage: ASM source[.ASM] [output]</td><td>You did not give a source file.</td></tr>
+</table>
+</section>
+
+<!-- END OF PART THREE -->
 
 <!-- ================================================================== -->
 <!-- APPENDIXES                                                           -->
@@ -1650,8 +1974,10 @@ Date:  bits 15-9 year - 1980, 8-5 month (1-12), 4-0 day (1-31)
 <tr><td>COPY <var>source</var> [<var>target</var>]</td><td>Copies files; global characters allowed</td></tr>
 <tr><td>DATE [<var>mm-dd-yy</var>]</td><td>Displays or sets the date</td></tr>
 <tr><td>DEL <var>filespec</var></td><td>Erases files (also ERASE)</td></tr>
+<tr><td>ASM <var>source</var> [<var>output</var>]</td><td>Assembles a program (Chapter 10)</td></tr>
 <tr><td>DIR [<var>filespec</var>] [/W]</td><td>Lists files</td></tr>
 <tr><td>ECHO [<var>message</var>]</td><td>Displays a message</td></tr>
+<tr><td>EDIT <var>filespec</var></td><td>Writes or changes a text file (Chapter 9)</td></tr>
 <tr><td>PAUSE</td><td>Waits for a key</td></tr>
 <tr><td>REN <var>old new</var></td><td>Renames files (also RENAME)</td></tr>
 <tr><td>SET</td><td>Displays the environment</td></tr>
@@ -1667,6 +1993,13 @@ Date:  bits 15-9 year - 1980, 8-5 month (1-12), 4-0 day (1-31)
 <tr><td><span class="key">Esc</span></td><td>Cancel the line</td></tr>
 <tr><td><span class="key">Ctrl</span>-<span class="key">C</span></td><td>Stop the command or program</td></tr>
 <tr><td>Abort, Retry, Fail?</td><td>A: end the program &middot; R: try again &middot; F: give up the operation</td></tr>
+</table>
+<table class="ref wrap">
+<tr><th>Key</th><th>In EDIT</th></tr>
+<tr><td>F2 &middot; Esc</td><td>Save &middot; leave</td></tr>
+<tr><td>F3 &middot; F4 &middot; F5</td><td>Find &middot; find again &middot; go to a line</td></tr>
+<tr><td>Ctrl-Y &middot; F9</td><td>Cut the line &middot; put the cut lines back</td></tr>
+<tr><td>Ins &middot; F1</td><td>Insert or type over &middot; all the keys</td></tr>
 </table>
 <table class="ref wrap">
 <tr><th>Program</th><th>INT 21h</th></tr>

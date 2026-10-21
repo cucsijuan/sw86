@@ -3,7 +3,7 @@
 ; A subset of MS-DOS 3.30 for the pc86 machine: INT 21h with the real
 ; function numbers, .COM and .EXE programs with a PSP and an environment,
 ; memory control blocks, file handles on FAT12 diskettes in drives A: and B:
-; (root directory only), the console through the BIOS, Ctrl-C (INT 23h) and
+; with subdirectories, the console through the BIOS, Ctrl-C (INT 23h) and
 ; critical errors (INT 24h). A function it does not implement stops the
 ; program with a message instead of doing something different.
 ;
@@ -55,6 +55,7 @@ SF_CURCI        equ 20          ; FFFFh: unknown
 SF_TIME         equ 22
 SF_DATE         equ 24
 SF_NAME         equ 26          ; 11 bytes
+SF_DIRCL        equ 38          ; the directory of its entry (0 = root)
 SFT_SIZE        equ 40
 SFT_COUNT       equ 20
 
@@ -68,6 +69,8 @@ DEV_CON         equ 1
 DEV_NUL         equ 2
 
 ERR_FULL        equ 0FFFFh      ; internal: no free cluster
+ERR_END         equ 0FFFDh      ; internal: past the end of a directory
+CUR_PATH_SIZE   equ 68          ; a current directory, as text
 
     jmp init
 
@@ -174,7 +177,7 @@ fn_table:
     dw fn_25, fn_unsupported, fn_unsupported
     dw fn_unsupported, fn_29, fn_2A, fn_2B, fn_2C, fn_2D, fn_2E, fn_2F                      ; 28
     dw fn_30, fn_31, fn_unsupported, fn_33, fn_34, fn_35, fn_36, fn_37                      ; 30
-    dw fn_38, fn_unsupported, fn_unsupported, fn_3B, fn_3C, fn_3D, fn_3E, fn_3F             ; 38
+    dw fn_38, fn_39, fn_3A, fn_3B, fn_3C, fn_3D, fn_3E, fn_3F             ; 38
     dw fn_40, fn_41, fn_42, fn_43, fn_44, fn_45, fn_46, fn_47                               ; 40
     dw fn_48, fn_49, fn_4A, fn_4B, fn_4C, fn_4D, fn_4E, fn_4F                               ; 48
     dw fn_50, fn_62, fn_unsupported, fn_unsupported, fn_54, fn_unsupported, fn_56, fn_57    ; 50
@@ -1385,6 +1388,16 @@ drive_ready:
 drive_invalidate:
     mov byte [bp+D_VALID], 0
     mov byte [bp+D_FATDIRTY], 0
+    mov byte [dc_drive], 0FFh
+    push ax                         ; another diskette: back to its root
+    push bx
+    push si
+    call cur_of_drive
+    mov word [cur_cl+bx], 0
+    mov byte [si], 0
+    pop si
+    pop bx
+    pop ax
     mov al, [bp+D_NUM]
     cmp al, [tc_drive]
     jne .ret
@@ -1894,16 +1907,35 @@ flush_all:
     ret
 
 ; ======================================================================
-; Names and the root directory
+; Names, paths and directories
 ; ======================================================================
+;
+; A directory is known by its first cluster: 0 is the root (fixed sectors
+; after the FATs), any other a subdirectory (a chain of clusters, like a
+; file, with "." and ".." first). [d_cluster] is the directory the routines
+; below work on; parse_path sets it to the one a path leads to.
 
 pathbuf  times 128 db 0
 fname    times 11 db 0          ; the name being looked for, 8 + 3
 p_drive  db 0
 p_wild   db 0
 p_dev    db 0                   ; 0 file, DEV_CON, DEV_NUL, 3 another device
+p_abs    db 0                   ; the path starts at the root
+p_first  dw 0                   ; its first directory name
+p_last   dw 0                   ; its last part (the file name)
 f_index  dw 0                   ; directory entry
 f_attr   db 0                   ; attributes searched for
+d_cluster dw 0                  ; the directory: 0 root, or its first cluster
+dc_drive db 0FFh                ; the last cluster reached in a directory's
+dc_dir   dw 0                   ; chain (cluster dc_ci of directory dc_dir
+dc_ci    dw 0                   ; on drive dc_drive is dc_cl)
+dc_cl    dw 0
+w_end    dw 0
+w_path   times 80 db 0          ; the directory walk reached, as text
+save_name times 11 db 0
+save_wild db 0
+cur_cl   dw 0, 0                ; the current directory of each drive:
+cur_path times MAX_DRIVES * CUR_PATH_SIZE db 0  ; cluster and "DIR\SUB"
 
 ; Copies the ASCIIZ at r_ds:r_dx into pathbuf, in capitals.
 path_from_dsdx:
@@ -1932,30 +1964,29 @@ path_copy:
     pop ds
     ret
 
-; pathbuf -> p_drive, fname, p_wild, p_dev. CF: AX = error (3 bad path,
-; 2 bad name).
+; pathbuf -> p_drive, fname, p_wild, p_dev, and (not for devices) BP = the
+; drive, ready, and d_cluster = the directory the path leads to.
+; CF: AX = error (3 bad path, 2 bad name, or a disk error).
 parse_path:
-    mov si, pathbuf
-    mov al, [cur_drive]
-    mov [p_drive], al
-    mov byte [p_wild], 0
-    mov byte [p_dev], 0
-    cmp byte [si+1], ':'
-    jne .no_drive
-    mov al, [si]
-    sub al, 'A'
-    cmp al, 26
-    jae .bad_name
-    mov [p_drive], al
-    add si, 2
-.no_drive:
-    cmp byte [si], '\'
-    je .root
-    cmp byte [si], '/'
-    jne .name
-.root:
-    inc si
-.name:
+    call path_start
+    jnc .skip16
+    jmp .ret
+.skip16:
+    ; the last part (after the last \ or /) is the name
+    mov bx, si
+    mov di, si
+.scan:
+    mov al, [di]
+    test al, al
+    jz .scanned
+    inc di
+    call is_sep
+    jne .scan
+    mov bx, di
+    jmp .scan
+.scanned:
+    mov [p_last], bx
+    mov si, bx
     mov di, fname
     mov cx, 11
     mov al, ' '
@@ -1973,10 +2004,38 @@ parse_path:
     jc .bad_name
 .no_ext:
     cmp byte [si], 0
-    jne .bad_path                   ; a directory in the path
+    jne .bad_path
     cmp byte [fname], ' '
     je .bad_path
     call check_device
+    cmp byte [p_dev], 0
+    jne .done                       ; devices are anywhere
+    ; the directories before it
+    mov si, fname
+    mov di, save_name
+    mov cx, 11
+    rep movsb
+    mov al, [p_wild]
+    mov [save_wild], al
+    mov dl, [p_drive]
+    call drive_ready
+    jc .ret
+    mov si, [p_first]
+    mov dx, [p_last]
+    call walk
+    pushf
+    push ax
+    mov si, save_name
+    mov di, fname
+    mov cx, 11
+    rep movsb
+    mov al, [save_wild]
+    mov [p_wild], al
+    pop ax
+    popf
+.ret:
+    ret
+.done:
     clc
     ret
 .bad_path:
@@ -1988,6 +2047,222 @@ parse_path:
     stc
     ret
 
+; The start of pathbuf: p_drive, p_abs (a \ first), SI = p_first = what
+; follows. CF: AX = 2 for a bad drive letter.
+path_start:
+    mov si, pathbuf
+    mov al, [cur_drive]
+    mov [p_drive], al
+    mov byte [p_wild], 0
+    mov byte [p_dev], 0
+    mov byte [p_abs], 0
+    cmp byte [si+1], ':'
+    jne .no_drive
+    mov al, [si]
+    sub al, 'A'
+    cmp al, 26
+    jae .bad
+    mov [p_drive], al
+    add si, 2
+.no_drive:
+    mov al, [si]
+    call is_sep
+    jne .relative
+    mov byte [p_abs], 1
+    inc si
+.relative:
+    mov [p_first], si
+    clc
+    ret
+.bad:
+    mov ax, 2
+    stc
+    ret
+
+; ZF = 1 if AL is \ or /
+is_sep:
+    cmp al, '\'
+    je .ret
+    cmp al, '/'
+.ret:
+    ret
+
+; Follows the directory names from SI to DX (separated by \ or /; "." is
+; the same directory, ".." the one above) from the root (p_abs) or the
+; current directory of drive BP -> d_cluster, and w_path = that directory
+; as text. CF: AX = 3 (a name is not a directory) or a disk error.
+walk:
+    mov [w_end], dx
+    mov byte [w_path], 0
+    xor ax, ax
+    cmp byte [p_abs], 0
+    jne .start
+    push si
+    call cur_of_drive               ; the current directory
+    mov ax, [cur_cl+bx]
+    mov di, w_path
+.copy:
+    lodsb
+    stosb
+    test al, al
+    jnz .copy
+    mov ax, [cur_cl+bx]
+    pop si
+.start:
+    mov [d_cluster], ax
+.component:
+    cmp si, [w_end]
+    jb .skip15
+    jmp .done
+.skip15:
+    mov al, [si]
+    test al, al
+    jnz .skip14
+    jmp .done
+.skip14:
+    call is_sep
+    jne .not_sep
+    inc si
+    jmp .component
+.not_sep:
+    cmp al, '.'
+    jne .name
+    mov al, [si+1]
+    call .ends
+    jne .dotdot
+    inc si                          ; "." stays
+    jmp .component
+.dotdot:
+    cmp al, '.'
+    jne .name
+    mov al, [si+2]
+    call .ends
+    jne .name
+    add si, 2
+    cmp word [d_cluster], 0
+    jne .skip13                   ; nothing above the root
+    jmp .not_found
+.skip13:
+    push si
+    mov si, dotdot_name
+    mov di, fname
+    mov cx, 11
+    rep movsb
+    call .lookup
+    pop si
+    jnc .skip12
+    jmp .ret
+.skip12:
+    mov di, w_path                  ; the text loses its last name
+    mov bx, di
+.strip:
+    mov al, [di]
+    test al, al
+    jz .stripped
+    inc di
+    cmp al, '\'
+    jne .strip
+    mov bx, di
+    dec bx
+    jmp .strip
+.stripped:
+    mov byte [bx], 0
+    jmp .component
+.name:
+    mov di, fname
+    mov cx, 11
+    mov al, ' '
+    rep stosb
+    mov byte [p_wild], 0
+    mov di, fname
+    mov cx, 8
+    call name_part
+    jc .not_found
+    cmp byte [si], '.'
+    jne .no_ext
+    inc si
+    mov di, fname + 8
+    mov cx, 3
+    call name_part
+    jc .not_found
+.no_ext:
+    cmp byte [p_wild], 0
+    jne .not_found
+    cmp byte [fname], ' '
+    je .not_found
+    mov al, [si]
+    call .ends
+    jne .not_found
+    push si
+    call .lookup
+    jc .lookup_failed
+    mov di, w_path                  ; the text gets the name
+    mov cx, 64
+    xor al, al
+    repne scasb
+    dec di
+    cmp di, w_path + 64 - 14
+    jae .too_long
+    cmp di, w_path
+    je .first
+    mov byte [di], '\'
+    inc di
+.first:
+    call name_from_entry
+    pop si
+    jmp .component
+.too_long:
+    pop si
+.not_found:
+    mov ax, 3
+    stc
+.ret:
+    ret
+.lookup_failed:
+    pop si
+    ret
+.done:
+    clc
+    ret
+; ZF = 1 if AL ends a name here (\, /, the end of the string)
+.ends:
+    test al, al
+    jz .ends_ret
+    call is_sep
+.ends_ret:
+    ret
+; fname in d_cluster must be a directory: d_cluster = it, SI = its entry
+.lookup:
+    call find_file
+    jc .lookup_error
+    test byte [si+11], 10h
+    jz .lookup_not_dir
+    mov ax, [si+26]
+    mov [d_cluster], ax
+    clc
+    ret
+.lookup_error:
+    cmp ax, 2
+    jne .lookup_ret
+.lookup_not_dir:
+    mov ax, 3
+    stc
+.lookup_ret:
+    ret
+
+dotdot_name db '..         '
+
+; BP = drive -> BX = 2 * its number (for cur_cl), SI = its cur_path
+cur_of_drive:
+    mov bl, [bp+D_NUM]
+    xor bh, bh
+    mov al, CUR_PATH_SIZE
+    mul bl
+    add ax, cur_path
+    mov si, ax
+    shl bx, 1
+    ret
+
 ; Up to CX characters of a name from SI to DI (more are dropped).
 name_part:
 .next:
@@ -1996,9 +2271,7 @@ name_part:
     jz .end
     cmp al, '.'
     je .end
-    cmp al, '\'
-    je .end
-    cmp al, '/'
+    call is_sep
     je .end
     cmp al, '*'
     je .star
@@ -2028,7 +2301,7 @@ name_part:
     jz .end
     cmp al, '.'
     je .end
-    cmp al, '\'
+    call is_sep
     je .end
     jmp .rest
 .end:
@@ -2089,23 +2362,112 @@ dev_names:
     db 'CLOCK$  ', 3
     db 0
 
-; BP = drive, AX = entry number -> SI = the entry. CF: AX = error.
+; BP = drive, AX = entry number in directory d_cluster -> SI = the entry.
+; CF: AX = ERR_END (past the end of the directory) or a disk error.
 dir_entry:
+    push bx
     push cx
     push dx
+    cmp word [d_cluster], 0
+    jne .sub
+    cmp ax, [bp+D_ROOTENT]
+    jae .end
     mov dx, ax
-    and dx, 15
-    mov cl, 5
-    shl dx, cl
     mov cl, 4
     shr ax, cl
     add ax, [bp+D_ROOTLBA]
+    jmp .sector
+.sub:
+    ; entries per cluster: 16 per sector
+    mov bl, [bp+D_SPC]
+    xor bh, bh
+    mov cl, 4
+    shl bx, cl
+    xor dx, dx
+    div bx                          ; AX = cluster index, DX = entry in it
+    push dx
+    call dir_cluster
+    pop dx
+    jc .ret
+    sub ax, 2
+    mov bl, [bp+D_SPC]
+    xor bh, bh
+    push dx
+    mul bx
+    pop dx
+    add ax, [bp+D_DATALBA]
+    mov bx, dx
+    mov cl, 4
+    shr bx, cl
+    add ax, bx                      ; + the sector in the cluster
+.sector:
+    and dx, 15
+    mov cl, 5
+    shl dx, cl
     call sec_get
     jc .ret
     add si, dx
+    clc
+    jmp .ret
+.end:
+    mov ax, ERR_END
+    stc
 .ret:
     pop dx
     pop cx
+    pop bx
+    ret
+
+; Cluster number AX of the chain of directory d_cluster (drive BP), from
+; the one reached last when it can. -> AX = cluster. CF: AX = ERR_END.
+dir_cluster:
+    push bx
+    push cx
+    mov cx, ax                      ; the index wanted
+    mov al, [bp+D_NUM]
+    cmp al, [dc_drive]
+    jne .from_start
+    mov ax, [d_cluster]
+    cmp ax, [dc_dir]
+    jne .from_start
+    cmp cx, [dc_ci]
+    jb .from_start
+    mov bx, [dc_cl]
+    mov ax, [dc_ci]
+    jmp .walk
+.from_start:
+    mov bx, [d_cluster]
+    xor ax, ax
+.walk:
+    cmp ax, cx
+    je .found
+    push ax
+    mov ax, bx
+    call fat_get
+    mov bx, ax
+    pop ax
+    cmp bx, 2
+    jb .end
+    cmp bx, 0FF8h
+    jae .end
+    inc ax
+    jmp .walk
+.found:
+    mov [dc_ci], ax
+    mov [dc_cl], bx
+    mov ax, [d_cluster]
+    mov [dc_dir], ax
+    mov al, [bp+D_NUM]
+    mov [dc_drive], al
+    mov ax, bx
+    clc
+    jmp .ret
+.end:
+    mov ax, ERR_END
+    stc
+.ret:
+    pop cx
+    pop bx
     ret
 
 ; Looks for fname (with ? wildcards) from entry f_index on, with the
@@ -2114,10 +2476,12 @@ dir_entry:
 dir_search:
 .next:
     mov ax, [f_index]
-    cmp ax, [bp+D_ROOTENT]
-    jae .none
     call dir_entry
-    jc .ret
+    jnc .entry
+    cmp ax, ERR_END
+    je .none
+    ret
+.entry:
     mov al, [si]
     test al, al
     jz .none
@@ -2164,7 +2528,6 @@ dir_search:
 .none:
     mov ax, 12h
     stc
-.ret:
     ret
 
 ; Exact name: f_index = 0, attributes 16h. CF: AX = 2 or a disk error.
@@ -2181,15 +2544,14 @@ find_file:
 .ret:
     ret
 
-; A free directory entry -> SI, f_index. CF: AX = 5 (full) or a disk error.
+; A free entry in directory d_cluster -> SI, f_index. A full subdirectory
+; gets one more cluster. CF: AX = 5 (no room) or a disk error.
 dir_free:
     mov word [f_index], 0
 .next:
     mov ax, [f_index]
-    cmp ax, [bp+D_ROOTENT]
-    jae .full
     call dir_entry
-    jc .ret
+    jc .end
     mov al, [si]
     test al, al
     jz .found
@@ -2200,10 +2562,75 @@ dir_free:
 .found:
     clc
     ret
+.end:
+    cmp ax, ERR_END
+    jne .error
+    cmp word [d_cluster], 0
+    je .full                        ; the root does not grow
+    ; the last cluster of the directory gets a new one after it
+    mov bl, [bp+D_SPC]
+    xor bh, bh
+    mov cl, 4
+    shl bx, cl
+    mov ax, [f_index]
+    xor dx, dx
+    div bx
+    dec ax
+    call dir_cluster
+    jc .error
+    mov bx, ax
+    call cluster_alloc
+    jc .full
+    mov dx, ax
+    mov ax, bx
+    call fat_set
+    mov ax, dx
+    call zero_cluster
+    jc .error
+    mov ax, [f_index]
+    call dir_entry
+    jnc .found
+.error:
+    stc
+    ret
 .full:
     mov ax, 5
     stc
+    ret
+
+; BP = drive, AX = cluster: every byte of it becomes 0. CF: AX = error.
+zero_cluster:
+    push cx
+    push di
+    sub ax, 2
+    mov cl, [bp+D_SPC]
+    xor ch, ch
+    push cx
+    mul cx
+    pop cx
+    add ax, [bp+D_DATALBA]
+.sector:
+    push ax
+    push cx
+    call sec_get
+    jc .error
+    mov di, si
+    mov cx, 256
+    xor ax, ax
+    rep stosw
+    call sec_mark
+    pop cx
+    pop ax
+    inc ax
+    loop .sector
+    clc
+    jmp .ret
+.error:
+    pop cx
+    pop cx
 .ret:
+    pop di
+    pop cx
     ret
 
 ; ======================================================================
@@ -2333,6 +2760,8 @@ sft_commit:
     mov [di+SF_TIME], ax
     mov [di+SF_DATE], dx
 .stamped:
+    mov ax, [di+SF_DIRCL]
+    mov [d_cluster], ax
     mov ax, [di+SF_DIRIX]
     call dir_entry
     jc .ret
@@ -2394,6 +2823,8 @@ sft_from_entry:
     mov [di+SF_SIZE+2], ax
     mov ax, [f_index]
     mov [di+SF_DIRIX], ax
+    mov ax, [d_cluster]
+    mov [di+SF_DIRCL], ax
     add di, SF_NAME
     mov cx, 11
     rep movsb
@@ -3108,52 +3539,104 @@ fn_41:                              ; delete DS:DX
 .error:
     jmp set_error
 
-r_name times 11 db 0
+r_name  times 11 db 0
 r_drive db 0
+r_dir   dw 0
+r_entry times 32 db 0
 
-fn_56:                              ; rename DS:DX to ES:DI
+fn_56:                              ; rename DS:DX to ES:DI (or move it)
     ; the new name first: it must not exist
     mov ax, [r_es]
     mov si, [r_di]
     call path_copy
-    call parse_path
-    jc .error
-    cmp byte [p_dev], 0
-    jne .denied
-    cmp byte [p_wild], 0
-    jne .bad_path
+    call new_name
+    jnc .skip11
+    jmp .error
+.skip11:
     mov al, [p_drive]
     mov [r_drive], al
+    mov ax, [d_cluster]
+    mov [r_dir], ax
     mov si, fname
     mov di, r_name
     mov cx, 11
     rep movsb
-    mov dl, [p_drive]
-    call drive_ready
-    jc .error
-    call find_file
-    jnc .denied
-    cmp ax, 2
-    jne .error
-    ; then the old one
+    ; then the old one: a file or a directory
     call path_from_dsdx
-    call existing_file
-    jc .error
+    call parse_path
+    jnc .skip10
+    jmp .error
+.skip10:
+    cmp byte [p_dev], 0
+    je .skip9
+    jmp .not_found
+.skip9:
+    cmp byte [p_wild], 0
+    je .skip8
+    jmp .not_found
+.skip8:
+    call find_file
+    jnc .skip7
+    jmp .error
+.skip7:
+    test byte [si+11], 08h
+    jz .skip6
+    jmp .not_found
+.skip6:
     mov al, [p_drive]
     cmp al, [r_drive]
     jne .other_drive
-    mov di, si
+    mov ax, [d_cluster]
+    cmp ax, [r_dir]
+    jne .move
+    mov di, si                      ; the same directory: a new name
     mov si, r_name
     mov cx, 11
     rep movsb
     call sec_mark
     call flush_all
+    jc .error
+    ret
+.move:
+    ; another directory: a new entry there, the old one deleted (files
+    ; only: a directory's ".." would point at the old parent)
+    test byte [si+11], 10h
+    jnz .denied
+    mov di, r_entry
+    mov cx, 32
+    rep movsb
+    mov si, r_name
+    mov di, r_entry
+    mov cx, 11
+    rep movsb
+    mov ax, [d_cluster]
+    mov [md_parent], ax
+    mov ax, [f_index]
+    mov [md_index], ax
+    mov ax, [r_dir]
+    mov [d_cluster], ax
+    call dir_free
+    jc .error
+    mov di, si
+    mov si, r_entry
+    mov cx, 32
+    rep movsb
+    call sec_mark
+    mov ax, [md_parent]
+    mov [d_cluster], ax
+    mov ax, [md_index]
+    call dir_entry
+    jc .error
+    mov byte [si], 0E5h
+    call sec_mark
+    call flush_all
+    jc .error
     ret
 .other_drive:
     mov ax, 11h
     jmp set_error
-.bad_path:
-    mov ax, 3
+.not_found:
+    mov ax, 2
     jmp set_error
 .denied:
     mov ax, 5
@@ -3388,9 +3871,9 @@ ioctl_drive:
     clc
     ret
 
-; ---------- directories (the root only) ----------
+; ---------- directories ----------
 
-fn_47:                              ; current directory of drive DL: the root
+fn_47:                              ; current directory of drive DL into DS:SI
     mov al, [r_dx]
     dec al
     cmp al, 0FFh
@@ -3399,9 +3882,17 @@ fn_47:                              ; current directory of drive DL: the root
 .given:
     cmp al, [num_drives]
     jae .bad
+    mov bl, CUR_PATH_SIZE
+    mul bl
+    add ax, cur_path
+    mov si, ax
     mov es, [r_ds]
     mov di, [r_si]
-    mov byte [es:di], 0
+.copy:
+    lodsb
+    stosb
+    test al, al
+    jnz .copy
     push cs
     pop es
     mov word [r_ax], 0100h
@@ -3410,36 +3901,241 @@ fn_47:                              ; current directory of drive DL: the root
     mov ax, 0Fh
     jmp set_error
 
-fn_3B:                              ; change directory: only to the root
-    call path_from_dsdx
-    mov si, pathbuf
-    cmp byte [si+1], ':'
-    jne .path
-    mov al, [si]
-    sub al, 'A'
-    cmp al, [num_drives]
-    jae .bad
-    add si, 2
-.path:
-    cmp byte [si], 0
-    je .ok
-    cmp byte [si], '\'
-    je .slash
-    cmp byte [si], '/'
-    jne .bad
-.slash:
-    cmp byte [si+1], 0
-    jne .bad
-.ok:
+; pathbuf names a directory (every part of it): BP = its drive, d_cluster =
+; it, w_path = it as text. CF: AX = error.
+dir_path:
+    call path_start
+    jc .ret
+    mov dl, [p_drive]
+    call drive_ready
+    jc .ret
+    mov si, [p_first]
+    mov dx, 0FFFFh
+    call walk
+.ret:
     ret
-.bad:
+
+fn_3B:                              ; change the current directory to DS:DX
+    call path_from_dsdx
+    call dir_path
+    jc .error
+    call cur_of_drive
+    mov ax, [d_cluster]
+    mov [cur_cl+bx], ax
+    mov di, si
+    mov si, w_path
+.copy:
+    lodsb
+    stosb
+    test al, al
+    jnz .copy
+    ret
+.error:
+    jmp set_error
+
+; pathbuf names something that does not exist yet in a directory that
+; does: BP, d_cluster = that directory, fname. CF: AX = error (5 if it
+; exists).
+new_name:
+    call parse_path
+    jc .ret
+    cmp byte [p_dev], 0
+    jne .denied
+    cmp byte [p_wild], 0
+    jne .bad_path
+    call find_file
+    jnc .denied
+    cmp ax, 2
+    jne .error
+    clc
+    ret
+.bad_path:
     mov ax, 3
+.error:
+    stc
+.ret:
+    ret
+.denied:
+    mov ax, 5
+    stc
+    ret
+
+; The date and time of now into directory entry SI (keeps SI)
+stamp_entry:
+    push si
+    call file_stamp
+    pop si
+    mov [si+22], ax
+    mov [si+24], dx
+    ret
+
+fn_39:                              ; make the directory DS:DX
+    call path_from_dsdx
+    call new_name
+    jnc .ok25
+    jmp .error
+.ok25:
+    ; its entry first (the parent may need a new cluster), then its cluster
+    call dir_free
+    jnc .ok26
+    jmp .error
+.ok26:
+    mov ax, [d_cluster]
+    mov [md_parent], ax
+    mov ax, [f_index]
+    mov [md_index], ax
+    call cluster_alloc
+    jnc .ok27
+    mov ax, 5
+    jmp .error
+.ok27:
+    mov [md_cluster], ax
+    call zero_cluster
+    jnc .skip5
+    jmp .error
+.skip5:
+    ; "." and ".." at its start
+    mov ax, [md_cluster]
+    mov [d_cluster], ax
+    xor ax, ax
+    call dir_entry
+    jc .error
+    mov di, si
+    mov si, dot_name
+    mov cx, 11
+    rep movsb
+    mov si, dotdot_name
+    add di, 32 - 11
+    mov cx, 11
+    rep movsb
+    sub di, 32 + 11
+    mov si, di
+    mov byte [si+11], 10h
+    mov byte [si+32+11], 10h
+    call stamp_entry
+    mov ax, [si+22]
+    mov [si+32+22], ax
+    mov ax, [si+24]
+    mov [si+32+24], ax
+    mov ax, [md_cluster]
+    mov [si+26], ax
+    mov ax, [md_parent]
+    mov [si+32+26], ax
+    call sec_mark
+    ; its entry in the parent
+    mov ax, [md_parent]
+    mov [d_cluster], ax
+    mov ax, [md_index]
+    call dir_entry
+    jc .error
+    mov di, si
+    push si
+    mov si, fname
+    mov cx, 11
+    rep movsb
+    xor al, al
+    mov cx, 21
+    rep stosb
+    pop si
+    mov byte [si+11], 10h
+    call stamp_entry
+    mov ax, [md_cluster]
+    mov [si+26], ax
+    call sec_mark
+    call flush_all
+    jc .error
+    ret
+.error:
+    jmp set_error
+
+dot_name   db '.          '
+md_parent  dw 0
+md_index   dw 0
+md_cluster dw 0
+
+fn_3A:                              ; remove the directory DS:DX
+    call path_from_dsdx
+    call parse_path
+    jnc .skip4
+    jmp .error
+.skip4:
+    cmp byte [p_dev], 0
+    je .skip3
+    jmp .not_found
+.skip3:
+    cmp byte [p_wild], 0
+    je .skip2
+    jmp .not_found
+.skip2:
+    call find_file
+    jnc .skip1
+    jmp .error
+.skip1:
+    test byte [si+11], 10h
+    jz .not_found
+    test byte [si+11], 01h
+    jnz .denied
+    mov ax, [d_cluster]
+    mov [md_parent], ax
+    mov ax, [f_index]
+    mov [md_index], ax
+    mov ax, [si+26]
+    mov [md_cluster], ax
+    ; not the current directory of its drive
+    call cur_of_drive
+    mov ax, [md_cluster]
+    cmp ax, [cur_cl+bx]
+    je .current
+    ; empty: nothing but "." and ".."
+    mov [d_cluster], ax
+    mov word [f_index], 0
+.entry:
+    mov ax, [f_index]
+    call dir_entry
+    jc .end
+    mov al, [si]
+    test al, al
+    jz .empty
+    cmp al, 0E5h
+    je .next
+    cmp al, '.'
+    jne .denied
+.next:
+    inc word [f_index]
+    jmp .entry
+.end:
+    cmp ax, ERR_END
+    jne .error
+.empty:
+    mov ax, [md_parent]
+    mov [d_cluster], ax
+    mov ax, [md_index]
+    call dir_entry
+    jc .error
+    mov byte [si], 0E5h
+    call sec_mark
+    mov ax, [md_cluster]
+    call free_chain
+    mov byte [dc_drive], 0FFh       ; its clusters can be anything now
+    call flush_all
+    jc .error
+    ret
+.current:
+    mov ax, 10h
+    jmp set_error
+.not_found:
+    mov ax, 3
+    jmp set_error
+.denied:
+    mov ax, 5
+.error:
     jmp set_error
 
 ; ---------- find first / next ----------
 ;
 ; The DTA keeps the search: drive + 1 (byte 0), the pattern (1-11), the
-; attributes (12) and the next entry (13-14); then what was found: attribute
+; attributes (12), the next entry (13-14) and the directory (15-16); then
+; what was found: attribute
 ; (21), time (22), date (24), size (26) and name (30, ASCIIZ).
 
 dta_off dw 80h
@@ -3465,6 +4161,8 @@ fn_4E:                              ; find the first match of DS:DX, attributes 
     mov al, [r_cx]
     stosb
     xor ax, ax
+    stosw
+    mov ax, [d_cluster]
     stosw
     push cs
     pop es
@@ -3500,6 +4198,8 @@ find_next:
     mov [es:f_attr], al
     lodsw
     mov [es:f_index], ax
+    lodsw
+    mov [es:d_cluster], ax
     pop ds
     mov dl, [p_drive]
     cmp dl, [num_drives]
@@ -3769,7 +4469,7 @@ upcase:
 ; ======================================================================
 
 ex_hdr   times 28 db 0          ; the first bytes of the file
-ex_name  times 16 db 0          ; "A:\NAME.EXT"
+ex_name  times 84 db 0          ; "A:\DIR\NAME.EXT"
 ex_sft   dw 0
 ex_env   dw 0
 ex_psp   dw 0
@@ -3867,13 +4567,26 @@ fn_4B:                              ; load and run DS:DX with parameters ES:BX
     je .ok23
     jmp .not_found
 .ok23:
-    ; "A:\NAME.EXT" for the environment
+    ; "A:\DIR\NAME.EXT" for the environment
     mov di, ex_name
     mov al, [p_drive]
     add al, 'A'
     stosb
-    mov ax, ':'
+    mov ax, ':\'
     stosw
+    mov si, w_path
+    cmp byte [si], 0
+    je .in_root
+.dir:
+    lodsb
+    test al, al
+    jz .dir_end
+    stosb
+    jmp .dir
+.dir_end:
+    mov al, '\'
+    stosb
+.in_root:
     mov si, fname
     call name_from_entry
     call exec_open
@@ -4210,7 +4923,7 @@ make_env:
     ; + the count word + the name
     push di
     mov di, ex_name
-    mov cx, 16
+    mov cx, 84
     xor al, al
     repne scasb
     sub di, ex_name

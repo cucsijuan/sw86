@@ -4,7 +4,7 @@ Software for the [pc86](../pc86) virtual PC that is not part of any hardware
 (BIOS and drivers stay in pc86).
 
 - `dos/`: COS, a DOS that boots from a diskette (MS-DOS 3.30 subset, FAT12
-  on drives A: and B:, COMMAND.COM), with its own full-screen editor (EDIT)
+  with subdirectories on drives A: and B:, COMMAND.COM), with its own full-screen editor (EDIT)
   and assembler (ASM), so programs can be written, assembled and run on the
   machine itself. See [dos/README.md](dos/README.md).
 - `doc/`: the COS manual, [COS-Manual.pdf](doc/COS-Manual.pdf) (User's Guide and

@@ -6,8 +6,9 @@
 ; the kernel starts it again if it ever ends.
 ;
 ; Built-in: CD CHDIR CLS COPY DATE DEL DIR ECHO ERASE EXIT MD MKDIR PAUSE
-; RD REM REN RENAME RMDIR SET TIME TYPE VER VOL. Batch files, redirection
-; and pipes are not supported.
+; RD REM REN RENAME RMDIR SET TIME TYPE VER VOL. Names may have paths
+; (B:\GAMES\SPACE.COM, ..\NOTES). Batch files, redirection and pipes are
+; not supported.
 org 100h
 
     jmp start
@@ -206,6 +207,8 @@ str_equal:
 split_drive:
     mov ah, 19h
     int 21h
+    cmp byte [si], 0
+    je .ret
     cmp byte [si+1], ':'
     jne .ret
     mov al, [si]
@@ -265,6 +268,225 @@ has_dot:
     ret
 
 ; ======================================================================
+; Paths
+; ======================================================================
+
+; The path at SI: SI = its last part (the name), and its directory part
+; (up to the last \ or :, maybe nothing) into DI as ASCIIZ.
+split_name:
+    push di
+    mov bx, si                      ; where the name starts
+    mov di, si
+.scan:
+    mov al, [di]
+    test al, al
+    jz .scanned
+    inc di
+    cmp al, '\'
+    je .sep
+    cmp al, ':'
+    jne .scan
+.sep:
+    mov bx, di
+    jmp .scan
+.scanned:
+    pop di
+.copy:
+    cmp si, bx
+    je .done
+    movsb
+    jmp .copy
+.done:
+    mov byte [di], 0
+    ret
+
+; 1 in AL if the name at SI (a last part) is "." or ".."
+is_dots:
+    xor al, al
+    cmp byte [si], '.'
+    jne .ret
+    cmp byte [si+1], 0
+    je .yes
+    cmp byte [si+1], '.'
+    jne .ret
+    cmp byte [si+2], 0
+    jne .ret
+.yes:
+    mov al, 1
+.ret:
+    ret
+
+; The directory part at SI ("B:GAMES\", "\", "..\", or nothing) -> its full
+; form, "B:\GAMES\" (always with the drive and a final \), into DI.
+; CF if it is not a directory.
+canon_dir:
+    mov [canon_out], di
+    call split_drive                ; AL = drive, SI = the rest
+    mov [canon_drive], al
+    ; where the drive is now, to come back
+    mov dl, al
+    inc dl
+    mov di, canon_saved
+    mov ax, 'A:'
+    add al, [canon_drive]
+    stosw
+    mov al, '\'
+    stosb
+    push si
+    mov si, di
+    mov ah, 47h
+    int 21h
+    pop si
+    jc .ret
+    cmp byte [si], 0
+    je .here
+    ; go there: "X:" + the rest without its final \ (but "\" stays)
+    mov di, canon_tmp
+    mov al, [canon_drive]
+    add al, 'A'
+    mov ah, ':'
+    stosw
+.copy:
+    lodsb
+    stosb
+    test al, al
+    jnz .copy
+    sub di, 2
+    cmp di, canon_tmp + 2
+    je .go                          ; just "\"
+    cmp byte [di], '\'
+    jne .go
+    mov byte [di], 0
+.go:
+    mov dx, canon_tmp
+    mov ah, 3Bh
+    int 21h
+    jc .ret
+.here:
+    mov di, [canon_out]
+    mov al, [canon_drive]
+    add al, 'A'
+    mov ah, ':'
+    stosw
+    mov al, '\'
+    stosb
+    mov si, di
+    mov dl, [canon_drive]
+    inc dl
+    mov ah, 47h
+    int 21h
+    mov di, si                      ; a final \ unless it is the root
+.end:
+    cmp byte [di], 0
+    je .ended
+    inc di
+    jmp .end
+.ended:
+    cmp byte [di-1], '\'
+    je .back
+    mov word [di], '\'
+.back:
+    mov dx, canon_saved
+    mov ah, 3Bh
+    int 21h
+    clc
+.ret:
+    ret
+
+canon_out   dw 0
+canon_drive db 0
+
+; The path at SI: its full directory into prefix, SI = its name part.
+; CF (and "File not found" or "Invalid directory" printed) if it does not
+; exist.
+path_prefix:
+    mov di, dirpart
+    call split_name
+    mov [name_part], si
+    mov si, dirpart
+    mov di, prefix
+    call canon_dir
+    jc .bad
+    mov si, [name_part]
+    ret
+.bad:
+    mov si, s_not_found
+    call print
+    stc
+    ret
+
+name_part dw 0
+
+; CF = 0 if the path at SI is a directory (it ends in \ or :, its name is
+; "." or "..", or it is the name of a directory). Uses the DTA.
+is_directory:
+    push si
+    cmp byte [si], 0
+    je .yes
+.end:
+    cmp byte [si+1], 0
+    je .last
+    inc si
+    jmp .end
+.last:
+    cmp byte [si], '\'
+    je .yes
+    cmp byte [si], ':'
+    je .yes
+    pop si
+    push si
+    call has_wild
+    test al, al
+    jnz .no
+    mov di, dirpart
+    call split_name
+    call is_dots
+    test al, al
+    jnz .yes
+    pop si
+    push si
+    mov dx, si
+    mov cx, 10h
+    mov ah, 4Eh
+    int 21h
+    jc .no
+    test byte [dta+21], 10h
+    jz .no
+.yes:
+    pop si
+    clc
+    ret
+.no:
+    pop si
+    stc
+    ret
+
+; DI = the end of a directory path: a \ unless it ends in \ or : already
+add_sep:
+    cmp di, [sep_start]
+    je .done
+    cmp byte [di-1], '\'
+    je .done
+    cmp byte [di-1], ':'
+    je .done
+    mov byte [di], '\'
+    inc di
+.done:
+    mov byte [di], 0
+    ret
+
+sep_start dw 0
+
+; DI = the end of the ASCIIZ at DI
+str_end:
+    cmp byte [di], 0
+    je .ret
+    inc di
+    jmp str_end
+.ret:
+    ret
+
+; ======================================================================
 ; Start and the main loop
 ; ======================================================================
 
@@ -298,8 +520,17 @@ main:
     int 21h
     add al, 'A'
     call putc
-    mov si, s_prompt
+    mov si, s_root
     call print
+    mov si, cwd_buf
+    xor dl, dl
+    mov ah, 47h
+    int 21h
+    jc .no_cwd
+    call print
+.no_cwd:
+    mov al, '>'
+    call putc
     mov dx, line_max
     mov ah, 0Ah
     int 21h
@@ -382,8 +613,8 @@ commands:
     dw n_cd, c_cd, n_chdir, c_cd, n_cls, c_cls, n_copy, c_copy
     dw n_date, c_date, n_del, c_del, n_dir, c_dir, n_echo, c_echo
     dw n_erase, c_del, n_exit, c_exit, n_md, c_md, n_mkdir, c_md
-    dw n_pause, c_pause, n_rd, c_md, n_rem, c_rem, n_ren, c_ren
-    dw n_rename, c_ren, n_rmdir, c_md, n_set, c_set, n_time, c_time
+    dw n_pause, c_pause, n_rd, c_rd, n_rem, c_rem, n_ren, c_ren
+    dw n_rename, c_ren, n_rmdir, c_rd, n_set, c_set, n_time, c_time
     dw n_type, c_type, n_ver, c_ver, n_vol, c_vol
     dw 0
 
@@ -446,44 +677,38 @@ external:
     test al, al
     jnz .bad
     mov si, cmd_word
-    call has_dot
+    mov di, prog_base
+    call copy_str
+    call find_program
+    cmp al, 2
+    jne .result
+    ; not here: the root directory, for a name without a path
+    mov si, cmd_word
+.path:
+    lodsb
     test al, al
-    jnz .with_extension
-    ; NAME: try .COM, then .EXE, then say why a .BAT does not run
-    mov si, ext_com
-    call try_extension
-    jnc .run
-    mov si, ext_exe
-    call try_extension
-    jnc .run
-    mov si, ext_bat
-    call try_extension
-    jc .bad
+    jz .no_path
+    cmp al, ':'
+    je .result
+    cmp al, '\'
+    je .result
+    jmp .path
+.no_path:
+    mov di, prog_base
+    mov byte [di], '\'
+    inc di
+    mov si, cmd_word
+    call copy_str
+    call find_program
+.result:
+    cmp al, 1
+    jne .not_batch
     mov si, s_no_batch
     call print
     ret
-.with_extension:
-    mov si, cmd_word
-    mov di, prog_path
-.copy:
-    lodsb
-    stosb
-    test al, al
-    jnz .copy
-    sub di, 5
-    mov si, di
-    mov di, ext_com
-    call str_equal
-    je .check
-    mov di, ext_exe
-    call str_equal
-    jne .bad
-.check:
-    mov dx, prog_path
-    xor cx, cx
-    mov ah, 4Eh
-    int 21h
-    jnc .run
+.not_batch:
+    cmp al, 0
+    je .run
 .bad:
     mov si, s_bad_command
     call print
@@ -546,27 +771,75 @@ external:
     call own_ctrl_c
     ret
 
-; prog_path = cmd_word + the extension at SI, if that file exists. CF if not.
-try_extension:
-    push si
-    mov si, cmd_word
+; prog_base names a program: AL = 0 (prog_path is it), 1 (a batch file),
+; 2 (there is none). A name without extension tries .COM, .EXE, .BAT.
+find_program:
+    mov si, prog_base
+    mov di, dirpart
+    call split_name
+    call has_dot
+    test al, al
+    jnz .with_extension
+    mov si, ext_com
+    call try_extension
+    jnc .found
+    mov si, ext_exe
+    call try_extension
+    jnc .found
+    mov si, ext_bat
+    call try_extension
+    mov al, 1
+    jnc .ret
+    mov al, 2
+.ret:
+    ret
+.found:
+    xor al, al
+    ret
+.with_extension:
+    mov si, prog_base
     mov di, prog_path
-.copy:
-    lodsb
-    stosb
-    test al, al
-    jnz .copy
-    dec di
-    pop si
-.ext:
-    lodsb
-    stosb
-    test al, al
-    jnz .ext
+    call copy_str
+    sub di, 4
+    mov si, di
+    mov di, ext_com
+    call str_equal
+    je .check
+    mov di, ext_exe
+    call str_equal
+    mov al, 2
+    jne .ret
+.check:
     mov dx, prog_path
     xor cx, cx
     mov ah, 4Eh
     int 21h
+    mov al, 2
+    jc .ret
+    xor al, al
+    ret
+
+; prog_path = prog_base + the extension at SI, if that file exists. CF if not.
+try_extension:
+    push si
+    mov si, prog_base
+    mov di, prog_path
+    call copy_str
+    pop si
+    call copy_str
+    mov dx, prog_path
+    xor cx, cx
+    mov ah, 4Eh
+    int 21h
+    ret
+
+; The ASCIIZ at SI to DI; DI is left on its final 0
+copy_str:
+    lodsb
+    stosb
+    test al, al
+    jnz copy_str
+    dec di
     ret
 
 ext_com db '.COM', 0
@@ -620,18 +893,47 @@ c_pause:
 
 c_cd:
     cmp byte [si], 0
+    jne .argument
+    xor dl, dl                      ; CD: where the default drive is
+    jmp .show
+.argument:
+    mov di, arg1
+    call get_word
+    cmp byte [arg1+1], ':'          ; CD B: shows where drive B: is
     jne .change
-    mov ah, 19h                     ; show it: always the root
+    cmp byte [arg1+2], 0
+    jne .change
+    mov dl, [arg1]
+    sub dl, 'A' - 1
+.show:
+    mov al, dl
+    dec al
+    cmp al, 0FFh
+    jne .letter
+    push dx
+    mov ah, 19h
     int 21h
+    pop dx
+.letter:
     add al, 'A'
+    mov [cd_letter], al
+    mov si, cwd_buf
+    mov ah, 47h
+    int 21h
+    jc .bad_drive
+    mov al, [cd_letter]
     call putc
     mov si, s_root
     call print
+    mov si, cwd_buf
+    call print
     call crlf
     ret
+.bad_drive:
+    mov si, s_bad_drive
+    call print
+    ret
 .change:
-    mov di, arg1
-    call get_word
     mov dx, arg1
     mov ah, 3Bh
     int 21h
@@ -641,9 +943,35 @@ c_cd:
 .ok:
     ret
 
+cd_letter db 0
+
 c_md:
-    mov si, s_no_subdirs
+    mov ah, 39h
+    mov bx, s_md_error
+    jmp dir_command
+c_rd:
+    mov ah, 3Ah
+    mov bx, s_rd_error
+; INT 21h function AH on the name given, message BX if it fails
+dir_command:
+    cmp byte [si], 0
+    jne .name
+    mov si, s_required
     call print
+    ret
+.name:
+    push ax
+    push bx
+    mov di, arg1
+    call get_word
+    pop bx
+    pop ax
+    mov dx, arg1
+    int 21h
+    jnc .ok
+    mov si, bx
+    call print
+.ok:
     ret
 
 c_set:
@@ -681,7 +1009,7 @@ c_set:
 show_volume:
     push ax
     mov di, vol_path
-    mov si, s_all
+    mov si, s_root_all
     call make_path
     mov dx, vol_path
     mov cx, 08h
@@ -767,42 +1095,55 @@ c_dir:
     call get_word
     jmp .arg
 .args_done:
-    ; pattern: drive, and a name that defaults to *.* (NAME means NAME.*)
+    ; a directory means its files; NAME means NAME.*
     mov si, arg1
-    call split_drive
-    mov [dir_drive], al
     mov di, arg2
-    cmp byte [si], 0
-    jne .name
+    call copy_str
+    mov si, arg1
+    call is_directory
+    jc .pattern
+    mov di, arg2
+    call str_end
+    mov word [sep_start], arg2
+    call add_sep
     mov si, s_all
-    call make_path
-    jmp .header
-.name:
-    call make_path
+    call copy_str
+    jmp .full
+.pattern:
     mov si, arg2
+    mov di, dirpart
+    call split_name
     call has_dot
     test al, al
-    jnz .header
-    dec di
+    jnz .full
+    mov di, arg2
+    call str_end
     mov si, s_dot_all
-.ext:
-    lodsb
-    stosb
-    test al, al
-    jnz .ext
-.header:
+    call copy_str
+.full:
+    mov si, arg2
+    call split_drive
+    mov [dir_drive], al
     call crlf
     mov al, [dir_drive]
     call show_volume
+    jnc .directory
+    ret
+.directory:
+    mov si, arg2
+    call path_prefix
     jnc .listing
     ret
 .listing:
     mov si, s_dir_of
     call print
-    mov al, [dir_drive]
-    add al, 'A'
-    call putc
-    mov si, s_root
+    mov di, prefix                  ; "A:\GAMES", or "A:\"
+    call str_end
+    cmp di, prefix + 3
+    je .print_dir
+    mov byte [di-1], 0
+.print_dir:
+    mov si, prefix
     call print
     call crlf
     call crlf
@@ -853,6 +1194,26 @@ c_dir:
 
 ; One entry of DIR from the DTA
 dir_line:
+    cmp byte [dta+30], '.'          ; "." and "..", as they are
+    jne .normal
+    mov si, dta+30
+    push si
+    call print
+    pop si
+    mov cx, 12
+.dots:
+    lodsb
+    test al, al
+    jz .dots_pad
+    dec cx
+    jmp .dots
+.dots_pad:
+.dots_space:
+    mov al, ' '
+    call putc
+    loop .dots_space
+    jmp .wide_or_long
+.normal:
     ; name and extension, padded as 8 + 3
     mov si, dta+30
     mov cx, 8
@@ -1118,9 +1479,8 @@ from_fcb:
     ret
 
 ; The name found (DTA) through the template pattern_fcb (? = keep that
-; character) -> "X:NAME.EXT" at DI, drive AL.
+; character) -> the directory at BX + "NAME.EXT" at DI.
 apply_template:
-    push ax
     push di
     mov si, dta+30
     mov di, found_fcb
@@ -1137,11 +1497,8 @@ apply_template:
     inc di
     loop .char
     pop di
-    pop ax
-    add al, 'A'
-    stosb
-    mov al, ':'
-    stosb
+    mov si, bx
+    call copy_str
     mov si, found_fcb
     call from_fcb
     ret
@@ -1157,18 +1514,12 @@ make_pattern:
     rep movsb
     ret
 
-; "X:" + the name found (DTA) at DI, drive AL
+; The directory at BX + the name found (DTA) at DI
 found_path:
-    add al, 'A'
-    stosb
-    mov al, ':'
-    stosb
+    mov si, bx
+    call copy_str
     mov si, dta+30
-.copy:
-    lodsb
-    stosb
-    test al, al
-    jnz .copy
+    call copy_str
     ret
 
 ; ---------- DEL ----------
@@ -1185,9 +1536,21 @@ c_del:
 .args:
     mov di, arg1
     call get_word
+    mov si, arg1                    ; a directory: every file in it
+    call is_directory
+    jc .names
+    mov di, arg1
+    call str_end
+    mov word [sep_start], arg1
+    call add_sep
+    mov si, s_all
+    call copy_str
+.names:
     mov si, arg1
-    call split_drive
-    mov [del_drive], al
+    call path_prefix
+    jnc .pattern
+    ret
+.pattern:
     call make_pattern
     ; *.*: ask first
     mov si, pattern_fcb
@@ -1216,7 +1579,7 @@ c_del:
     int 21h
     jc .none
 .file:
-    mov al, [del_drive]
+    mov bx, prefix
     mov di, arg2
     call found_path
     mov dx, arg2
@@ -1253,13 +1616,13 @@ c_ren:
     ret
 .names:
     mov si, arg1
-    call split_drive
-    mov [del_drive], al
-    mov si, arg2                    ; the new name has no drive
-    cmp byte [si+1], ':'
-    jne .pattern
-    add si, 2
-.pattern:
+    call path_prefix
+    jnc .new_name
+    ret
+.new_name:
+    mov si, arg2                    ; the new name: only its last part counts
+    mov di, dirpart
+    call split_name
     call make_pattern
     mov dx, arg1
     xor cx, cx
@@ -1267,10 +1630,10 @@ c_ren:
     int 21h
     jc .failed
 .file:
-    mov al, [del_drive]
+    mov bx, prefix
     mov di, path1
     call found_path
-    mov al, [del_drive]
+    mov bx, prefix
     mov di, path2
     call apply_template
     mov dx, path1
@@ -1312,17 +1675,57 @@ c_copy:
     mov si, arg1
     call has_wild
     mov [copy_wild], al
+    ; a directory as the source: every file in it
     mov si, arg1
-    call split_drive
-    mov [copy_src_drive], al
-    ; destination: a drive, a name or nothing (the current drive)
+    call is_directory
+    jc .source
+    mov byte [copy_wild], 1
+    mov di, arg1
+    call str_end
+    mov word [sep_start], arg1
+    call add_sep
+    mov si, s_all
+    call copy_str
+.source:
+    mov si, arg1
+    call path_prefix
+    jnc .source_ok
+    jmp .summary
+.source_ok:
+    mov si, prefix
+    mov di, src_prefix
+    call copy_str
+    ; the target: a directory (or nothing: where we are), or a name there
     mov si, arg2
-    call split_drive
-    mov [copy_dst_drive], al
-    cmp byte [si], 0
-    jne .dst_name
+    call is_directory
+    jc .target_name
+    mov si, arg2
+    mov di, dirpart
+    call copy_str
+    mov word [sep_start], dirpart
+    call add_sep
+    mov si, dirpart
+    mov di, dst_prefix
+    call canon_dir
+    jnc .target_dir
+    mov si, s_bad_dir
+    call print
+    jmp .summary
+.target_dir:
     mov si, s_all                   ; *.*: keep every name
-.dst_name:
+    jmp .template
+.target_name:
+    mov si, arg2
+    call path_prefix
+    jnc .target_ok
+    jmp .summary
+.target_ok:
+    push si
+    mov si, prefix
+    mov di, dst_prefix
+    call copy_str
+    pop si
+.template:
     call make_pattern
     mov dx, arg1
     xor cx, cx
@@ -1333,10 +1736,10 @@ c_copy:
     call print
     jmp .summary
 .file:
-    mov al, [copy_src_drive]
+    mov bx, src_prefix
     mov di, path1
     call found_path
-    mov al, [copy_dst_drive]
+    mov bx, dst_prefix
     mov di, path2
     call apply_template
     mov si, path1
@@ -1677,10 +2080,10 @@ c_time:
 s_banner      db 13, 10, 'CucsiCorp COS Version 1.00', 13, 10
               db '(C) Copyright CucsiCorp 1981', 13, 10, 0
 s_version     db 13, 10, 'CucsiCorp COS Version 1.00', 13, 10, 0
-s_prompt      db ':\>', 0
 s_crlf        db 13, 10, 0
 s_root        db ':\', 0
 s_all         db '*.*', 0
+s_root_all    db '\*.*', 0
 s_dot_all     db '.*', 0
 s_2spaces     db '  ', 0
 s_wide_gap    db '    ', 0
@@ -1689,7 +2092,8 @@ s_bad_command db 'Bad command or file name', 13, 10, 0
 s_bad_drive   db 'Invalid drive specification', 13, 10, 0
 s_too_big     db 'Program too big to fit in memory', 13, 10, 0
 s_no_batch    db 'Batch files are not supported by COS', 13, 10, 0
-s_no_subdirs  db 'Subdirectories are not supported by COS', 13, 10, 0
+s_md_error    db 'Unable to create directory', 13, 10, 0
+s_rd_error    db 'Invalid path, not directory,', 13, 10, 'or directory not empty', 13, 10, 0
 s_no_set      db 'Changing the environment is not supported by COS', 13, 10, 0
 s_bad_dir     db 'Invalid directory', 13, 10, 0
 s_bad_switch  db 'Invalid switch', 13, 10, 0
@@ -1745,6 +2149,14 @@ arg2       times 128 db 0
 path1      times 80 db 0
 path2      times 80 db 0
 prog_path  times 80 db 0
+prog_base  times 130 db 0
+dirpart    times 130 db 0
+prefix     times 80 db 0
+src_prefix times 80 db 0
+dst_prefix times 80 db 0
+cwd_buf    times 68 db 0
+canon_saved times 72 db 0
+canon_tmp  times 132 db 0
 dta        times 128 db 0
 vol_path   times 8 db 0
 vol_found  db 0

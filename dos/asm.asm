@@ -653,9 +653,16 @@ find_dot:
     lodsb
     or al, al
     jz .end
+    cmp al, '\'
+    je .dir
+    cmp al, ':'
+    je .dir
     cmp al, '.'
     jne .loop
     lea di, [si - 1]
+    jmp .loop
+.dir:                               ; a dot in a directory name does not count
+    mov di, 0
     jmp .loop
 .end:
     or di, di

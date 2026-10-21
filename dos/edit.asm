@@ -1386,6 +1386,13 @@ make_name:
     mov bx, 0
 .copy:
     lodsb
+    cmp al, '\'                     ; a dot in a directory name does not count
+    je .dir
+    cmp al, ':'
+    jne .dot
+.dir:
+    xor bx, bx
+.dot:
     cmp al, '.'
     jne .not_dot
     lea bx, [di]

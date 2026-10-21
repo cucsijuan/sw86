@@ -78,12 +78,93 @@ def build(env):
     env.image("a720.img", "COS", system, boot="boot.bin", small=True)
 
 
+def fsck(path):
+    """Checks a FAT12 image the way CHKDSK would: every directory (from the
+    root down) and file chain is valid, no cluster is used twice or lost,
+    "." and ".." point where they must. Returns (problems, files, dirs)."""
+    d = open(path, "rb").read()
+    bps, spc = int.from_bytes(d[11:13], "little"), d[13]
+    res, nfats = int.from_bytes(d[14:16], "little"), d[16]
+    rootent, total = int.from_bytes(d[17:19], "little"), int.from_bytes(d[19:21], "little")
+    spf = int.from_bytes(d[22:24], "little")
+    root = (res + nfats * spf) * bps
+    data = root + rootent * 32
+    maxcl = (total - data // bps) // spc + 1
+    fat = d[res * bps:(res + spf) * bps]
+    problems, used, files, dirs = [], {}, 0, 0
+
+    def entry(c):
+        v = int.from_bytes(fat[c * 3 // 2:c * 3 // 2 + 2], "little")
+        return (v >> 4) if c & 1 else (v & 0xFFF)
+
+    def chain(first, owner):
+        out, c = [], first
+        while 2 <= c <= maxcl:
+            if c in used:
+                problems.append(f"{owner}: cluster {c} also in {used[c]}")
+                return out
+            used[c] = owner
+            out.append(c)
+            c = entry(c)
+        if c < 0xFF8 and first:
+            problems.append(f"{owner}: bad chain ({c:03X})")
+        return out
+
+    def walk(raw, name, cl, parent):
+        nonlocal files, dirs
+        for i in range(0, len(raw), 32):
+            e = raw[i:i + 32]
+            if e[0] == 0:
+                break
+            if e[0] == 0xE5 or e[11] & 8:
+                continue
+            base, ext = e[:8].decode("ascii", "replace").rstrip(), e[8:11].decode("ascii", "replace").rstrip()
+            n = base + ("." + ext if ext else "")
+            first, size = int.from_bytes(e[26:28], "little"), int.from_bytes(e[28:32], "little")
+            if n == "..":
+                if first != parent:
+                    problems.append(f"{name}\\..: cluster {first}, not {parent}")
+                continue
+            if n == ".":
+                if first != cl:
+                    problems.append(f"{name}\\.: cluster {first}, not {cl}")
+                continue
+            full = (name + "\\" + n).lstrip("\\")
+            if e[11] & 0x10:
+                dirs += 1
+                cs = chain(first, full)
+                body = b"".join(d[data + (c - 2) * spc * bps:data + (c - 1) * spc * bps] for c in cs)
+                if body[:2] != b". " or body[32:34] != b"..":
+                    problems.append(f"{full}: no . and ..")
+                walk(body, full, first, cl)
+            else:
+                files += 1
+                cs = chain(first, full)
+                need = -(-size // (spc * bps))
+                if len(cs) != need:
+                    problems.append(f"{full}: {len(cs)} clusters for {size} bytes")
+
+    walk(d[root:data], "", 0, 0)
+    lost = [c for c in range(2, maxcl + 1) if entry(c) and c not in used and entry(c) != 0xFF7]
+    if lost:
+        problems.append(f"{len(lost)} lost clusters")
+    for k in range(1, nfats):
+        if d[(res + k * spf) * bps:(res + (k + 1) * spf) * bps] != fat:
+            problems.append(f"FAT copy {k + 1} differs")
+    return problems, files, dirs
+
+
 def fresh(env):
     """The diskettes each scenario starts from."""
     env.image("b.img", "DATA")
     env.image("b2.img", "OTHER", ["README.TXT"])
     env.image("bfull.img", None, ["FILLER.BIN"])
     env.image("b720.img", "SMALL", small=True)
+
+
+def k(keys):
+    """--type text with two backslashes for each one (one alone escapes the next key)."""
+    return keys.replace("\\", "\\\\")
 
 
 # (name, keys, expected texts, options)
@@ -122,6 +203,27 @@ SCENARIOS = [
     ("batch files", "copy readme.txt run.bat\nrun\n", ["Batch files are not supported by COS"], {}),
     ("the environment", "set\n", ["COMSPEC=A:\\COMMAND.COM"], {}),
     ("ECHO keeps the case", "echo Hello, World\n", ["Hello, World"], {}),
+    ("MD, CD, the prompt, DIR of a directory", "md games\ncd games\ncd\ndir\n",
+     ["A:\\GAMES>", "A:\\GAMES\n", " Directory of  A:\\GAMES", ".              <DIR>", "..             <DIR>",
+      "2 File(s)"], {"until": "A:\\GAMES>"}),
+    ("DIR shows directories", "md games\ndir\n", ["GAMES          <DIR>"], {}),
+    ("paths with \\ and ..", k("md a\ncd a\nmd b\ncd b\ncd\ncd ..\\..\ncd\ncd a\\b\ncd \\\ncd\n"),
+     ["A:\\A\\B\n", "A:\\>cd\nA:\\\n", "A:\\A\\B>"], {}),
+    ("programs in a directory, and from the root", k("md games\ncopy hello.com games\ngames\\hello\ncd games\n"
+     "hello\ndel hello.com\nhello\n"), ["A:\\>games\\hello\nHello from the 8086!", "A:\\GAMES>hello\nHello from the 8086!",
+                                        "A:\\GAMES>del hello.com\n\nA:\\GAMES>hello\nHello from the 8086!"],
+     {"until": "A:\\GAMES>"}),
+    ("COPY, REN, DEL, TYPE with paths", k("md w\ncopy readme.txt w\ncopy w\\readme.txt w\\second.txt\n"
+     "ren w\\s*.txt *.doc\ntype w\\second.doc\ndel w\\readme.txt\ndir w\n"),
+     ["Hello, diskette!", "SECOND   DOC", "3 File(s)"], {"absent": ["README   TXT"]}),
+    ("COPY a directory to another drive", "md w\ncopy *.com w\ncopy w b:\ndir b:\n",
+     ["A:\\W\\HELLO.COM", "HELLO    COM", "Volume in drive B is DATA"], {"b": "b.img"}),
+    ("MD and RD errors", k("md x\nmd x\nmd y\\z\nmd x\\y\nrd x\nrd x\\y\nrd x\nrd x\ncd x\n"),
+     ["Unable to create directory", "Invalid path, not directory,\nor directory not empty", "Invalid directory"], {}),
+    ("removing the current directory", k("md x\ncd x\nrd \\x\ncd ..\nrd x\ncd x\n"),
+     ["Invalid path, not directory", "Invalid directory"], {}),
+    ("the current directory of another drive", k("md b:\\data\ncd b:data\ncd b:\ncopy hello.com b:\nb:\ndir\n"),
+     ["B:\\DATA\n", "B:\\DATA>", " Directory of  B:\\DATA", "HELLO    COM"], {"b": "b.img", "until": "B:\\DATA>"}),
 ]
 
 
@@ -177,7 +279,23 @@ def main():
         fails += 1
         print("FAIL the diskette read back on the host\n" + listing)
 
-    total = len(SCENARIOS) + 1
+    # a busy session in directories, then the diskette checked like CHKDSK
+    fresh(env)
+    shutil.copy(env.path("a.img"), env.path("a_run.img"))
+    keys = ("md one\nmd one\\two\ncd one\\two\ncopy \\*.com\ncopy \\*.txt\nmd three\ncopy *.* three\ncd \\\n"
+            "copy one\\two\\*.com one\nren one\\two\\*.com *.bin\ndel one\\two\\three\\*.com\nrd one\\two\\three\n"
+            "md many\ncd many\n" + "".join(f"copy \\readme.txt r{i}.txt\n" for i in range(40)) +
+            "del r1*.txt\ncd \\\n")
+    keys = k(keys)
+    out = env.boot(keys, a="a_run.img", extra=["--save"], seconds=600)
+    problems, nfiles, ndirs = fsck(env.path("a_run.img"))
+    if problems or ndirs < 4 or "timeout" in out:
+        fails += 1
+        print("FAIL the diskette after a session in directories\n     " + "\n     ".join(problems) + "\n" + out)
+    else:
+        print(f"ok   the diskette after a session in directories ({nfiles} files, {ndirs} directories, no errors)")
+
+    total = len(SCENARIOS) + 2
     print(f"\nCOS scenarios: {total - fails}/{total} passed")
     shutil.rmtree(tmp, ignore_errors=True)
     return 1 if fails else 0

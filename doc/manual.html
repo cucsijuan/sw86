@@ -244,7 +244,7 @@ table.regs td { font-size: 8.6pt; }
 <h2>What COS Can Do</h2>
 <ul>
 <li>Run programs: .COM and .EXE files, one at a time, with up to 583 KB of memory for each program.</li>
-<li>Keep files on diskettes: up to 224 files on a 1.44 MB diskette and 112 on a 720 KB diskette, each up to the size of the diskette.</li>
+<li>Keep files on diskettes, in directories: up to 224 files in the main directory of a 1.44 MB diskette (112 on a 720 KB diskette), and as many as fit in the directories you make inside it, each file up to the size of the diskette.</li>
 <li>Copy, rename, erase and display files, and list what is on a diskette.</li>
 <li>Keep the date and the time of day, and record them on every file you write.</li>
 <li>Notice when you change the diskette in a drive, and tell you when a diskette cannot be read or written.</li>
@@ -333,10 +333,10 @@ A:\&gt;<b>dir</b>
  Volume in drive A is COS
  Directory of  A:\
 
-COS      SYS    11188   1-01-80  12:00a
-COMMAND  COM     5460   1-01-80  12:00a
-ASM      COM    17171   1-01-80  12:00a
-EDIT     COM     5400   1-01-80  12:00a
+COS      SYS    12902   1-01-80  12:00a
+COMMAND  COM     7035   1-01-80  12:00a
+ASM      COM    17184   1-01-80  12:00a
+EDIT     COM     5410   1-01-80  12:00a
 HELLO    ASM      299   1-01-80  12:00a
 HELLO    COM       31   1-01-80  12:00a
 NUMBERS  COM       69   1-01-80  12:00a
@@ -344,7 +344,7 @@ FACTOR   COM       81   1-01-80  12:00a
 SORT     COM      124   1-01-80  12:00a
 README   TXT       94   1-01-80  12:00a
 LETTER   TXT       47   1-01-80  12:00a
-       11 File(s)   1414144 bytes free
+       11 File(s)   1410560 bytes free
 </pre>
 <p>Each line shows a file's name, its extension, its size in bytes, and the date and time it was last written. The last line tells you how much room is left on the diskette.</p>
 
@@ -422,7 +422,7 @@ $ &amp; # @ ! % ' ( ) - { } ~ ` ^ _
 <pre class="listing">
 B:LETTER.TXT
 </pre>
-<p>A backslash may follow the colon, B:\LETTER.TXT, to name the <i>root directory</i> of the diskette. COS Version 1.00 has only the root directory, so B:LETTER.TXT and B:\LETTER.TXT are the same file.</p>
+<p>A file specification can also say which <i>directory</i> the file is in, B:\LETTERS\JUNE.TXT. Directories are explained below.</p>
 <h3>Reserved Names</h3>
 <p>Some names stand for devices, not files, and cannot be used as filenames, with any extension:</p>
 <table class="ref wrap">
@@ -447,6 +447,54 @@ DIR R*.*            every file whose name begins with R
 COPY *.* B:         every file, to drive B:
 </pre>
 <p>DIR, COPY, DEL and REN accept global characters. Other commands, and programs you run, need a single file name.</p>
+
+<h2>Directories</h2>
+<p>A diskette with many files is easier to use when they are kept in groups. COS lets you make <i>directories</i> for them, the way a filing cabinet has folders: one for your letters, one for your games, one for a program you are writing.</p>
+<p>Every diskette starts with one directory, the <i>root directory</i>. You can make directories in it, and directories in those, as many as you like. A directory has a name like a file (eight characters, and an extension if you wish), and appears in the listing of the directory that holds it as <b>&lt;DIR&gt;</b>:</p>
+<pre class="listing">
+A:\              the root directory
+   COMMAND.COM
+   HELLO.COM
+   GAMES         a directory
+      SPACE.COM
+      SCORES.DAT
+   LETTERS       another one
+      JUNE.TXT
+</pre>
+<h3>The Current Directory</h3>
+<p>COS remembers, for each drive, a <i>current directory</i>: the one where files are looked for and made when you give no directory. When you start COS, it is the root directory. The prompt shows the current directory of the default drive, and the CD command changes it:</p>
+<pre class="screen">
+A:\&gt;<b>md letters</b>
+
+A:\&gt;<b>copy letter.txt letters</b>
+        1 File(s) copied
+
+A:\&gt;<b>cd letters</b>
+
+A:\LETTERS&gt;<b>dir</b>
+
+ Volume in drive A is COS
+ Directory of  A:\LETTERS
+
+.              &lt;DIR&gt;     1-01-80  12:00a
+..             &lt;DIR&gt;     1-01-80  12:00a
+LETTER   TXT       47   1-01-80  12:00a
+        3 File(s)   1409024 bytes free
+
+A:\LETTERS&gt;
+</pre>
+<p>Every directory but the root holds two entries COS makes by itself: <b>.</b>, the directory itself, and <b>..</b>, the directory that holds it.</p>
+<h3>Paths</h3>
+<p>A <i>path</i> names a directory by the directories that lead to it, separated by backslashes (\). A path that starts with a backslash starts at the root directory; any other starts at the current directory. <b>..</b> goes up one level:</p>
+<table class="ref wrap">
+<tr><td>\GAMES\SPACE.COM</td><td>SPACE.COM in the directory GAMES of the root directory.</td></tr>
+<tr><td>GAMES\SPACE.COM</td><td>The same, if the root directory is the current directory.</td></tr>
+<tr><td>..\NOTES.TXT</td><td>NOTES.TXT in the directory above the current one.</td></tr>
+<tr><td>B:\LETTERS</td><td>The directory LETTERS on the diskette in drive B:.</td></tr>
+<tr><td>B:JUNE.TXT</td><td>JUNE.TXT in the current directory of drive B:.</td></tr>
+</table>
+<p>Every command that takes a file name takes a path too: <b>type \letters\june.txt</b>, <b>copy *.com games</b>, <b>del b:\old\*.*</b>. A path may be up to 63 characters long.</p>
+<p>When the diskette in a drive is changed, the current directory of that drive goes back to the root directory.</p>
 
 <h2>Diskettes</h2>
 <table class="ref">
@@ -485,10 +533,10 @@ A:\&gt;<b>dir b:</b>
  Volume in drive B is COS
  Directory of  B:\
 
-COS      SYS    11188   1-01-80  12:00a
-COMMAND  COM     5460   1-01-80  12:00a
-ASM      COM    17171   1-01-80  12:00a
-EDIT     COM     5400   1-01-80  12:00a
+COS      SYS    12902   1-01-80  12:00a
+COMMAND  COM     7035   1-01-80  12:00a
+ASM      COM    17184   1-01-80  12:00a
+EDIT     COM     5410   1-01-80  12:00a
 HELLO    ASM      299   1-01-80  12:00a
 HELLO    COM       31   1-01-80  12:00a
 </pre>
@@ -524,15 +572,26 @@ HELLO    COM       31   1-01-80  12:00a
 <div class="entry">
 <h2 class="cmd">CD (Change Directory) <small>also CHDIR</small></h2>
 <dl>
-<dt>Purpose</dt><dd>Displays the current directory of a drive.</dd>
-<dt>Format</dt><dd><pre>CD [d:][\]</pre></dd>
-<dt>Remarks</dt><dd><p>COS Version 1.00 keeps all files in the root directory of each diskette, so the current directory is always the root. CD without parameters displays it; CD \ is accepted and does nothing. Any other directory name gives "Invalid directory".</p></dd>
+<dt>Purpose</dt><dd>Changes the current directory of a drive, or displays it.</dd>
+<dt>Format</dt><dd><pre>CD [d:][<var>path</var>]</pre></dd>
+<dt>Remarks</dt><dd><p>CD <var>path</var> makes that directory the current directory of its drive (the default drive if none is given). The default drive does not change: CD B:\DATA changes the current directory of drive B:, which DIR B: and B:<var>name</var> then use.</p>
+<p>CD \ goes back to the root directory, and CD .. to the directory above. CD alone, or CD d:, displays the current directory of that drive. A directory that does not exist gives "Invalid directory".</p></dd>
 <dt>Example</dt><dd><pre class="screen">
-A:\&gt;<b>cd</b>
-A:\
+A:\&gt;<b>md games</b>
 
 A:\&gt;<b>cd games</b>
-Invalid directory
+
+A:\GAMES&gt;<b>cd</b>
+A:\GAMES
+
+A:\GAMES&gt;<b>cd ..</b>
+
+A:\&gt;<b>cd \games</b>
+
+A:\GAMES&gt;<b>cd b:</b>
+B:\
+
+A:\GAMES&gt;
 </pre></dd>
 </dl>
 </div>
@@ -641,7 +700,7 @@ A:\&gt;<b>dir *.txt</b>
 
 README   TXT       94   1-01-80  12:00a
 LETTER   TXT       47   1-01-80  12:00a
-        2 File(s)   1414144 bytes free
+        2 File(s)   1410560 bytes free
 
 A:\&gt;<b>dir /w</b>
 
@@ -651,7 +710,7 @@ A:\&gt;<b>dir /w</b>
 COS      SYS    COMMAND  COM    ASM      COM    EDIT     COM    HELLO    ASM
 HELLO    COM    NUMBERS  COM    FACTOR   COM    SORT     COM    README   TXT
 LETTER   TXT
-       11 File(s)   1414144 bytes free
+       11 File(s)   1410560 bytes free
 </pre></dd>
 </dl>
 </div>
@@ -679,10 +738,61 @@ Hello there
 </div>
 
 <div class="entry">
-<h2 class="cmd">MD, RD (Make and Remove Directory) <small>also MKDIR, RMDIR</small></h2>
+<h2 class="cmd">MD (Make Directory) <small>also MKDIR</small></h2>
 <dl>
-<dt>Purpose</dt><dd>Reserved for subdirectories.</dd>
-<dt>Remarks</dt><dd><p>COS Version 1.00 keeps all files in the root directory and does not create or remove subdirectories. These commands say "Subdirectories are not supported by COS".</p></dd>
+<dt>Purpose</dt><dd>Makes a new directory.</dd>
+<dt>Format</dt><dd><pre>MD [d:]<var>path</var></pre></dd>
+<dt>Remarks</dt><dd><p>The last name of the path is the new directory; the directories before it must exist. MD says "Unable to create directory" if a file or directory already has that name, if the directory above does not exist, or if there is no room for it (the root directory is full, or the diskette is full or write-protected).</p></dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>md games</b>
+
+A:\&gt;<b>dir</b>
+
+ Volume in drive A is COS
+ Directory of  A:\
+
+COS      SYS    12902   1-01-80  12:00a
+COMMAND  COM     7035   1-01-80  12:00a
+ASM      COM    17184   1-01-80  12:00a
+EDIT     COM     5410   1-01-80  12:00a
+HELLO    ASM      299   1-01-80  12:00a
+HELLO    COM       31   1-01-80  12:00a
+NUMBERS  COM       69   1-01-80  12:00a
+FACTOR   COM       81   1-01-80  12:00a
+SORT     COM      124   1-01-80  12:00a
+README   TXT       94   1-01-80  12:00a
+LETTER   TXT       47   1-01-80  12:00a
+UNSUP    COM       31   1-01-80  12:00a
+GAMES          &lt;DIR&gt;     1-01-80  12:00a
+       13 File(s)   1409536 bytes free
+
+A:\&gt;
+</pre></dd>
+</dl>
+</div>
+
+<div class="entry">
+<h2 class="cmd">RD (Remove Directory) <small>also RMDIR</small></h2>
+<dl>
+<dt>Purpose</dt><dd>Removes a directory.</dd>
+<dt>Format</dt><dd><pre>RD [d:]<var>path</var></pre></dd>
+<dt>Remarks</dt><dd><p>The directory must be empty (only . and .. in it), and it cannot be the current directory of its drive. Otherwise, or if there is no such directory, RD says "Invalid path, not directory, or directory not empty". Erase the files in it first with DEL, and remove the directories in it with RD.</p></dd>
+<dt>Example</dt><dd><pre class="screen">
+A:\&gt;<b>md games</b>
+
+A:\&gt;<b>copy hello.com games</b>
+        1 File(s) copied
+
+A:\&gt;<b>rd games</b>
+Invalid path, not directory,
+or directory not empty
+
+A:\&gt;<b>del games\hello.com</b>
+
+A:\&gt;<b>rd games</b>
+
+A:\&gt;
+</pre></dd>
 </dl>
 </div>
 
@@ -815,11 +925,35 @@ A:\&gt;<b>vol b:</b>
 <h2>Running Programs</h2>
 <p>A word at the prompt that is not a command is the name of a program:</p>
 <pre class="listing">
-[d:]<var>filename</var>[.<var>ext</var>] [<var>parameters</var>]
+[d:][<var>path</var>]<var>filename</var>[.<var>ext</var>] [<var>parameters</var>]
 </pre>
-<p>COS looks on the drive you name, or on the default drive, for <var>filename</var>.COM and then for <var>filename</var>.EXE, and runs the first one it finds. If you type the extension, only that file is tried. The rest of the line, the <i>parameters</i>, is given to the program exactly as you typed it.</p>
+<p>COS looks in the directory you name, or in the current directory, for <var>filename</var>.COM and then for <var>filename</var>.EXE, and runs the first one it finds. If you type the extension, only that file is tried. When you give only a name and the program is not in the current directory, COS looks for it in the root directory of the drive as well, so the programs of the System Diskette (EDIT, ASM) can be used from any directory. The rest of the line, the <i>parameters</i>, is given to the program exactly as you typed it.</p>
 <p>If there is no such program, COS says "Bad command or file name". If there is not enough memory for it, "Program too big to fit in memory". If only a batch file (.BAT) has that name, "Batch files are not supported by COS".</p>
 <p>When the program ends, its memory is given back and the prompt returns. The files it left open are closed.</p>
+<pre class="screen">
+A:\&gt;<b>md games</b>
+
+A:\&gt;<b>copy hello.com games</b>
+        1 File(s) copied
+
+A:\&gt;<b>games\hello</b>
+Hello from the 8086!
+
+A:\&gt;<b>cd games</b>
+
+A:\GAMES&gt;<b>factor</b>
+1
+1
+2
+6
+24
+120
+720
+5040
+40320
+
+A:\GAMES&gt;
+</pre>
 </section>
 
 <!-- ================================================================== -->
@@ -875,16 +1009,17 @@ Abort, Retry, Fail?
 <tr><td>General failure</td><td>A command could not read a file because of a disk error you answered with F.</td></tr>
 <tr><td>Insufficient disk space</td><td>The target diskette is full. The incomplete copy was erased. Make room or use another diskette.</td></tr>
 <tr><td>Invalid date</td><td>The date is not one COS can keep: check the month, the day and the year (1980-2099).</td></tr>
-<tr><td>Invalid directory</td><td>CD was given a directory other than the root.</td></tr>
+<tr><td>Invalid directory</td><td>CD, or the target of COPY, names a directory that does not exist.</td></tr>
 <tr><td>Invalid drive specification</td><td>The computer does not have that drive.</td></tr>
 <tr><td>Invalid number of parameters</td><td>REN needs two names.</td></tr>
+<tr><td>Invalid path, not directory,<br>or directory not empty</td><td>RD could not remove the directory: it does not exist, it is a file, it still has files or directories in it, or it is the current directory.</td></tr>
 <tr><td>Invalid switch</td><td>DIR accepts only /W.</td></tr>
 <tr><td>Invalid time</td><td>Hours go from 0 to 23, minutes and seconds from 0 to 59.</td></tr>
 <tr><td>Press any key to restart</td><td>The boot record could not start COS (see the message before it). Insert a System Diskette and press a key.</td></tr>
 <tr><td>Program too big to fit in memory</td><td>There is not enough memory for the program.</td></tr>
 <tr><td>Required parameter missing</td><td>The command needs a file name: COPY, DEL and TYPE.</td></tr>
 <tr><td>Strike a key when ready . . .</td><td>PAUSE is waiting for a key.</td></tr>
-<tr><td>Subdirectories are not supported by COS</td><td>MD and RD are reserved for a later version.</td></tr>
+<tr><td>Unable to create directory</td><td>MD could not make the directory: the name is taken, the directory above does not exist, or there is no room.</td></tr>
 <tr><td>^C</td><td>You pressed Ctrl-C. The command or program was stopped.</td></tr>
 </table>
 </section>
@@ -1108,13 +1243,15 @@ block dw 0                  ; environment: a copy of ours
 </table>
 
 <h2>Calling Conventions</h2>
-<p>Load AH with the function number and the other registers as shown, and execute INT 21h. COS preserves all registers except those that return a result. Functions that can fail return with the carry flag clear on success, or set with an error code in AX. "ASCIIZ" means a string ending with a zero byte. File names may include a drive and a backslash for the root directory: B:\SCORES.DAT.</p>
+<p>Load AH with the function number and the other registers as shown, and execute INT 21h. COS preserves all registers except those that return a result. Functions that can fail return with the carry flag clear on success, or set with an error code in AX. "ASCIIZ" means a string ending with a zero byte. File names may include a drive and a path: B:\GAMES\SCORES.DAT, ..\NOTES.TXT (Chapter 3). A path may have up to 63 characters.</p>
 
 <h2>Functions in Numeric Order</h2>
 <table class="ref quick">
 <tr><th>AH</th><th>Function</th><th>AH</th><th>Function</th></tr>
 <tr><td>00h</td><td>Terminate program</td><td>38h</td><td>Country information</td></tr>
-<tr><td>01h</td><td>Keyboard input with echo</td><td>3Bh</td><td>Change directory</td></tr>
+<tr><td>01h</td><td>Keyboard input with echo</td><td>39h</td><td>Make a directory</td></tr>
+<tr><td></td><td></td><td>3Ah</td><td>Remove a directory</td></tr>
+<tr><td></td><td></td><td>3Bh</td><td>Change the current directory</td></tr>
 <tr><td>02h</td><td>Display output</td><td>3Ch</td><td>Create a file</td></tr>
 <tr><td>06h</td><td>Direct console I/O</td><td>3Dh</td><td>Open a file</td></tr>
 <tr><td>07h</td><td>Direct keyboard input</td><td>3Eh</td><td>Close a handle</td></tr>
@@ -1138,14 +1275,14 @@ block dw 0                  ; environment: a copy of ours
 <tr><td>30h</td><td>COS version number</td><td>50h</td><td>Set the PSP</td></tr>
 <tr><td>31h</td><td>Terminate and stay resident</td><td>51h, 62h</td><td>Get the PSP</td></tr>
 <tr><td>33h</td><td>Ctrl-Break check, boot drive</td><td>54h</td><td>Get the verify switch</td></tr>
-<tr><td>34h</td><td>Address of the InDOS flag</td><td>56h</td><td>Rename a file</td></tr>
+<tr><td>34h</td><td>Address of the InDOS flag</td><td>56h</td><td>Rename or move a file</td></tr>
 <tr><td>35h</td><td>Get an interrupt vector</td><td>57h</td><td>File date and time</td></tr>
 <tr><td>36h</td><td>Free disk space</td><td>58h</td><td>Allocation strategy</td></tr>
 <tr><td>37h</td><td>Switch character</td><td>59h</td><td>Extended error</td></tr>
 <tr><td></td><td></td><td>5Bh</td><td>Create a new file</td></tr>
 <tr><td></td><td></td><td>68h</td><td>Commit a file</td></tr>
 </table>
-<p>Functions not in this list &mdash; among them 03h-05h (auxiliary and printer), 0Fh-18h and 21h-24h (file control blocks), 1Bh and 1Ch (FAT information), 26h-28h, 32h, 39h and 3Ah (subdirectories), 52h and 5Ah-61h &mdash; are not supported: COS displays "COS: INT 21h function AH=<var>xx</var>h is not supported" and ends the program.</p>
+<p>Functions not in this list &mdash; among them 03h-05h (auxiliary and printer), 0Fh-18h and 21h-24h (file control blocks), 1Bh and 1Ch (FAT information), 26h-28h, 32h, 52h and 5Ah-61h &mdash; are not supported: COS displays "COS: INT 21h function AH=<var>xx</var>h is not supported" and ends the program.</p>
 
 <h2>Console Functions</h2>
 
@@ -1216,18 +1353,25 @@ block dw 0                  ; environment: a copy of ours
 <tr><th>Return</th><td>AX = sectors per allocation unit, or FFFFh if the drive is not valid<br>BX = free allocation units<br>CX = bytes per sector (512)<br>DX = allocation units on the diskette</td></tr></table>
 <p>Free bytes = AX &times; BX &times; CX.</p></div>
 
-<div class="entry fn"><div class="fnhead"><span class="num">3Bh</span><h3>Change Directory</h3></div>
-<table class="regs"><tr><th>Entry</th><td>AH = 3Bh<br>DS:DX = ASCIIZ path</td></tr><tr><th>Return</th><td>CF set, AX = 3 if the path is not the root directory</td></tr></table>
-<p>Only the root directory exists: "\", "A:\" and "A:" are accepted.</p></div>
+<div class="entry fn"><div class="fnhead"><span class="num">39h</span><h3>Make a Directory</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 39h<br>DS:DX = ASCIIZ path of the new directory</td></tr><tr><th>Return</th><td>CF set: AX = 3 (a directory of the path does not exist) or 5 (the name exists, or there is no room)</td></tr></table>
+<p>The new directory gets its . and .. entries. A full root directory cannot grow; a full subdirectory gets another allocation unit.</p></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">3Ah</span><h3>Remove a Directory</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 3Ah<br>DS:DX = ASCIIZ path</td></tr><tr><th>Return</th><td>CF set: AX = 3 (no such directory), 5 (not empty, or read-only) or 10h (the current directory of its drive)</td></tr></table></div>
+
+<div class="entry fn"><div class="fnhead"><span class="num">3Bh</span><h3>Change the Current Directory</h3></div>
+<table class="regs"><tr><th>Entry</th><td>AH = 3Bh<br>DS:DX = ASCIIZ path</td></tr><tr><th>Return</th><td>CF set: AX = 3 if the path is not a directory</td></tr></table>
+<p>Changes the current directory of the drive in the path (the default drive if there is none); the default drive stays the same.</p></div>
 
 <div class="entry fn"><div class="fnhead"><span class="num">47h</span><h3>Current Directory</h3></div>
 <table class="regs"><tr><th>Entry</th><td>AH = 47h<br>DL = drive (0 = default, 1 = A:, 2 = B:)<br>DS:SI = 64-byte buffer</td></tr>
-<tr><th>Return</th><td>The buffer holds an empty ASCIIZ string (the root); CF set, AX = 0Fh for a drive that does not exist</td></tr></table></div>
+<tr><th>Return</th><td>The buffer holds the path of the current directory, without the drive and the first backslash: "GAMES\LEVELS", or an empty string for the root. CF set, AX = 0Fh for a drive that does not exist</td></tr></table></div>
 
 <div class="entry fn"><div class="fnhead"><span class="num">4Eh</span><h3>Find the First File</h3></div>
 <table class="regs"><tr><th>Entry</th><td>AH = 4Eh<br>DS:DX = ASCIIZ file specification, global characters allowed<br>CX = attributes to include</td></tr>
 <tr><th>Return</th><td>CF clear: the DTA describes the file; CF set: AX = 2 (no file) or 3 (bad path)</td></tr></table>
-<p>Normal and read-only files are always found. Hidden (02h), system (04h) and directory (10h) entries are found only if their bits are in CX. With CX = 08h, only the volume label is found. The DTA receives:</p>
+<p>The search is in the directory of the file specification. Normal and read-only files are always found. Hidden (02h), system (04h) and directory (10h) entries are found only if their bits are in CX; with 10h, the . and .. entries of a subdirectory are found too. With CX = 08h, only the volume label is found (it is in the root directory). The DTA receives:</p>
 <table class="ref"><tr><th>Offset</th><th>Contents</th></tr>
 <tr><td>00h-14h</td><td>Used by COS for function 4Fh: do not change</td></tr>
 <tr><td>15h</td><td>Attribute of the file</td></tr>
@@ -1285,9 +1429,9 @@ block dw 0                  ; environment: a copy of ours
 <table class="regs"><tr><th>Entry</th><td>AH = 46h<br>BX = handle<br>CX = second handle</td></tr><tr><th>Return</th><td>CF set: AX = 6</td></tr></table>
 <p>Closes CX if it is open, and makes it refer to the same file as BX.</p></div>
 
-<div class="entry fn"><div class="fnhead"><span class="num">56h</span><h3>Rename a File</h3></div>
+<div class="entry fn"><div class="fnhead"><span class="num">56h</span><h3>Rename or Move a File</h3></div>
 <table class="regs"><tr><th>Entry</th><td>AH = 56h<br>DS:DX = ASCIIZ present name<br>ES:DI = ASCIIZ new name</td></tr><tr><th>Return</th><td>CF set: AX = 2, 3, 5 or 11h</td></tr></table>
-<p>Both names must be on the same drive (error 11h). If a file with the new name exists, error 5.</p></div>
+<p>Both names must be on the same drive (error 11h). If a file with the new name exists, error 5. If the new name is in another directory, the file moves there. A directory can be renamed, but not moved.</p></div>
 
 <div class="entry fn"><div class="fnhead"><span class="num">57h</span><h3>File Date and Time</h3></div>
 <table class="regs"><tr><th>Entry</th><td>AH = 57h<br>BX = handle<br>AL = 0 to get; 1 to set from CX (time) and DX (date)</td></tr>
@@ -1486,8 +1630,10 @@ block dw 0                  ; environment: a copy of ours
 <tr><td>16h</td><td>Word</td><td>Time</td></tr>
 <tr><td>18h</td><td>Word</td><td>Date</td></tr>
 <tr><td>1Ah</td><td>Word</td><td>First allocation unit (0 for an empty file)</td></tr>
-<tr><td>1Ch</td><td>Dword</td><td>Size in bytes</td></tr>
+<tr><td>1Ch</td><td>Dword</td><td>Size in bytes (0 for a directory)</td></tr>
 </table>
+<h3>Subdirectories</h3>
+<p>A subdirectory is kept like a file, in a chain of allocation units, and holds directory entries of 32 bytes; its own entry has attribute 10h and size 0. Its first two entries are <b>.</b> (first allocation unit: the subdirectory itself) and <b>..</b> (the directory that holds it; 0 for the root directory). The root directory has a fixed size (Diskette Format, above); a subdirectory grows by one allocation unit, filled with zeros, whenever it is full.</p>
 <h3>Time and Date</h3>
 <pre class="listing">
 Time:  bits 15-11 hours (0-23), 10-5 minutes, 4-0 seconds / 2
@@ -1523,12 +1669,12 @@ Date:  bits 15-9 year - 1980, 8-5 month (1-12), 4-0 day (1-31)
 <h2>Compatibility</h2>
 <p>COS provides the version 3.30 services listed in Chapter 7, with the same numbers, registers and results. Programs that use only those services, through file handles, run on COS unchanged. COS Version 1.00 does not provide:</p>
 <ul>
-<li>Subdirectories and paths (all files are in the root directory).</li>
 <li>File control block (FCB) file functions, and absolute disk access (INT 25h and 26h).</li>
 <li>Batch files, redirection (&gt; and &lt;) and pipes (|) in COMMAND.COM.</li>
 <li>Installable device drivers, CONFIG.SYS, and the printer and serial devices.</li>
 <li>Commands such as FORMAT, DISKCOPY, CHKDSK and SYS.</li>
 <li>Loading high: an .EXE file that asks for no memory above it is loaded low.</li>
+<li>A search path (PATH): programs are looked for in the current directory, and then in the root directory.</li>
 <li>A check that a diskette changed while a file was open on it ("Invalid disk change").</li>
 </ul>
 <p>Programs that ask for a missing function are stopped with a message rather than given a wrong result.</p>
@@ -1548,7 +1694,7 @@ Date:  bits 15-9 year - 1980, 8-5 month (1-12), 4-0 day (1-31)
 <h2 class="cmd">EDIT</h2>
 <dl>
 <dt>Purpose</dt><dd>Creates a text file, or changes one.</dd>
-<dt>Format</dt><dd><pre>EDIT [d:]<var>filename</var>[.<var>ext</var>]</pre></dd>
+<dt>Format</dt><dd><pre>EDIT [d:][<var>path</var>]<var>filename</var>[.<var>ext</var>]</pre></dd>
 <dt>Remarks</dt><dd>
 <p>Give the whole name of the file, with its extension: EDIT does not add one. If the file does not exist, EDIT starts with an empty screen and the message "New file"; the file is created when you save it.</p>
 <p>When you leave EDIT, the screen is cleared and the COS prompt comes back.</p>
@@ -1692,7 +1838,7 @@ A:\&gt;<b>dir hello.*</b>
 
 HELLO    ASM      299   1-01-80  12:00a
 HELLO    COM       31   1-01-80  12:00a
-        2 File(s)   1416192 bytes free
+        2 File(s)   1412608 bytes free
 
 A:\&gt;
 </pre>
@@ -1701,7 +1847,7 @@ A:\&gt;
 <h2 class="cmd">ASM</h2>
 <dl>
 <dt>Purpose</dt><dd>Assembles a program.</dd>
-<dt>Format</dt><dd><pre>ASM [d:]<var>source</var>[.<var>ext</var>] [[d:]<var>output</var>[.<var>ext</var>]]</pre></dd>
+<dt>Format</dt><dd><pre>ASM [d:][<var>path</var>]<var>source</var>[.<var>ext</var>] [[d:][<var>path</var>]<var>output</var>[.<var>ext</var>]]</pre></dd>
 <dt>Remarks</dt><dd>
 <p>If the source has no extension, ASM adds .ASM. Without an output name, the bytes go to a file with the name of the source and the extension .COM, on the same drive. Give an output name to choose another, for example COS.SYS.</p>
 <p>When the program has no errors, ASM writes the output file and displays its name and size. Otherwise it writes no file, displays each error with the line where it is, and tells how many errors it found; the first 100 are shown. An error is reported as:</p>
@@ -1722,34 +1868,34 @@ A:\&gt;
 
 <h2>How ASM Works</h2>
 <p>ASM reads the source file once, a piece at a time, and keeps it in memory in a compact form, with every name looked up. Then it goes through the program several times, or <i>passes</i>. In each pass it works out the address of every line; a jump to a label further on may need 2 bytes or 3, depending on how far the label turns out to be, so the passes go on until no address changes. ASM always chooses the shortest form of each instruction. The last pass writes the bytes.</p>
-<p>Assembling HELLO.ASM takes about a second. Larger programs take longer: COS.SYS, about 4,900 lines, takes under a minute. A source file can be of any size that fits on a diskette; the program it makes can be up to 64 KB.</p>
+<p>Assembling HELLO.ASM takes about a second. Larger programs take longer: COS.SYS, about 5,600 lines, takes about a minute. A source file can be of any size that fits on a diskette; the program it makes can be up to 64 KB.</p>
 
 <h2>Assembling COS</h2>
 <p>The source files of COS are text files like any other. With them on a diskette in drive B:, COS can be assembled on COS. Drive B: is made the default drive, so that the files are read and written there, and ASM is run from drive A: by typing <b>a:asm</b>:</p>
 <pre class="screen">
 B:\&gt;<b>a:asm cos.asm cos.sys</b>
-COS.SYS: 11188 bytes
+COS.SYS: 12902 bytes
 
 B:\&gt;<b>a:asm command.asm</b>
-COMMAND.COM: 5460 bytes
+COMMAND.COM: 7035 bytes
 
 B:\&gt;<b>a:asm asm.asm</b>
-ASM.COM: 17171 bytes
+ASM.COM: 17184 bytes
 
 B:\&gt;<b>dir</b>
 
  Volume in drive B is SOURCES
  Directory of  B:\
 
-COS      ASM    97184   1-01-80  12:00a
-COMMAND  ASM    32658   1-01-80  12:00a
+COS      ASM   112041   1-01-80  12:00a
+COMMAND  ASM    40775   1-01-80  12:00a
 BOOT     ASM     4149   1-01-80  12:00a
-ASM      ASM   125007   1-01-80  12:00a
-EDIT     ASM    40703   1-01-80  12:00a
-COS      SYS    11188   1-01-80  12:00a
-COMMAND  COM     5460   1-01-80  12:01a
-ASM      COM    17171   1-01-80  12:02a
-        8 File(s)   1122304 bytes free
+ASM      ASM   125177   1-01-80  12:00a
+EDIT     ASM    40762   1-01-80  12:00a
+COS      SYS    12902   1-01-80  12:01a
+COMMAND  COM     7035   1-01-80  12:01a
+ASM      COM    17184   1-01-80  12:02a
+        8 File(s)   1095680 bytes free
 
 B:\&gt;
 </pre>
@@ -1874,7 +2020,7 @@ B:\&gt;
 <tr><th>Code</th><th>Meaning</th></tr>
 <tr><td>1 (01h)</td><td>Invalid function or subfunction</td></tr>
 <tr><td>2 (02h)</td><td>File not found</td></tr>
-<tr><td>3 (03h)</td><td>Path not found (a directory other than the root)</td></tr>
+<tr><td>3 (03h)</td><td>Path not found: a directory of the path does not exist</td></tr>
 <tr><td>4 (04h)</td><td>Too many open files: no handle left</td></tr>
 <tr><td>5 (05h)</td><td>Access denied: read-only file, full directory, existing name, or a device the computer does not have</td></tr>
 <tr><td>6 (06h)</td><td>Invalid handle</td></tr>
@@ -1884,6 +2030,7 @@ B:\&gt;
 <tr><td>11 (0Bh)</td><td>Invalid format (an .EXE file that cannot be loaded)</td></tr>
 <tr><td>12 (0Ch)</td><td>Invalid access code (function 3Dh)</td></tr>
 <tr><td>15 (0Fh)</td><td>Invalid drive</td></tr>
+<tr><td>16 (10h)</td><td>Attempt to remove the current directory (function 3Ah)</td></tr>
 <tr><td>17 (11h)</td><td>Not the same device (function 56h)</td></tr>
 <tr><td>18 (12h)</td><td>No more files (function 4Fh)</td></tr>
 <tr><td>21 (15h)</td><td>Drive not ready</td></tr>
@@ -1969,7 +2116,7 @@ B:\&gt;
 <table class="ref wrap">
 <tr><th>Command</th><th>What it does</th></tr>
 <tr><td>d:</td><td>Makes d: the default drive</td></tr>
-<tr><td>CD [d:]</td><td>Displays the current directory (the root)</td></tr>
+<tr><td>CD [d:][<var>path</var>]</td><td>Changes or displays the current directory</td></tr>
 <tr><td>CLS</td><td>Clears the display</td></tr>
 <tr><td>COPY <var>source</var> [<var>target</var>]</td><td>Copies files; global characters allowed</td></tr>
 <tr><td>DATE [<var>mm-dd-yy</var>]</td><td>Displays or sets the date</td></tr>
@@ -1978,7 +2125,9 @@ B:\&gt;
 <tr><td>DIR [<var>filespec</var>] [/W]</td><td>Lists files</td></tr>
 <tr><td>ECHO [<var>message</var>]</td><td>Displays a message</td></tr>
 <tr><td>EDIT <var>filespec</var></td><td>Writes or changes a text file (Chapter 9)</td></tr>
+<tr><td>MD [d:]<var>path</var></td><td>Makes a directory</td></tr>
 <tr><td>PAUSE</td><td>Waits for a key</td></tr>
+<tr><td>RD [d:]<var>path</var></td><td>Removes an empty directory</td></tr>
 <tr><td>REN <var>old new</var></td><td>Renames files (also RENAME)</td></tr>
 <tr><td>SET</td><td>Displays the environment</td></tr>
 <tr><td>TIME [<var>hh:mm</var>]</td><td>Displays or sets the time</td></tr>

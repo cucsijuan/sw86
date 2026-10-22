@@ -1,6 +1,6 @@
 # COS — CucsiCorp OS, a DOS for the pc86 machine
 
-A subset of MS-DOS 3.30 that boots from a diskette: the real `INT 21h` function numbers, `.COM` and `.EXE` programs with a PSP and an environment, memory control blocks, file handles on FAT12 diskettes in drives A: and B:, and a `COMMAND.COM` with the usual built-in commands. Programs written for DOS that stay within this subset run unchanged.
+A subset of MS-DOS 3.30 that boots from a diskette: the real `INT 21h` function numbers, `.COM` and `.EXE` programs with a PSP and an environment, memory control blocks, file handles on FAT12 diskettes in drives A: and B:, and a `COMMAND.COM` with the usual built-in commands and batch files (`AUTOEXEC.BAT` runs when COS starts). Programs written for DOS that stay within this subset run unchanged.
 
 Like the rest of the suite, what it implements behaves like DOS, and what it does not implement says so: a program that calls a missing `INT 21h` function is stopped with `COS: INT 21h function AH=xxh is not supported`, instead of getting something different.
 
@@ -152,7 +152,7 @@ A000:0000  top of memory (640 KB)
 
 - A search path (`PATH`): programs are looked for in the current directory, then in the root.
 - FCB file functions (`0Fh`–`28h`), absolute disk access (`INT 25h`/`26h`), `CALL 5`, `4B01h`/`4B03h`, and the other functions not listed: they stop the program with a message.
-- Batch files, redirection and pipes in COMMAND.COM; environment changes with `SET`.
+- Redirection and pipes in COMMAND.COM; the batch commands IF, GOTO, FOR, SHIFT, CALL and `%1` parameters; environment changes with `SET`.
 - `AUX`, `PRN`, `COMx`, `LPTx` and `CLOCK$`: the machine has no such hardware; opening them gives "access denied".
 - `INT 21h` is not reentrant: an `INT 24h` handler or a hardware interrupt cannot call it.
 - Ctrl-C is checked on console input only (`BREAK OFF`). A program's `INT 23h` handler must return with `IRET` (the function is retried) or not return.

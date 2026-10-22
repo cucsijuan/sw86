@@ -7,8 +7,10 @@
 ;
 ; Built-in: CD CHDIR CLS COPY DATE DEL DIR ECHO ERASE EXIT MD MKDIR PAUSE
 ; RD REM REN RENAME RMDIR SET TIME TYPE VER VOL. Names may have paths
-; (B:\GAMES\SPACE.COM, ..\NOTES). Batch files, redirection and pipes are
-; not supported.
+; (B:\GAMES\SPACE.COM, ..\NOTES). A batch file (.BAT) runs its lines as
+; if they were typed; a line starting with @ is not shown, and ECHO OFF
+; hides them all. Started by COS with /P (the first time only), it runs
+; \AUTOEXEC.BAT. Redirection and pipes are not supported.
 org 100h
 
     jmp start
@@ -505,6 +507,20 @@ start:
     call own_ctrl_c
     mov si, s_banner
     call print
+    ; /P: COS starting its shell, so AUTOEXEC.BAT
+    mov si, 81h
+.switch:
+    lodsb
+    cmp al, 13
+    je main
+    cmp al, '/'
+    jne .switch
+    mov al, [si]
+    and al, 0DFh
+    cmp al, 'P'
+    jne .switch
+    mov dx, s_autoexec
+    call batch_open
 
 main:
     cld
@@ -515,27 +531,19 @@ main:
     mov dx, dta
     mov ah, 1Ah
     int 21h
-    ; prompt
-    mov ah, 19h
-    int 21h
-    add al, 'A'
-    call putc
-    mov si, s_root
-    call print
-    mov si, cwd_buf
-    xor dl, dl
-    mov ah, 47h
-    int 21h
-    jc .no_cwd
-    call print
-.no_cwd:
-    mov al, '>'
-    call putc
+    cmp word [batch_handle], 0
+    je .typed
+    call batch_line
+    jc main
+    jmp .have_line
+.typed:
+    call show_prompt
     mov dx, line_max
     mov ah, 0Ah
     int 21h
     mov al, 10
     call putc
+.have_line:
     ; the line, in capitals, ending in 0 (and as typed, for programs)
     mov si, line
     mov cl, [line_count]
@@ -569,8 +577,116 @@ main:
     call get_word
     mov [args], si
     call run_command
+    cmp word [batch_handle], 0      ; ECHO OFF: no blank line either
+    je .blank
+    cmp byte [batch_echo], 0
+    je .next
+.blank:
     call crlf
+.next:
     jmp main
+
+; A:\PATH>
+show_prompt:
+    mov ah, 19h
+    int 21h
+    add al, 'A'
+    call putc
+    mov si, s_root
+    call print
+    mov si, cwd_buf
+    xor dl, dl
+    mov ah, 47h
+    int 21h
+    jc .no_cwd
+    call print
+.no_cwd:
+    mov al, '>'
+    call putc
+    ret
+
+; ---------- batch files ----------
+
+; Runs the batch file named at DX from its first line (one that was
+; running stops: like DOS, a batch file ends where it starts another).
+batch_open:
+    mov ax, 3D00h
+    int 21h
+    jc .ret
+    push ax
+    call batch_close
+    pop ax
+    mov [batch_handle], ax
+    mov byte [batch_echo], 1
+.ret:
+    ret
+
+batch_close:
+    mov bx, [batch_handle]
+    test bx, bx
+    jz .ret
+    mov ah, 3Eh
+    int 21h
+    mov word [batch_handle], 0
+.ret:
+    ret
+
+; The next line of the batch file into line_count/line, shown after the
+; prompt unless ECHO is OFF or it starts with @. CF at the end of the file,
+; which is closed.
+batch_line:
+    xor cx, cx
+    mov di, line
+.byte:
+    push cx
+    mov bx, [batch_handle]
+    mov dx, batch_char
+    mov cx, 1
+    mov ah, 3Fh
+    int 21h
+    pop cx
+    jc .end
+    test ax, ax
+    jz .end
+    mov al, [batch_char]
+    cmp al, 10
+    je .eol
+    cmp al, 13
+    je .byte
+    cmp al, 1Ah
+    je .end
+    cmp cx, 127
+    jae .byte
+    stosb
+    inc cx
+    jmp .byte
+.end:
+    test cx, cx
+    jnz .eol
+    call batch_close
+    stc
+    ret
+.eol:
+    mov byte [di], 0
+    mov [line_count], cl
+    cmp byte [line], '@'
+    jne .shown
+    mov si, line + 1                ; @: drop it, show nothing
+    mov di, line
+    rep movsb
+    dec byte [line_count]
+    clc
+    ret
+.shown:
+    cmp byte [batch_echo], 0
+    je .quiet
+    call show_prompt
+    mov si, line
+    call print
+    call crlf
+.quiet:
+    clc
+    ret
 
 ; Runs the command in cmd_word with the arguments at [args].
 run_command:
@@ -665,6 +781,7 @@ on_ctrl_c:
     mov ss, ax
     mov sp, stack_top
     sti
+    call batch_close                ; Ctrl-C ends a batch file too
     jmp main
 
 ; ======================================================================
@@ -703,9 +820,8 @@ external:
 .result:
     cmp al, 1
     jne .not_batch
-    mov si, s_no_batch
-    call print
-    ret
+    mov dx, prog_path
+    jmp batch_open
 .not_batch:
     cmp al, 0
     je .run
@@ -807,8 +923,19 @@ find_program:
     je .check
     mov di, ext_exe
     call str_equal
+    je .check
+    mov di, ext_bat
+    call str_equal
     mov al, 2
     jne .ret
+    mov dx, prog_path
+    xor cx, cx
+    mov ah, 4Eh
+    int 21h
+    mov al, 2
+    jc .ret
+    dec al
+    ret
 .check:
     mov dx, prog_path
     xor cx, cx
@@ -875,8 +1002,23 @@ c_echo:
     cmp byte [si], 0
     jne .text
     mov si, s_echo_on
+    cmp byte [batch_echo], 0
+    jne .print
+    mov si, s_echo_off
     jmp .print
 .text:
+    mov di, s_off
+    call str_equal
+    jne .not_off
+    mov byte [batch_echo], 0
+    ret
+.not_off:
+    mov di, s_on
+    call str_equal
+    jne .not_on
+    mov byte [batch_echo], 1
+    ret
+.not_on:
     add si, line_typed - line       ; as typed, not in capitals
 .print:
     call print
@@ -2091,13 +2233,16 @@ s_dir_tag     db '   <DIR>  ', 0
 s_bad_command db 'Bad command or file name', 13, 10, 0
 s_bad_drive   db 'Invalid drive specification', 13, 10, 0
 s_too_big     db 'Program too big to fit in memory', 13, 10, 0
-s_no_batch    db 'Batch files are not supported by COS', 13, 10, 0
 s_md_error    db 'Unable to create directory', 13, 10, 0
 s_rd_error    db 'Invalid path, not directory,', 13, 10, 'or directory not empty', 13, 10, 0
 s_no_set      db 'Changing the environment is not supported by COS', 13, 10, 0
 s_bad_dir     db 'Invalid directory', 13, 10, 0
 s_bad_switch  db 'Invalid switch', 13, 10, 0
 s_echo_on     db 'ECHO is on', 0
+s_echo_off    db 'ECHO is off', 0
+s_on          db 'ON', 0
+s_off         db 'OFF', 0
+s_autoexec    db '\AUTOEXEC.BAT', 0
 s_strike      db 'Strike a key when ready . . . ', 0
 s_volume      db ' Volume in drive ', 0
 s_is          db ' is ', 0
@@ -2125,6 +2270,9 @@ s_bad_time    db 'Invalid time', 13, 10, 0
 
 old23      dw 0, 0
 cmd_start  dw 0
+batch_handle dw 0                   ; the batch file running, 0 if none
+batch_echo db 1
+batch_char db 0
 args       dw 0
 exec_block dw 0, 0, 0, 0, 0, 0, 0
 tail       times 128 db 0

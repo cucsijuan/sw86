@@ -5400,7 +5400,8 @@ vectors:
 shell_name  db 'A:\COMMAND.COM', 0
 master_env  db 'COMSPEC=A:\COMMAND.COM', 0, 0
 master_env_end:
-exec_block  dw 0, empty_tail, KSEG, blank_fcb, KSEG, blank_fcb, KSEG
+exec_block  dw 0, first_tail, KSEG, blank_fcb, KSEG, blank_fcb, KSEG
+first_tail  db 3, ' /P', 13          ; the first start: AUTOEXEC.BAT
 empty_tail  db 0, 13
 blank_fcb   db 0, '           ', 0, 0, 0, 0
 
@@ -5538,6 +5539,7 @@ shell_done:
     mov ss, ax
     mov sp, istack_top
     sti
+    mov word [exec_block + 2], empty_tail   ; started again: no AUTOEXEC.BAT
     jmp shell
 no_shell:
     mov si, msg_no_shell

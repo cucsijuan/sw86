@@ -283,7 +283,8 @@ CucsiCorp COS Version 1.00
 (C) Copyright CucsiCorp 1981
 A:\>
 </pre>
-<p>COS is now ready for your commands. If instead you see one of the following, the computer could not start COS:</p>
+<p>COS is now ready for your commands. If the diskette has a batch file named AUTOEXEC.BAT in its root directory, COS runs it first (see "Batch Files" in Chapter 4), so a diskette can start a program by itself.</p>
+<p>If instead you see one of the following, the computer could not start COS:</p>
 <table class="ref wrap">
 <tr><td>No boot device available.</td><td>There is no diskette in drive A:, or no diskette adapter. Insert the System Diskette and press Reset.</td></tr>
 <tr><td>The diskette in drive A: is not bootable.</td><td>The diskette in drive A: has no boot record. It is not a System Diskette.</td></tr>
@@ -414,7 +415,7 @@ $ &amp; # @ ! % ' ( ) - { } ~ ` ^ _
 <tr><td>.COM</td><td>A program, in the simple .COM form (up to 64 KB).</td></tr>
 <tr><td>.EXE</td><td>A program, in the .EXE form, which may be larger and use several segments.</td></tr>
 <tr><td>.SYS</td><td>Part of the operating system: COS.SYS.</td></tr>
-<tr><td>.BAT</td><td>A batch file. COS Version 1.00 does not run batch files.</td></tr>
+<tr><td>.BAT</td><td>A batch file: commands that COS runs one after another (Chapter 4).</td></tr>
 </table>
 <p>Other common extensions are .TXT for text, .ASM for assembly language programs and .DAT for data, but you may use any extension you like.</p>
 <h3>File Specifications</h3>
@@ -719,8 +720,10 @@ LETTER   TXT
 <h2 class="cmd">ECHO</h2>
 <dl>
 <dt>Purpose</dt><dd>Displays a message.</dd>
-<dt>Format</dt><dd><pre>ECHO [<var>message</var>]</pre></dd>
-<dt>Remarks</dt><dd><p>ECHO displays the message exactly as you typed it. Without a message, it displays "ECHO is on".</p></dd>
+<dt>Format</dt><dd><pre>ECHO [<var>message</var>]
+ECHO [ON | OFF]</pre></dd>
+<dt>Remarks</dt><dd><p>ECHO displays the message exactly as you typed it.</p>
+<p>In a batch file, ECHO OFF stops COS from showing each command before it runs it, and ECHO ON shows them again. Without a message, ECHO displays "ECHO is on" or "ECHO is off".</p></dd>
 <dt>Example</dt><dd><pre class="screen">
 A:\&gt;<b>echo Hello there</b>
 Hello there
@@ -928,7 +931,7 @@ A:\&gt;<b>vol b:</b>
 [d:][<var>path</var>]<var>filename</var>[.<var>ext</var>] [<var>parameters</var>]
 </pre>
 <p>COS looks in the directory you name, or in the current directory, for <var>filename</var>.COM and then for <var>filename</var>.EXE, and runs the first one it finds. If you type the extension, only that file is tried. When you give only a name and the program is not in the current directory, COS looks for it in the root directory of the drive as well, so the programs of the System Diskette (EDIT, ASM) can be used from any directory. The rest of the line, the <i>parameters</i>, is given to the program exactly as you typed it.</p>
-<p>If there is no such program, COS says "Bad command or file name". If there is not enough memory for it, "Program too big to fit in memory". If only a batch file (.BAT) has that name, "Batch files are not supported by COS".</p>
+<p>If there is no .COM or .EXE file with that name, COS looks for <var>filename</var>.BAT, a batch file, and runs it. If there is no such file either, COS says "Bad command or file name". If there is not enough memory for a program, "Program too big to fit in memory".</p>
 <p>When the program ends, its memory is given back and the prompt returns. The files it left open are closed.</p>
 <pre class="screen">
 A:\&gt;<b>md games</b>
@@ -961,6 +964,18 @@ A:\GAMES&gt;
 <!-- ================================================================== -->
 
 <section class="chapter" data-num="5" data-title="Messages" data-part="Part One: Using COS">
+
+<h2>Batch Files</h2>
+<p>A batch file is a text file, with the extension .BAT, that holds commands, one per line. Typing its name runs the commands in order, as if you had typed them: commands of COS, programs, and the drive changes. You can write one with EDIT.</p>
+<p>COS shows each command, after the prompt, before it runs it. A line that begins with @ is not shown, and ECHO OFF stops showing the lines that follow. A batch file that names another batch file ends there, and the other one runs. Ctrl-C stops a batch file.</p>
+<pre class="listing">
+@ECHO OFF
+ECHO Starting the game
+B:
+SPACE
+</pre>
+<h3>AUTOEXEC.BAT</h3>
+<p>When COS starts, it runs AUTOEXEC.BAT from the root directory of the diskette it started from, if there is one. Use it to start a program, or to set the date, every time the computer is turned on.</p>
 
 <h2>About the Messages</h2>
 <p>This chapter lists, in alphabetic order, the messages that COS and COMMAND.COM display, with their meaning and what to do. In the messages, <var>x</var> stands for a drive letter and <var>xx</var> for a hexadecimal number.</p>
@@ -995,7 +1010,6 @@ Abort, Retry, Fail?
 <tr><td>All files in directory will be deleted! Are you sure (Y/N)?</td><td>You typed DEL *.*. Type Y and Enter to erase every file, or N and Enter to keep them.</td></tr>
 <tr><td>Bad command or file name</td><td>What you typed is not a command, and there is no program with that name on the drive. Check the spelling and the drive.</td></tr>
 <tr><td>Bad or missing command interpreter</td><td>COS could not find COMMAND.COM on the diskette it started from. Start the computer with a System Diskette.</td></tr>
-<tr><td>Batch files are not supported by COS</td><td>You named a .BAT file. COS Version 1.00 runs only .COM and .EXE programs.</td></tr>
 <tr><td>Changing the environment is not supported by COS</td><td>SET only displays the environment.</td></tr>
 <tr><td>COS: CALL 5 (CP/M entry) is not supported</td><td>The program uses the old CP/M way of calling the operating system. COS ended it.</td></tr>
 <tr><td>COS: INT 21h function AH=<var>xx</var>h is not supported</td><td>The program asked COS for a service that COS Version 1.00 does not provide. COS ended it rather than give it a wrong answer. Chapter 7 lists the functions COS provides.</td></tr>
@@ -1670,7 +1684,7 @@ Date:  bits 15-9 year - 1980, 8-5 month (1-12), 4-0 day (1-31)
 <p>COS provides the version 3.30 services listed in Chapter 7, with the same numbers, registers and results. Programs that use only those services, through file handles, run on COS unchanged. COS Version 1.00 does not provide:</p>
 <ul>
 <li>File control block (FCB) file functions, and absolute disk access (INT 25h and 26h).</li>
-<li>Batch files, redirection (&gt; and &lt;) and pipes (|) in COMMAND.COM.</li>
+<li>Redirection (&gt; and &lt;), pipes (|), and the batch commands IF, GOTO, FOR, SHIFT and CALL, and parameters (%1) in batch files.</li>
 <li>Installable device drivers, CONFIG.SYS, and the printer and serial devices.</li>
 <li>Commands such as FORMAT, DISKCOPY, CHKDSK and SYS.</li>
 <li>Loading high: an .EXE file that asks for no memory above it is loaded low.</li>

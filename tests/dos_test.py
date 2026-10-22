@@ -72,10 +72,18 @@ def build(env):
         f.write(b"Hello, diskette!\r\nSecond line.\r\n")
     with open(env.path("FILLER.BIN"), "wb") as f:     # leaves about 30 KB free
         f.write(bytes(1457664 - 30000))
+    batches = {"RUN.BAT": "echo First line\r\n@echo Hidden command\r\nhello\r\n",
+               "QUIET.BAT": "@echo off\r\necho Quiet\r\nver\r\necho\r\n",
+               "CHAIN.BAT": "run\r\necho never\r\n",
+               "AUTOEXEC.BAT": "@echo off\r\necho Autoexec ran\r\n"}
+    for name, text in batches.items():
+        with open(env.path(name), "w", newline="") as f:
+            f.write(text)
     system = ["COS.SYS", "COMMAND.COM", "HELLO.COM", "README.TXT", "DOSTEST.COM", "CHILD.COM",
-              "UNSUP.COM", "READLINE.COM", "DISKFULL.COM", "TESTEXE.EXE"]
+              "UNSUP.COM", "READLINE.COM", "DISKFULL.COM", "TESTEXE.EXE", "RUN.BAT", "QUIET.BAT", "CHAIN.BAT"]
     env.image("a.img", "COS", system, boot="boot.bin")
     env.image("a720.img", "COS", system, boot="boot.bin", small=True)
+    env.image("aauto.img", "COS", system + ["AUTOEXEC.BAT"], boot="boot.bin")
 
 
 def fsck(path):
@@ -200,7 +208,13 @@ SCENARIOS = [
     ("DATE and TIME", "date 12-31-1999\ndate\n\ntime 23:59:30\ntime\n\n",
      ["Current date is Fri 12-31-1999", "Current time is 23:59:3"], {}),
     ("invalid date", "date 2-30-1999\n", ["Invalid date"], {}),
-    ("batch files", "copy readme.txt run.bat\nrun\n", ["Batch files are not supported by COS"], {}),
+    ("a batch file", "run\n", ["A:\\>echo First line\nFirst line", "Hidden command", "Hello from the 8086!"],
+     {"absent": ["A:\\>@echo"]}),
+    ("ECHO OFF in a batch file", "quiet.bat\n", ["Quiet", "CucsiCorp COS Version 1.00", "ECHO is off"],
+     {"absent": ["A:\\>echo Quiet"]}),
+    ("a batch file starting another", "chain\n", ["First line", "Hello from the 8086!"], {"absent": ["never"]}),
+    ("AUTOEXEC.BAT when COS starts", "ver\n", ["Autoexec ran", "A:\\>ver"],
+     {"a": "aauto.img", "absent": ["A:\\>echo Autoexec"]}),
     ("the environment", "set\n", ["COMSPEC=A:\\COMMAND.COM"], {}),
     ("ECHO keeps the case", "echo Hello, World\n", ["Hello, World"], {}),
     ("MD, CD, the prompt, DIR of a directory", "md games\ncd games\ncd\ndir\n",

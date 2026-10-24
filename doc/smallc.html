@@ -1,0 +1,2162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Small-C - C Compiler User's Guide and Reference</title>
+<!--
+  The Small-C manual. Open it in a browser to read it, or print it to PDF with
+  build.py. It is laid out like the COS manual. The pages are laid out by the script at the end: the content in
+  #source flows into fixed-size pages with running heads, chapter-page
+  numbers (4-12) and tabs, and the contents get their page numbers.
+-->
+<style>@page { size: 7in 9in; margin: 0; }
+:root {
+  --paper: #fffefb;
+  --ink: #161616;
+  --muted: #555;
+  --hair: #9a9a96;
+  --light: #f4f4f1;
+  --sans: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", "Nimbus Sans", sans-serif;
+  --mono: "Courier New", "Liberation Mono", "Nimbus Mono PS", Courier, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #8d8d89; }
+body { -webkit-print-color-adjust: exact; print-color-adjust: exact; color: var(--ink);
+       font-family: var(--sans); font-size: 9.2pt; line-height: 1.4; }
+#source { display: none; }
+#book { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 24px 0; }
+@media print {
+  html, body { background: var(--paper); }
+  #book { display: block; padding: 0; gap: 0; }
+}
+
+/* ---------- the page ---------- */
+.page { width: 7in; height: 9in; position: relative; overflow: hidden; background: var(--paper); contain: strict;
+        break-after: page; page-break-after: always; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+.page:last-child { break-after: auto; page-break-after: auto; }
+@media print { .page { box-shadow: none; } }
+.page .body { position: absolute; top: 0.85in; bottom: 0.85in; overflow: hidden; }
+.page.odd .body  { left: 0.9in; right: 0.7in; }
+.page.even .body { left: 0.7in; right: 0.9in; }
+.page .head { position: absolute; top: 0.45in; height: 0.22in; font-family: var(--sans); font-weight: 400; font-size: 7.6pt;
+              letter-spacing: .03em; color: var(--muted);
+              border-bottom: 0.4pt solid var(--ink); display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 3px; }
+.page.odd .head  { left: 0.9in; right: 0.7in; }
+.page.even .head { left: 0.7in; right: 0.9in; flex-direction: row-reverse; }
+.page .foot { position: absolute; bottom: 0.4in; height: 0.25in; display: flex; justify-content: space-between;
+              align-items: flex-start; font-size: 7.6pt; color: var(--muted); border-top: 0.4pt solid var(--ink); padding-top: 4px; }
+.page.odd .foot  { left: 0.9in; right: 0.7in; }
+.page.even .foot { left: 0.7in; right: 0.9in; flex-direction: row-reverse; }
+.page .foot .label { font-family: var(--sans); font-weight: 700; font-size: 8.6pt; color: var(--ink); }
+.page .tab { position: absolute; width: 0.3in; height: 0.42in; background: var(--paper); color: var(--ink);
+             border: 0.5pt solid var(--ink); font-family: var(--sans); font-weight: 700; font-size: 10pt; display: none;
+             align-items: center; justify-content: center; }
+.page.odd .tab  { right: 0; border-right: none; }
+.page.even .tab { left: 0;  border-left: none; }
+.page.has-tab .tab { display: flex; }
+.page.blank .body { display: flex; align-items: center; justify-content: center; font-style: italic; color: var(--muted); }
+.page.plain .head, .page.plain .foot { display: none; }
+
+/* ---------- type ---------- */
+h1, h2, h3, h4, .display { font-family: var(--sans); font-weight: 700; margin: 0; }
+h2 { font-size: 13.5pt; margin: 15px 0 7px; padding-bottom: 3px; border-bottom: 0.5pt solid var(--ink); }
+h3 { font-size: 10.5pt; margin: 12px 0 4px; }
+h4 { font-size: 9.2pt; margin: 9px 0 2px; }
+.body > :first-child { margin-top: 0 !important; }
+p { margin: 0 0 7px; }
+ul, ol { margin: 0 0 7px; padding-left: 1.6em; }
+li { margin-bottom: 2px; }
+b, strong { font-weight: 700; }
+i, em { font-style: italic; }
+code { font-family: var(--mono); font-size: 0.93em; }
+kbd { font-family: var(--mono); }
+.key { display: inline-block; border: 0.5pt solid var(--ink); border-radius: 2px; padding: 0 3px; line-height: 1.15;
+       font-size: 7.8pt; font-weight: 700; margin: 0 1px; white-space: nowrap; }
+var { font-style: italic; }
+.small { font-size: 8pt; }
+
+pre { font-family: var(--mono); margin: 4px 0 9px; white-space: pre; }
+pre.screen { font-size: 7.9pt; line-height: 1.22; padding: 6px 9px; border: 0.5pt solid var(--ink);
+             background: var(--light); margin: 8px 2px 12px; }
+pre.screen b { font-weight: 700; text-decoration: underline; text-decoration-thickness: 0.5pt; text-underline-offset: 2px; }
+pre.screen.wide { font-size: 6.9pt; line-height: 1.18; }
+pre.screen .inv { background: var(--ink); color: var(--paper); }
+pre.listing { font-size: 8pt; line-height: 1.22; padding: 3px 0 3px 10px; border-left: 0.5pt solid var(--ink); }
+.caption { font-size: 8pt; font-style: italic; margin: -6px 0 10px 4px; }
+
+table { border-collapse: collapse; margin: 4px 0 10px; width: 100%; font-size: 8.4pt; }
+th, td { text-align: left; vertical-align: top; padding: 3px 6px 3px 0; }
+table.ref th { font-family: var(--sans); font-weight: 700; font-size: 8.4pt;
+               border-bottom: 0.5pt solid var(--ink); border-top: 0.5pt solid var(--ink); }
+table.ref td { border-bottom: 0.25pt solid #bdbdb8; }
+table.ref td:first-child { white-space: nowrap; font-family: var(--mono); font-size: 8pt; }
+table.ref.wrap td:first-child { white-space: normal; }
+
+.note { border: 0.5pt solid var(--ink); padding: 5px 8px; margin: 6px 0 10px; }
+.note::before { content: "Note: "; font-weight: 700; }
+.warn { border: 0.5pt solid var(--ink); padding: 5px 8px; margin: 6px 0 10px; background: var(--light); }
+.warn::before { content: "Warning: "; font-weight: 700; }
+
+dl { margin: 0 0 6px; }
+dt { font-family: var(--sans); font-weight: 700; font-size: 8.6pt; margin-top: 5px; }
+dd, .in-dd { margin: 0 0 4px 0.3in; }
+dd > :last-child { margin-bottom: 2px; }
+dd > pre.screen, pre.screen.in-dd { margin-left: 2px; }
+dd pre:not(.screen) { margin: 0; }
+h2.cmd { display: flex; justify-content: space-between; align-items: baseline; }
+
+/* ---------- cover and openers ---------- */
+.cover .body { inset: 0 !important; }
+.cover .titles { position: absolute; left: 0.9in; right: 0.7in; top: 3.3in; }
+.cover .titles .t1 { font-family: var(--sans); font-weight: 700; font-size: 54pt; line-height: 1; letter-spacing: -0.5pt; }
+.cover .titles .t2 { font-family: "Times New Roman", Times, Georgia, serif; font-weight: 400; font-size: 19pt; line-height: 1; margin-top: 2px; color: var(--ink); }
+
+.opener .num { font-family: var(--sans); font-weight: 400; font-size: 84pt; line-height: .85;
+               color: var(--ink); margin: 0.25in 0 8px; }
+.opener h1 { font-size: 24pt; line-height: 1.05; border-bottom: 0.5pt solid var(--ink); padding-bottom: 8px; margin-bottom: 0.35in; }
+.opener .mini h4 { margin-bottom: 6px; }
+.toc { width: 100%; }
+.toc .row { display: flex; align-items: baseline; gap: 4px; margin: 1px 0; }
+.toc .row .t { white-space: nowrap; overflow: hidden; }
+.toc .row .dots { flex: 1; border-bottom: 0.5pt dotted var(--ink); transform: translateY(-3px); min-width: 12px; }
+.toc .row .p { white-space: nowrap; }
+.toc .row.ch { margin-top: 8px; font-family: var(--sans); font-weight: 700; font-size: 9.6pt; }
+.toc .row.sec { padding-left: 1.6em; }
+.toc .row.part { margin-top: 16px; font-weight: 700; font-size: 8.4pt; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+#toc > .row.part:first-child { margin-top: 0; }
+.notice p { font-size: 8.4pt; }
+.keywords { columns: 4; font-family: var(--mono); font-size: 8.2pt; margin: 4px 0 10px; }
+.keywords div { break-inside: avoid; }
+pre.listing.full { font-size: 7.3pt; line-height: 1.16; }
+</style>
+</head>
+<body>
+<div id="book"></div>
+<div id="source">
+
+<!-- ================================================================== -->
+<!-- FRONT MATTER                                                         -->
+<!-- ================================================================== -->
+
+<section class="front" data-kind="notice">
+<div class="notice">
+<p style="margin-top:3.6in"><b>First Edition (October 1981)</b></p>
+<p>Changes are made periodically to the information herein; any such changes will be reported in subsequent revisions.</p>
+<p>This manual describes Small-C Version 1.00, the C compiler for the COS disk operating system on the pc86 personal computer.</p>
+<p>Small-C is supplied on the COS System Diskette as the program <code>SMALLC.EXE</code>, with the library <code>CLIB.LIB</code>, the header files (<code>STDIO.H</code> and seven others) and the sample program <code>HELLO.C</code>. Read Chapter 2, "Writing and Running Programs," before you write your first program.</p>
+</div>
+</section>
+
+<section class="front" data-kind="preface" data-title="Preface">
+<h2>Preface</h2>
+<p>This manual tells you how to write programs in C for the pc86 personal computer, and how to compile and run them under COS with Small-C, the C compiler of COS. Small-C is a compact C: it has the integer types, pointers, arrays, structures, unions, enumerations, the preprocessor and a library of functions for files, strings and memory, and it makes small, fast programs that can reach every part of the machine &mdash; its ports, its memory, its interrupts, and assembly language written inside the C program itself.</p>
+<p>This is not a tutorial on the C language. It assumes that you know C, or are learning it from a textbook, and that you know how to use COS: how to start it, how to name files and how to use the text editor, EDIT. These are described in the COS User's Guide. What this manual describes is the C that Small-C accepts, what it leaves out, and what is special to the pc86.</p>
+<ul>
+<li>If you are new to Small-C, read Part One, Chapters 1 to 4, in order, and try the examples on the computer.</li>
+<li>If you want to use the machine itself &mdash; the keyboard, the speaker, the screen &mdash; read Chapter 5. For programs of several files and libraries of your own, read Chapter 6.</li>
+<li>Part Two is for reference: the library functions, the error messages, and the technical details of the code Small-C makes.</li>
+</ul>
+<h3>Organization of This Manual</h3>
+<table class="ref">
+<tr><td>Chapter 1</td><td>Introduction: what Small-C is, what you need, and a first program.</td></tr>
+<tr><td>Chapter 2</td><td>Writing and Running Programs: EDIT and Small-C, the options, mistakes, programs of several files, .COM and .EXE programs.</td></tr>
+<tr><td>Chapter 3</td><td>The Language: types, declarations, expressions, functions, statements, and what Small-C does not have.</td></tr>
+<tr><td>Chapter 4</td><td>The Preprocessor: <code>#include</code>, <code>#define</code>, conditional compilation and <code>#asm</code>.</td></tr>
+<tr><td>Chapter 5</td><td>Using the Machine: ports, memory, interrupts, the keyboard and screen, assembly language, and running other programs.</td></tr>
+<tr><td>Chapter 6</td><td>Modules and Libraries: how programs are put together, and how to make libraries.</td></tr>
+<tr><td>Chapter 7</td><td>Library Reference: every function of the library, by header file.</td></tr>
+<tr><td>Appendix A</td><td>Error Messages.</td></tr>
+<tr><td>Appendix B</td><td>Technical Information: how Small-C makes code, memory, limits.</td></tr>
+<tr><td>Appendix C</td><td>The Sample Program <code>WORDS.C</code>.</td></tr>
+</table>
+<h3>Notation</h3>
+<table class="ref">
+<tr><td><var>italics</var></td><td>Items you supply: a file name, a number, an expression.</td></tr>
+<tr><td>[ ]</td><td>The item inside is optional. Do not type the brackets.</td></tr>
+<tr><td>...</td><td>The item before may be repeated.</td></tr>
+<tr><td><b><u>smallc hello.c</u></b></td><td>In the screen examples, what you type is printed in bold and underlined. Press <span class="key">Enter</span> at the end of each line.</td></tr>
+<tr><td>0x1F</td><td>A hexadecimal number, as it is written in C. Other manuals of the pc86 write 1Fh.</td></tr>
+<tr><td>A:\&gt;</td><td>The COS prompt. The programs in this manual were typed in small letters; COS does not mind.</td></tr>
+</table>
+<p>The screen examples in this manual were made on the machine itself.</p>
+</section>
+
+<section class="front" data-kind="contents" data-title="Contents">
+<h2>Contents</h2>
+<div class="toc" id="toc"></div>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 1                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="1" data-title="Introduction" data-part="Part One: Using Small-C">
+
+<h2>What Small-C Is</h2>
+<p>Small-C is a compiler for the C programming language. You write a program as a text file, with the COS editor, EDIT, in a file whose name ends in .C; Small-C translates it into a program of the machine's own language, a file ending in .COM, that you run by typing its name, as you run any other COS program.</p>
+<p>C was made for writing programs that are close to the machine: operating systems, editors, compilers, games. Small-C is a compiler of that kind. It has no floating point and no <code>long</code> integers, but it makes compact code, and a C program can do everything an assembly language program can: read and write the ports of the computer, look at any place in memory, call any COS or BIOS service, and even contain instructions of the 8086 processor between its own lines.</p>
+<p>Small-C is itself a C program. It is written in the C that it compiles, and it compiles itself.</p>
+
+<h2>What You Need</h2>
+<ul>
+<li>A pc86 personal computer with 640 KB of memory and the COS disk operating system.</li>
+<li>The COS System Diskette. These files on it are for Small-C: <code>SMALLC.EXE</code>, the compiler; <code>CLIB.LIB</code>, the library; the header files <code>CONIO.H</code>, <code>CTYPE.H</code>, <code>DOS.H</code>, <code>IO.H</code>, <code>STDARG.H</code>, <code>STDIO.H</code>, <code>STDLIB.H</code> and <code>STRING.H</code>; and the sample program <code>HELLO.C</code>. Small-C also needs <code>ASM.COM</code>, the assembler, and <code>EDIT.COM</code>, the editor, that are on the same diskette.</li>
+<li>Room on the diskette for what Small-C writes: a file of assembly language, <code>CCTEMP.ASM</code>, that is larger than the program (about 32 KB for a small one), and the program itself.</li>
+<li>Patience. Small-C does a great deal of work for a computer with an 8086 processor: to compile the sample program takes about fifty seconds (Chapter 2 tells where the time goes).</li>
+</ul>
+
+<h2>A First Program</h2>
+<p>The System Diskette has the smallest C program, <code>HELLO.C</code>. This is what it looks like:</p>
+<pre class="listing">/* hello.c - the first C program: SMALLC HELLO.C, then HELLO */
+#include &lt;stdio.h&gt;
+
+int main(void)
+{
+    printf(&quot;Hello from the 8086, in C!\n&quot;);
+    return 0;
+}</pre>
+<p>The first line is a comment. The second asks for <code>STDIO.H</code>, the file that tells Small-C about <code>printf</code>, the function that shows text on the screen. Every C program has a function called <i><code>main</code></i>, where it starts; this one has a single statement, that calls <code>printf</code>, and ends with return 0, which tells COS that the program worked.</p>
+<p>To compile and run it:</p>
+<pre class="screen">
+A:\&gt;<b>smallc hello.c</b>
+HELLO.COM: 3988 bytes
+
+A:\&gt;<b>hello</b>
+Hello from the 8086, in C!
+
+A:\&gt;
+</pre>
+<p>Small-C shows the name of the program it made and its size. <code>HELLO.COM</code> is now on the diskette; HELLO runs it.</p>
+
+<h2>What Small-C Does Not Have</h2>
+<p>Small-C is C without some of its more advanced parts. It has no <i><code>long</code></i>, <i><code>float</code></i> or <i><code>double</code></i> types (integers are 16 bits, and there is no arithmetic with fractions), no <i><code>typedef</code></i>, no pointers to functions, no bit fields, and a structure cannot be passed to a function or returned from it by value. Chapter 3 lists what is missing and what to do instead; each of these things gives an error message when a program uses it, so nothing is silently wrong. Everything else of the language that a program for this computer needs is there.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 2                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="2" data-title="Writing and Running Programs" data-part="Part One: Using Small-C">
+
+<h2>Writing a Program</h2>
+<p>A C program is an ordinary text file, written with EDIT. Give it a name that ends in .C, and give the whole name, extension included:</p>
+<pre class="screen">
+A:\&gt;<b>edit squares.c</b>
+</pre>
+<p>EDIT starts with an empty screen and the message "New file", and the file is made when you save it. Type the program a line at a time, pressing <span class="key">Enter</span> at the end of each line, and indent lines with spaces to show their structure: Small-C ignores them. Save the program with <span class="key">F2</span> and leave EDIT with <span class="key">Esc</span>. This is the screen with the program of this chapter:</p>
+<pre class="screen wide">
+<span class="inv"> COS Edit  SQUARES.C                          Line 1 of 11      Col 1     Insert</span>
+/* SQUARES.C - the squares of the numbers 1 to 5 */
+#include &lt;stdio.h&gt;
+
+int main(void)
+{
+    int i;
+
+    for (i = 1; i &lt;= 5; i++)
+        printf("%d squared is %d\n", i, i * i);
+    return 0;
+}
+
+
+
+
+<span class="inv"> F1 Help  F2 Save  F3 Find  F4 Again  F5 Line  Ctrl+Y Cut  F9 Paste  Esc Exit       </span>
+</pre>
+<p>Chapter 9 of the COS User's Guide describes EDIT.</p>
+
+<h2>Running Small-C</h2>
+<dl>
+<dt>Format</dt><dd><pre>SMALLC [<var>options</var>] <var>file</var> ...</pre></dd>
+</dl>
+<p>Small-C takes one or more files, and the options that tell it what to make of them. The file names must have their extensions, because the extension says what the file is:</p>
+<table class="ref wrap">
+<tr><th>File</th><th>What Small-C does with it</th></tr>
+<tr><td>name.C</td><td>A C source. It is compiled.</td></tr>
+<tr><td>name.ASM</td><td>A module in assembly language. It is taken as it is.</td></tr>
+<tr><td>name.LIB</td><td>A library. The program takes from it the modules that it needs, and no others (Chapter 6).</td></tr>
+</table>
+<p>A file named without an extension is taken for a .C file: SMALLC HELLO is the same as SMALLC <code>HELLO.C</code>. Up to 24 files may be given.</p>
+<p>Without options, Small-C makes a .COM program, with the name of the first file:</p>
+<pre class="screen">
+A:\&gt;<b>smallc squares.c</b>
+SQUARES.COM: 4014 bytes
+
+A:\&gt;<b>squares</b>
+1 squared is 1
+2 squared is 4
+3 squared is 9
+4 squared is 16
+5 squared is 25
+
+A:\&gt;
+</pre>
+<p>Typing SMALLC alone shows the format and the options:</p>
+<pre class="screen">
+A:\&gt;<b>smallc</b>
+Small-C for COS Version 1.00
+usage: SMALLC [options] file...
+  file.C    compiled       file.ASM  taken whole
+  file.LIB  modules taken as the program needs them
+  -o name   the program (NAME.COM after the first file)
+  -e        an .EXE: 64 KB of code and 64 KB of data
+  -c        each .C to an .ASM module; with -o all in one library
+  -S        only the program&#x27;s .ASM, without ASM
+  -Dname[=value]  -Idirectory  -Llibrary  -n (no CLIB.LIB)
+
+A:\&gt;
+</pre>
+
+<h2>The Options</h2>
+<p>An option begins with a hyphen, or with a slash. Capital and small letters are the same for the letters that name an option, but not in the names that follow -D, -I and -L. Options may be anywhere in the line, among the files.</p>
+<table class="ref wrap">
+<tr><th>Option</th><th>Meaning</th></tr>
+<tr><td>-o <var>name</var></td><td>The name of the program (or, with -c, of the library). Without it, the program has the name of the first file, with the extension .COM, or .EXE with -e. A name ending in .EXE makes an .EXE, as -e does.</td></tr>
+<tr><td>-e</td><td>Makes an .EXE program: the code has a segment of its own, and so has the data, with room for 64 KB of data, variables, heap and stack (Appendix B).</td></tr>
+<tr><td>-c</td><td>Compiles each .C file to a module in assembly language, with the name of the file and the extension .ASM, and stops there. With -o, all the files are put in one library file, .ASM files too.</td></tr>
+<tr><td>-S</td><td>Makes only the assembly language of the program, a file with the name of the program and the extension .ASM, and does not run ASM.</td></tr>
+<tr><td>-D<var>name</var>[=<var>value</var>]</td><td>Defines a macro for every file, as <code>#define</code> does. Without a value, the macro is 1. There is no space after -D.</td></tr>
+<tr><td>-I<var>directory</var></td><td>Adds a directory where <code>#include</code> looks for files (see below). There is no space after -I. Up to three may be given.</td></tr>
+<tr><td>-L<var>library</var></td><td>Adds a library, a .LIB file, as if it were given among the files, but after all of them. Up to three may be given.</td></tr>
+<tr><td>-n</td><td>Does not use <code>CLIB.LIB</code>. The program must get its start-up from a library of its own (-L), and its functions too.</td></tr>
+</table>
+
+<h2>When the Program Has a Mistake</h2>
+<p>Small-C reads all of the program. When a line breaks the rules of the language, Small-C shows the name of the file, the number of the line and what is wrong, and goes on reading, to find more mistakes; it makes no program. This one has two:</p>
+<pre class="listing">/* OOPS.C - a program with mistakes */
+#include &lt;stdio.h&gt;
+
+int main(void)
+{
+    int n;
+
+    n = 3
+    printf(&quot;%d\n&quot;, n + total);
+    return 0;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc oops.c</b>
+oops.c(9): &#x27;;&#x27; expected
+oops.c(9): &#x27;total&#x27; is not declared
+
+A:\&gt;
+</pre>
+<p>The missing semicolon at the end of line 8 is found only when Small-C sees the <code>printf</code> on line 9, so the message says line 9: when a message does not make sense on its line, look at the line before it. The second message is a result of the first, as often happens: Small-C lost its place, and found 'total' on the way, which was never declared. <b>Correct the first message first</b>, then compile again, and see which of the others are left.</p>
+<p>Small-C stops after 20 messages, with "too many errors". The messages are listed in Appendix A. The name of the file is as you typed it; for a mistake in a header file it is the name of that file, so that you know where to go in EDIT: press <span class="key">F5</span>, type the line number, correct it and save.</p>
+<p>When Small-C finds a mistake, it writes no program, and the one made by an earlier compilation stays as it was. Small-C ends with return code 1; when it made the program it ends with 0.</p>
+
+<h2>Messages From the Link</h2>
+<p>A program is made of its own modules and of the library functions that it calls. When the program is all read, Small-C looks for the names that are used and are not defined anywhere:</p>
+<pre class="screen">
+A:\&gt;<b>smallc bad.c</b>
+SMALLC: &#x27;twice&#x27; is not defined anywhere
+SMALLC: &#x27;missing&#x27; is not defined anywhere
+
+A:\&gt;
+</pre>
+<p>These are the names of functions, or of variables, that the program uses and nobody defines: the spelling is wrong, a file is missing from the line, or a library was not given. Names of C are shown as you wrote them; the names of the assembly language that are not C names are shown with their underscore (Chapter 6). A name that is defined twice is reported too: "_twice is defined in two modules" (see "Programs of Several Files").</p>
+
+<h2>Programs of Several Files</h2>
+<p>A large program is better in several files, each with the functions that belong together. Give them all to Small-C; the program has the name of the first:</p>
+<pre class="listing">/* VEC.H - sums and maximums of arrays of numbers */
+int vsum(int *v, int n);
+int vmax(int *v, int n);
+extern int vcalls;</pre>
+<pre class="listing">/* VEC.C - sums and maximums of arrays of numbers */
+#include &quot;vec.h&quot;
+
+int vcalls;
+
+int vsum(int *v, int n)
+{
+    int i, s;
+
+    vcalls++;
+    s = 0;
+    for (i = 0; i &lt; n; i++)
+        s += v[i];
+    return s;
+}
+
+int vmax(int *v, int n)
+{
+    int i, m;
+
+    vcalls++;
+    m = v[0];
+    for (i = 1; i &lt; n; i++)
+        if (v[i] &gt; m)
+            m = v[i];
+    return m;
+}</pre>
+<pre class="listing">/* DEMO.C - uses the functions of VEC.C */
+#include &lt;stdio.h&gt;
+#include &quot;vec.h&quot;
+
+int data[] = { 31, 4, 159, 26, 5, 358 };
+
+int main(void)
+{
+    printf(&quot;sum %d, largest %d\n&quot;, vsum(data, 6), vmax(data, 6));
+    printf(&quot;%d calls\n&quot;, vcalls);
+    return 0;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc demo.c vec.c</b>
+DEMO.COM: 4190 bytes
+
+A:\&gt;<b>demo</b>
+sum 583, largest 358
+2 calls
+
+A:\&gt;
+</pre>
+<p><code>VEC.H</code> says what <code>VEC.C</code> offers, and both <code>DEMO.C</code> and <code>VEC.C</code> include it. Three rules make the files work together:</p>
+<ul>
+<li>A function or a variable that other files use is defined in <i>one</i> file only. The other files declare it: a function with its prototype, a variable with <b><code>extern</code></b>.</li>
+<li>A name declared <b><code>static</code></b> belongs to its file, and no other file can see it. Two files may each have a <code>static</code> function helper, and they are two different functions.</li>
+<li>A variable declared without <code>extern</code> in several files, like <b><code>int</code> counter;</b> in all of them, is one variable. If it is given a value in one of them, that one defines it; if two give it a value, or two files have a function with the same name, the message is "<i>name</i> is defined in two modules". The tidy way is the definition in one file and an <code>extern</code> declaration in the header.</li>
+</ul>
+<p>Compiling all the files at each change takes time. Chapter 6 tells how to compile the files that do not change once, and keep them in a library.</p>
+
+<h2>.COM and .EXE Programs</h2>
+<p>A .COM program is made of one segment of 64 KB of the computer's memory, shared by its code, its variables, its heap and its stack. For most programs that is plenty. For one that needs more data, -e makes an .EXE: its code is in a segment, and its data, variables, heap and stack have a segment of 64 KB all to themselves. This program has 60000 bytes of data:</p>
+<pre class="listing">/* BIG.C - more data than a .COM program can hold: make it with SMALLC -e */
+#include &lt;stdio.h&gt;
+
+char big[30000];
+int more[15000];
+
+int main(void)
+{
+    int i;
+    for (i = 0; i &lt; 30000; i++)
+        big[i] = i;
+    for (i = 0; i &lt; 15000; i++)
+        more[i] = i * 3;
+    printf(&quot;%u bytes of data, big[29999] = %d, more[14999] = %d\n&quot;,
+           sizeof(big) + sizeof(more), big[29999], more[14999]);
+    return 0;
+}</pre>
+<p>As a .COM program it is too big to start: the stack needs room too. As an .EXE, it works. COS looks for a .COM with the name you type before it looks for an .EXE, so the old <code>BIG.COM</code> is deleted first:</p>
+<pre class="screen">
+A:\&gt;<b>smallc big.c</b>
+BIG.COM: 4100 bytes
+
+A:\&gt;<b>big</b>
+Not enough memory
+
+A:\&gt;<b>smallc -e big.c</b>
+BIG.EXE: 4180 bytes
+
+A:\&gt;<b>del big.com</b>
+
+A:\&gt;<b>big</b>
+60000 bytes of data, big[29999] = 47, more[14999] = -20539
+
+A:\&gt;
+</pre>
+<p>An array has from 1 to 32767 elements; keep each array and structure under 32 KB, in a .COM or an .EXE. The code of a program may not be larger than 64 KB, in either. Appendix B describes how both kinds of program use the memory.</p>
+
+<h2>Where Small-C Finds Its Files</h2>
+<p>Small-C is told where it is when COS runs it, and looks for what it needs there:</p>
+<ul>
+<li><b><code>#include</code> "name"</b> looks first in the directory of the file that has the <code>#include</code>, then in the directories given with -I, in order, then in the directory INCLUDE of the directory where Small-C is, then in the directory where Small-C is. <b><code>#include</code> &lt;name&gt;</b> does the same, but skips the first step. On the System Diskette the header files are in the root directory, next to <code>SMALLC.EXE</code>.</li>
+<li><b><code>CLIB.LIB</code></b>, the library, is in the directory where Small-C is.</li>
+<li><b><code>ASM.COM</code></b> is in the directory where Small-C is; if it is not there, in the root directory of the current drive.</li>
+</ul>
+<p>So Small-C works from any directory, if you type its whole name: A:\SMALLC. Small-C writes its files, <code>CCTEMP.ASM</code> and the program, in the current directory.</p>
+
+<h2>How Small-C Makes a Program</h2>
+<p>Small-C does not make the .COM file by itself. It writes the whole program as one source in assembly language, in the file <code>CCTEMP.ASM</code>, and then runs ASM, the COS assembler, which makes the program from it and shows its name and size. Then Small-C deletes <code>CCTEMP.ASM</code>. The source holds, one after the other:</p>
+<ol>
+<li>the start-up module, which sets the program going and calls <i><code>main</code></i> (Appendix B);</li>
+<li>the files that you gave, in order: the C sources compiled, the assembly files copied;</li>
+<li>the modules of the libraries that the program needs, and those that they need;</li>
+<li>the end of the program, where the variables that start as zero are placed.</li>
+</ol>
+<p>The computer works at 4.77 megahertz, and Small-C and ASM have much to do: SMALLC <code>HELLO.C</code> takes about 50 seconds, of which about 20 are Small-C reading and compiling and 30 are ASM assembling. A program that prints something, like this one, brings in the library functions that print, and that is most of the time. The compiled program starts at once, and is fast.</p>
+<p>The programs that ASM finds mistakes in are those that have assembly language of their own. ASM shows its own messages (Chapter 10 of the COS User's Guide), with the line in <code>CCTEMP.ASM</code>. If you wish to read what Small-C wrote, use -S: it keeps the .ASM file, with the name of the program, and does not run ASM. You can then assemble it yourself with ASM.</p>
+<pre class="screen">
+A:\&gt;<b>smallc -S -o sq.com squares.c</b>
+
+A:\&gt;<b>dir sq.*</b>
+
+ Volume in drive A is COS
+ Directory of  A:\
+
+SQ       ASM    32836   1-01-80  12:00a
+        1 File(s)   1211904 bytes free
+
+A:\&gt;
+</pre>
+
+<h2>The Command Line of a Program</h2>
+<p>The words typed after the name of a program arrive in <i><code>main</code></i> as <code>argc</code> and <code>argv</code>, as the language says: <code>argv</code>[0] is the name of the program with its whole path, <code>argv</code>[1] is the first word, and so on. A word in quotation marks may have spaces inside; the marks are not part of the word. A program may have 24 words, and the whole line may have 127 characters.</p>
+<pre class="listing">/* ARGS.C - shows the words of the command line */
+#include &lt;stdio.h&gt;
+
+int main(int argc, char **argv)
+{
+    int i;
+
+    for (i = 0; i &lt; argc; i++)
+        printf(&quot;argv[%d] = \&quot;%s\&quot;\n&quot;, i, argv[i]);
+    return argc - 1;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc args.c</b>
+ARGS.COM: 4024 bytes
+
+A:\&gt;<b>args one &quot;two words&quot; 3</b>
+argv[0] = &quot;A:\ARGS.COM&quot;
+argv[1] = &quot;one&quot;
+argv[2] = &quot;two words&quot;
+argv[3] = &quot;3&quot;
+
+A:\&gt;
+</pre>
+<p>The value that <i><code>main</code></i> returns, or that exit is given, is the return code of the program. A program that runs another one with <code>spawn</code> <code>gets</code> it (Chapter 5).</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 3                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="3" data-title="The Language" data-part="Part One: Using Small-C">
+
+<h2>What Small-C Accepts</h2>
+<table class="ref wrap">
+<tr><th>Part</th><th>What there is</th></tr>
+<tr><td>Types</td><td><code>char</code>, <code>unsigned</code> <code>char</code>, <code>int</code>, <code>short</code>, <code>unsigned</code>, pointers, arrays of any number of dimensions, <code>struct</code>, <code>union</code>, <code>enum</code>, <code>void</code>.</td></tr>
+<tr><td>Storage</td><td><code>static</code>, <code>extern</code>, <code>auto</code> and <code>register</code>. <code>const</code> and <code>volatile</code> are accepted and ignored.</td></tr>
+<tr><td>Functions</td><td>Prototypes and old-style definitions, variable arguments (...), recursion. A function called before it is declared returns <code>int</code>.</td></tr>
+<tr><td>Operators</td><td>All those of C for integers and pointers: arithmetic, bits, comparisons, &amp;&amp; || !, ?:, comma, assignments, ++ and --, casts, <code>sizeof</code>, &amp;, *, [], . and -&gt;.</td></tr>
+<tr><td>Statements</td><td>if, else, while, do, for, switch, case, default, break, continue, <code>goto</code>, return, labels, blocks.</td></tr>
+<tr><td>Constants</td><td>Decimal, octal (017), hexadecimal (0x1F), character constants, strings.</td></tr>
+<tr><td>Preprocessor</td><td><code>#include</code>, <code>#define</code>, <code>#undef</code>, <code>#if</code>, <code>#elif</code>, <code>#else</code>, <code>#endif</code>, <code>#ifdef</code>, <code>#ifndef</code>, <code>#error</code>, <code>#pragma</code>, and <code>#asm</code> (Chapter 4).</td></tr>
+</table>
+
+<h2>Types and Constants</h2>
+<table class="ref wrap">
+<tr><th>Type</th><th>Size</th><th>Values</th></tr>
+<tr><td><code>char</code></td><td>1 byte</td><td>-128 to 127. The sign counts: <code>char</code> is <code>signed</code>.</td></tr>
+<tr><td><code>unsigned</code> <code>char</code></td><td>1 byte</td><td>0 to 255.</td></tr>
+<tr><td><code>int</code>, <code>short</code></td><td>2 bytes</td><td>-32768 to 32767. <code>short</code> is the same type as <code>int</code>.</td></tr>
+<tr><td><code>unsigned</code>, <code>unsigned</code> <code>int</code></td><td>2 bytes</td><td>0 to 65535.</td></tr>
+<tr><td>pointer</td><td>2 bytes</td><td>An address in the data segment of the program. Pointers compare as <code>unsigned</code> numbers.</td></tr>
+<tr><td><code>enum</code></td><td>2 bytes</td><td>An <code>int</code>. The names of an enumeration are constants.</td></tr>
+</table>
+<p>In an expression a <code>char</code> is turned into an <code>int</code> first, with its sign. When an operation has an <code>unsigned</code> operand the operation is <code>unsigned</code>: division, remainder, shifts to the right and comparisons. The results of integer arithmetic that do not fit in 16 bits are cut to 16 bits, without any message.</p>
+<p>A decimal constant above 32767, or one that ends in U, is <code>unsigned</code>. A constant with L is an error: there are no <code>long</code> numbers. A character constant like 'A' has the code of the character; the escapes are \n \t \r \a \b \f \v \0, \x followed by hexadecimal digits and \ followed by up to three octal digits. Strings written next to each other are joined into one: "ab" "cd" is "abcd". A string may have up to 299 characters, and each one written in a program is kept separately, in the data of the program, where it can be changed.</p>
+<pre class="listing">/* TYPES.C - the integer types and how they mix */
+#include &lt;stdio.h&gt;
+
+int main(void)
+{
+    char c;
+    unsigned char b;
+    int i;
+    unsigned u;
+
+    c = 200;                    /* char is signed: this is -56 */
+    b = 200;
+    i = -7;
+    u = 65535;
+    printf(&quot;%d %d %d\n&quot;, c, b, (unsigned char)c);
+    printf(&quot;%d %d %d\n&quot;, i / 2, i % 2, i &gt;&gt; 1);
+    printf(&quot;%u %u %d\n&quot;, u &gt;&gt; 1, u + 1, (int)u);
+    printf(&quot;%d %d\n&quot;, i &lt; 1, (unsigned)i &lt; 1);
+    printf(&quot;%d %d\n&quot;, u &gt; 30000, sizeof(int[10]));
+    printf(&quot;%d %d %d\n&quot;, 0x1F, 017, &#x27;A&#x27;);
+    return 0;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc types.c</b>
+TYPES.COM: 4198 bytes
+
+A:\&gt;<b>types</b>
+-56 200 200
+-3 -1 -4
+32767 0 -1
+1 0
+1 20
+31 15 65
+
+A:\&gt;
+</pre>
+<p>The first line shows the sign of <code>char</code> (200 is -56 when it is a <code>char</code>), the second that division truncates toward zero and the shift of a negative number keeps the sign, and the third the <code>unsigned</code> numbers.</p>
+
+<h2>Declarations</h2>
+<p>A declaration is as in C: <b><code>int</code> a, *b, c[10];</b> declares an <code>int</code>, a pointer to <code>int</code> and an array of ten. Inside a function the declarations must be at the start of a block, before the first statement; Small-C says "declarations go at the start of a block" otherwise. A variable declared in a block is known until the end of the block.</p>
+<h3>Initial values</h3>
+<ul>
+<li>Variables outside functions, and <b><code>static</code></b> variables of functions, start as zero, or with the value given. The value must be constant: numbers and constant expressions, the address of a variable (&amp;x, &amp;table[2], or the name of an array), or a string.</li>
+<li>Arrays and structures are initialized with braces, as in C, with braces inside braces, with fewer values than elements (the others are zero) and with a last comma. If the size of an array is left out, the values give it. A <code>char</code> array may be initialized with a string, and a <code>char</code> pointer too.</li>
+<li>Variables of a function (<code>auto</code>) may be initialized with any expression, when they are simple numbers or pointers. An array or structure of a function cannot have an initial value: make it <code>static</code>.</li>
+<li>One initializer may have up to 40 strings for pointers, with 600 characters in all. A larger table of strings is better in two parts.</li>
+</ul>
+<h3>Declarators</h3>
+<p>Pointers and arrays can be combined as in C (an array of pointers is <b><code>char</code> *names[4]</b>), but parentheses in a declarator are not accepted, so there are no pointers to arrays, nor pointers to functions. An array has at most 8 dimensions. Only the first one may be left out.</p>
+
+<h2>Expressions</h2>
+<p>The operators are those of C, with the same precedence, in this order, from the tightest:</p>
+<table class="ref wrap">
+<tr><th>Operators</th><th>Meaning</th></tr>
+<tr><td>( ) [ ] . -&gt; ++ --</td><td>Call, index, members, postfix increment and decrement.</td></tr>
+<tr><td>! ~ - + * &amp; ++ -- <code>sizeof</code> (type)</td><td>Unary operators and casts.</td></tr>
+<tr><td>* / %</td><td>Multiplication, division, remainder.</td></tr>
+<tr><td>+ -</td><td>Addition, subtraction.</td></tr>
+<tr><td>&lt;&lt; &gt;&gt;</td><td>Shifts.</td></tr>
+<tr><td>&lt; &lt;= &gt; &gt;=</td><td>Relations.</td></tr>
+<tr><td>== !=</td><td>Equality.</td></tr>
+<tr><td>&amp; ^ |</td><td>Bitwise and, exclusive or, or (three levels, in this order).</td></tr>
+<tr><td>&amp;&amp; ||</td><td>Logical and, or: the right side is worked out only if needed.</td></tr>
+<tr><td>?:</td><td>Condition.</td></tr>
+<tr><td>= += -= *= /= %= &lt;&lt;= &gt;&gt;= &amp;= ^= |=</td><td>Assignments.</td></tr>
+<tr><td>,</td><td>Comma.</td></tr>
+</table>
+<p>The arguments of a function are worked out from the right to the left, and the order of the other parts of an expression is not defined: do not write i++ + ++i. A pointer plus or minus an integer moves by the size of what it points to; two pointers to the same kind of thing subtract to a count of elements; &amp;, * and [] are as in C. Constant expressions are worked out when the program is compiled, and a division by zero in one is an error.</p>
+<p>An expression may have up to 250 parts; a longer one gives "expression too complex" and has to be written in pieces.</p>
+
+<h2>Arrays and Pointers</h2>
+<p>The name of an array, used as a value, is a pointer to its first element. Arrays of arrays are stored row by row.</p>
+<pre class="listing">/* ARRAYS.C - arrays, pointers and strings */
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+int table[3][4];
+char name[] = &quot;Ada&quot;;
+char *days[] = { &quot;Mon&quot;, &quot;Tue&quot;, &quot;Wed&quot; };
+
+int main(void)
+{
+    int i, j, *p;
+    char *s;
+
+    for (i = 0; i &lt; 3; i++)
+        for (j = 0; j &lt; 4; j++)
+            table[i][j] = i * 10 + j;
+    p = &amp;table[1][0];
+    printf(&quot;%d %d %d\n&quot;, table[2][3], p[2], *(p + 5));
+    printf(&quot;%d %d\n&quot;, sizeof(table), sizeof table[0]);
+    s = name;
+    while (*s)
+        printf(&quot;%c.&quot;, *s++);
+    printf(&quot; %d %s\n&quot;, strlen(name), days[2]);
+    printf(&quot;%d\n&quot;, &amp;table[2][0] - &amp;table[0][0]);
+    return 0;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc arrays.c</b>
+ARRAYS.COM: 5158 bytes
+
+A:\&gt;<b>arrays</b>
+23 12 21
+24 8
+A.d.a. 3 Wed
+8
+
+A:\&gt;
+</pre>
+
+<h2>Structures, Unions and Enumerations</h2>
+<p>A structure is the members one after another, byte by byte, without any space between them; a <code>union</code> takes the size of its largest member. A structure may be assigned to another of the same type, and used through pointers (-&gt;), but it cannot be passed to a function or returned from one: pass its address. The tag of a structure may be used inside it, as the type of a pointer, for lists and trees. The names of an enumeration are <code>int</code> constants, counted from 0 or from the value given.</p>
+<pre class="listing">/* STRUCTS.C - structures, unions and enumerations */
+#include &lt;stdio.h&gt;
+
+enum color { RED, GREEN = 5, BLUE };
+
+struct point {
+    int x, y;
+};
+
+struct item {
+    char name[8];
+    struct point where;
+    enum color shade;
+};
+
+union word {
+    unsigned w;
+    struct { unsigned char lo, hi; } b;
+};
+
+struct item items[2] = {
+    { &quot;key&quot;, { 3, 4 }, GREEN },
+    { &quot;lamp&quot;, { 10, 20 }, BLUE }
+};
+
+void move(struct item *it, int dx, int dy)
+{
+    it-&gt;where.x += dx;
+    it-&gt;where.y += dy;
+}
+
+int main(void)
+{
+    struct item copy;
+    union word w;
+
+    copy = items[1];
+    move(&amp;copy, -1, 5);
+    printf(&quot;%s %d,%d %d\n&quot;, copy.name, copy.where.x, copy.where.y, copy.shade);
+    printf(&quot;%s %d,%d\n&quot;, items[1].name, items[1].where.x, items[1].where.y);
+    w.w = 0x1234;
+    printf(&quot;%x %x %d %d\n&quot;, w.b.lo, w.b.hi, sizeof(struct item), sizeof(union word));
+    return 0;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc structs.c</b>
+STRUCTS.COM: 4164 bytes
+
+A:\&gt;<b>structs</b>
+lamp 9,25 6
+lamp 10,20
+34 12 14 2
+
+A:\&gt;
+</pre>
+<p>The size of <code>struct</code> item is 14: 8 for the name, 4 for the point and 2 for the enumeration.</p>
+
+<h2>Functions</h2>
+<p>A function may be written in the new way, with the types in the parentheses, or the old way, with the names in the parentheses and the types after them. A prototype may leave out the names of the parameters; a definition may not. A function with no value is <b><code>void</code></b>, and one with no parameters has <b>(<code>void</code>)</b>, or empty parentheses. A function may have up to 32 parameters.</p>
+<p>Small-C does not compare the arguments of a call with the prototype: neither their number nor their types. A call with the wrong number of arguments compiles, and does nonsense when it runs; be careful. The prototype is used for the type of the value that the function returns. A function that is called before it is declared is taken for one that returns <code>int</code>, so declare functions that return anything else before they are used.</p>
+<p>Variable arguments are written with ... and read with the macros of <code>STDARG.H</code>. The arguments are words, so a <code>char</code> is read as an <code>int</code>.</p>
+<pre class="listing">/* FUNCS.C - functions: prototypes, old style, variable arguments */
+#include &lt;stdio.h&gt;
+#include &lt;stdarg.h&gt;
+
+int sum(int count, ...)
+{
+    va_list ap;
+    int total;
+
+    va_start(ap, count);
+    total = 0;
+    while (count-- &gt; 0)
+        total += va_arg(ap, int);
+    va_end(ap);
+    return total;
+}
+
+int gcd(a, b)
+int a, b;
+{
+    return b ? gcd(b, a % b) : a;
+}
+
+int next(void)
+{
+    static int n = 100;
+
+    return n++;
+}
+
+int main(void)
+{
+    int r;
+
+    r = half(9);                /* not declared: it returns int */
+    printf(&quot;%d %d %d\n&quot;, sum(4, 10, 20, 30, 40), gcd(84, 36), r);
+    printf(&quot;%d %d\n&quot;, next(), next());
+    return 0;
+}
+
+half(x)
+{
+    return x / 2;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc funcs.c</b>
+FUNCS.COM: 4174 bytes
+
+A:\&gt;<b>funcs</b>
+100 12 4
+101 100
+
+A:\&gt;
+</pre>
+<p>The <code>static</code> variable of next keeps its value between calls, and starts at 100. The function half was not declared when <code>main</code> called it; it has no type, so it returns <code>int</code>.</p>
+
+<h2>Statements</h2>
+<p>All the statements of C are there. A switch takes an integer; the values of the cases are constant expressions, the same value twice is an error, and a function may have 150 cases in all. A break leaves the innermost loop or switch, a continue goes to the next turn of the innermost loop (a switch inside a loop does not stop it). A label is a name followed by a colon, <code>goto</code> goes to a label of the same function, and names of labels are apart from all the other names. Loops and switches may be nested 32 deep.</p>
+<pre class="listing">/* FLOW.C - switch, goto and the other statements */
+#include &lt;stdio.h&gt;
+
+int vowels(char *s)
+{
+    int n;
+
+    n = 0;
+    for (; *s; s++)
+        switch (*s) {
+        case &#x27;a&#x27;: case &#x27;e&#x27;: case &#x27;i&#x27;: case &#x27;o&#x27;: case &#x27;u&#x27;:
+            n++;
+            break;
+        default:
+            break;
+        }
+    return n;
+}
+
+int main(void)
+{
+    int i, j;
+
+    printf(&quot;%d\n&quot;, vowels(&quot;education&quot;));
+    for (i = 0; i &lt; 4; i++)
+        for (j = 0; j &lt; 4; j++)
+            if (i * j == 6)
+                goto found;
+    printf(&quot;none\n&quot;);
+    return 1;
+found:
+    printf(&quot;%d x %d\n&quot;, i, j);
+    i = 0;
+    do {
+        i += 3;
+    } while (i &lt; 10);
+    printf(&quot;%d %d\n&quot;, i, i &gt; 10 ? 1 : 2);
+    return 0;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc flow.c</b>
+FLOW.COM: 4208 bytes
+
+A:\&gt;<b>flow</b>
+5
+2 x 3
+12 1
+
+A:\&gt;
+</pre>
+
+<h2>What Small-C Does Not Have</h2>
+<p>Each of these gives an error message when a program uses it:</p>
+<table class="ref wrap">
+<tr><th>Not there</th><th>Message</th><th>What to do</th></tr>
+<tr><td><code>long</code></td><td><code>long</code> is not supported; <code>long</code> constants are not supported</td><td>Use <code>int</code> or <code>unsigned</code>, or keep a number in two words.</td></tr>
+<tr><td><code>float</code>, <code>double</code></td><td>floating point is not supported</td><td>Use whole numbers: hundredths instead of fractions, for example.</td></tr>
+<tr><td><code>typedef</code></td><td><code>typedef</code> is not supported</td><td>Use <code>#define</code> for simple names, and write <code>struct</code> tags.</td></tr>
+<tr><td>Pointers to functions</td><td>pointers to functions are not supported</td><td>Use a switch or a table of numbers. For this reason the library has no <code>qsort</code>.</td></tr>
+<tr><td>Bit fields</td><td>bit fields are not supported</td><td>Use shifts and masks.</td></tr>
+<tr><td>Structures by value</td><td>structures are passed by pointer, not by value; functions return structures by pointer, not by value</td><td>Pass and return their addresses.</td></tr>
+<tr><td>Initial values of arrays and structures in a function</td><td>only simple locals can be initialized here; make it <code>static</code></td><td>Declare it <code>static</code>.</td></tr>
+<tr><td>Declarations after statements</td><td>declarations go at the start of a block</td><td>Start a block with { where the variable is needed.</td></tr>
+<tr><td>The # and ## operators of macros</td><td>the # and ## operators are not supported</td><td>Write the macro in another way.</td></tr>
+</table>
+<p>Also missing, but without a message of their own: the library has no <code>scanf</code>, no <code>fseek</code> (see <code>lseek</code> in <code>IO.H</code>), no floating point functions, no time functions.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 4                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="4" data-title="The Preprocessor" data-part="Part One: Using Small-C">
+
+<h2>How the Preprocessor Works</h2>
+<p>Small-C reads a program a line at a time. Comments are taken out (both /* ... */, which does not nest, and // to the end of the line), a line that begins with # is a directive and is done at once, and in all the other lines macros are replaced by what they stand for. A line ending in a backslash goes on in the next. A line may have up to 511 characters, and 767 after its macros are replaced.</p>
+<table class="ref wrap">
+<tr><th>Directive</th><th>Does</th></tr>
+<tr><td><code>#include</code> "<var>file</var>"<br><code>#include</code> &lt;<var>file</var>&gt;</td><td>Reads another file here. Where Small-C looks is told in Chapter 2. Files may include files up to 5 levels deep.</td></tr>
+<tr><td><code>#define</code> <var>name</var> <var>text</var><br><code>#define</code> <var>name</var>(<var>a</var>, <var>b</var>) <var>text</var></td><td>Defines a macro. Defining a name again replaces it.</td></tr>
+<tr><td><code>#undef</code> <var>name</var></td><td>Forgets a macro.</td></tr>
+<tr><td><code>#if</code> <var>expression</var><br><code>#elif</code> <var>expression</var><br><code>#else</code><br><code>#endif</code></td><td>Keeps or skips lines. Up to 16 levels.</td></tr>
+<tr><td><code>#ifdef</code> <var>name</var><br><code>#ifndef</code> <var>name</var></td><td><code>#if</code> for a name that is, or is not, a macro.</td></tr>
+<tr><td><code>#error</code> <var>text</var></td><td>Makes Small-C show the text as an error message.</td></tr>
+<tr><td><code>#pragma</code>, #line</td><td>Accepted and ignored.</td></tr>
+<tr><td><code>#asm</code> ... <code>#endasm</code></td><td>Lines of assembly language that go into the program (Chapter 5).</td></tr>
+</table>
+
+<h2>Macros</h2>
+<p>A macro without parameters is replaced by its text wherever its name is found as a word, outside of strings. A macro with parameters is replaced only when its name is followed by an opening parenthesis, and the arguments, separated by commas (commas in parentheses do not count), must be on one line. A macro may use other macros, but one that uses itself is stopped by an error ("a macro expands without end"). A macro may have up to 16 parameters. In a source file, the macros may have 3000 characters of text in all, and there may be 250.</p>
+<p>Put parentheses around the parameters and around the whole text of a macro that is an expression: SQUARE(n + 1) must be ((n + 1) * (n + 1)), not n + 1 * n + 1.</p>
+
+<h2>Conditions</h2>
+<p>The expression of <code>#if</code> is made of whole numbers and character constants, the operators of C except the assignments and the comma, and parentheses. <b>defined(name)</b> (or defined name) is 1 for a macro and 0 for any other name; a name that is not a macro counts as 0. Its numbers are 16-bit as everywhere in Small-C.</p>
+<h2>Predefined Names</h2>
+<table class="ref wrap">
+<tr><td><code>__COS__</code></td><td>1. The program is made for COS.</td></tr>
+<tr><td><code>__SMALLC__</code></td><td>1. The program is made by Small-C.</td></tr>
+</table>
+<p>Macros can also be defined on the command line: <b>smallc -DSIZE=10 -DDEBUG pre.c</b> is the same as <code>#define</code> SIZE 10 and <code>#define</code> DEBUG 1 before the first line of each file.</p>
+<pre class="listing">/* DEFS.H - shared definitions */
+#define SQUARE(x)   ((x) * (x))
+#define MAX(a, b)   ((a) &gt; (b) ? (a) : (b))
+#define VERSION     2</pre>
+<pre class="listing">/* PRE.C - the preprocessor */
+#include &lt;stdio.h&gt;
+#include &quot;defs.h&quot;
+
+#ifndef SIZE
+#define SIZE 4
+#endif
+
+#if VERSION &gt;= 2 &amp;&amp; defined(DEBUG)
+#define SHOW(x) printf(&quot;debug\n&quot;)
+#elif VERSION &gt;= 2
+#define SHOW(x) printf(&quot;v2: %d\n&quot;, x)
+#else
+#define SHOW(x)
+#endif
+
+int buffer[SIZE];
+
+int main(void)
+{
+    int n;
+
+    n = 3;
+    SHOW(SQUARE(n + 1));
+    printf(&quot;%d %d\n&quot;, MAX(n, 10), sizeof(buffer) / sizeof(buffer[0]));
+#ifdef __COS__
+    printf(&quot;running under COS, compiled by Small-C %d\n&quot;, __SMALLC__);
+#endif
+    return 0;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc pre.c</b>
+PRE.COM: 4086 bytes
+
+A:\&gt;<b>pre</b>
+v2: 16
+10 4
+running under COS, compiled by Small-C 1
+
+A:\&gt;<b>smallc -DSIZE=10 -DDEBUG pre.c</b>
+PRE.COM: 4068 bytes
+
+A:\&gt;<b>pre</b>
+debug
+10 10
+running under COS, compiled by Small-C 1
+
+A:\&gt;
+</pre>
+<p>With the second command the buffer has 10 elements, and the debug version of SHOW is the one chosen.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 5                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="5" data-title="Using the Machine" data-part="Part One: Using Small-C">
+
+<h2>What a C Program Can Reach</h2>
+<p>The functions of <code>DOS.H</code> and <code>CONIO.H</code> give a C program the same reach that an assembly language program has. They are described in Chapter 7; this chapter shows how they are used. The computer's ports, memory, BIOS and COS services are described in the COS User's Guide (Chapters 6 to 8 and Appendix D).</p>
+
+<h2>Ports</h2>
+<p><code>inp</code> and <code>outp</code> read and write a byte at a port of the computer; <code>inpw</code> and <code>outpw</code>, a word. This program makes a sound with the timer and the speaker, as Appendix D of the COS User's Guide describes them, and waits for 9 ticks of the clock before stopping it.</p>
+<pre class="listing">/* TICKS.C - ports, memory and interrupts: a beep and a clock */
+#include &lt;stdio.h&gt;
+#include &lt;dos.h&gt;
+#include &lt;conio.h&gt;
+
+unsigned ticks(void)
+{
+    return peek(0, 0x46C);          /* the BIOS counts 18.2 ticks a second */
+}
+
+void wait(int n)
+{
+    unsigned t;
+
+    t = ticks();
+    while (ticks() - t &lt; n)
+        ;
+}
+
+void tone(int divisor)
+{
+    outp(0x43, 0xB6);               /* timer 2, a square wave */
+    outp(0x42, divisor &amp; 255);
+    outp(0x42, divisor &gt;&gt; 8);
+    outp(0x61, inp(0x61) | 3);      /* the speaker on */
+}
+
+void quiet(void)
+{
+    outp(0x61, inp(0x61) &amp; 0xFC);
+}
+
+int main(void)
+{
+    struct REGS r;
+    int n;
+
+    r.ax = 0x3000;                  /* COS function 30h: the version */
+    intdos(&amp;r, &amp;r);
+    printf(&quot;COS version %d.%d\n&quot;, r.ax &amp; 255, r.ax &gt;&gt; 8);
+    tone(2712);                     /* about 440 Hz */
+    wait(9);
+    quiet();
+    printf(&quot;Counting seconds; press a key to stop.\n&quot;);
+    for (n = 1; n &lt;= 5 &amp;&amp; !kbhit(); n++) {
+        wait(18);
+        printf(&quot;%d second%s\n&quot;, n, n == 1 ? &quot;&quot; : &quot;s&quot;);
+    }
+    if (kbhit())
+        getch();
+    return 0;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc ticks.c</b>
+TICKS.COM: 4462 bytes
+
+A:\&gt;<b>ticks</b>
+COS version 3.30
+Counting seconds; press a key to stop.
+1 second
+2 seconds
+3 seconds
+4 seconds
+5 seconds
+
+A:\&gt;
+</pre>
+
+<h2>Memory</h2>
+<p>peek and <code>peekb</code> read a word and a byte at any segment and offset; poke and <code>pokeb</code> write them. They make the BIOS data (segment 0x40, or segment 0 and offsets from 0x400: the tick counter above is at 0:0x46C) and the video memory available:</p>
+<pre class="listing">/* VIDEO.C - the screen: video memory and the BIOS */
+#include &lt;stdio.h&gt;
+#include &lt;dos.h&gt;
+
+/* Puts a character and its color at a row and column (80 x 25 text) */
+void put(int row, int col, int ch, int attr)
+{
+    unsigned off;
+
+    off = (row * 80 + col) * 2;
+    pokeb(0xB800, off, ch);
+    pokeb(0xB800, off + 1, attr);
+}
+
+int main(void)
+{
+    struct REGS r;
+    char *s;
+    int i;
+
+    s = &quot;Written straight into video memory&quot;;
+    for (i = 0; s[i]; i++)
+        put(10, 20 + i, s[i], 0x1E);        /* yellow on blue */
+    r.ax = 0x0200;                          /* BIOS 10h: set the cursor */
+    r.bx = 0;                               /* page 0 */
+    r.dx = 0x0C00;                          /* row 12, column 0 */
+    int86(0x10, &amp;r, &amp;r);
+    printf(&quot;The cursor was moved with INT 10h.\n&quot;);
+    return 0;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc video.c</b>
+VIDEO.COM: 4278 bytes
+
+A:\&gt;<b>video</b>
+
+
+
+
+
+                    Written straight into video memory
+
+The cursor was moved with INT 10h.
+
+A:\&gt;
+</pre>
+<p>The characters of the text screen are at segment 0xB800, a character and then its color byte (yellow on blue is 0x1E). Pointers of C reach only the data segment of the program; <code>getds</code> gives its segment, if you need to say it to a service, and the variable <code>_psp</code>, declared in <code>DOS.H</code>, the segment of the program's PSP.</p>
+
+<h2>Interrupts</h2>
+<p><code>int86</code>(<var>n</var>, &amp;<var>in</var>, &amp;<var>out</var>) loads the registers AX, BX, CX, DX, SI and DI from the structure <var>in</var>, runs INT <var>n</var>, and <code>puts</code> the registers that the service gave back into <var>out</var>; the structure has the carry flag too, in cflag (1 when the service failed, with an error code in ax). <code>intdos</code> does the same for INT 21h, the COS services. The two structures may be the same one, as in the examples. DS is the data segment of the program, so a pointer that is given in DX, SI or DI is understood by the service; the other segment registers are not set.</p>
+<pre class="listing">
+struct REGS r;
+
+r.ax = 0x3000;              /* function 30h: the version of COS */
+intdos(&amp;r, &amp;r);
+printf("%d.%d\n", r.ax &amp; 255, r.ax &gt;&gt; 8);
+</pre>
+<p>The number of the interrupt is written into the code of <code>int86</code>, so it may be any variable.</p>
+
+<h2>The Keyboard and the Screen</h2>
+<p><code>printf</code> and the other functions of <code>STDIO.H</code> write on the screen and read the keyboard line by line, as COS does it. For a program that wants a key at once, without waiting for Enter, <code>CONIO.H</code> has <code>getch</code>, that waits for a key and shows nothing, <code>getche</code>, that shows it, and <code>kbhit</code>, that tells whether a key is waiting, so that a program can do something else until it is. Keys without a character, like the function and cursor keys, come as two values: 0, and then a code (Appendix B of the COS User's Guide). <code>getch</code> does not stop the program when you press Ctrl-C: it is the character 3, and the program must end by itself. <code>putch</code> and <code>cputs</code> write characters just as they are; end a line with both \r and \n there.</p>
+<p><code>stdout</code> is written at the end of each line, and before the program waits for the keyboard. A program that writes a part of a line, and then waits with <code>getch</code>, should call <code>fflush</code>(<code>stdout</code>) first.</p>
+
+<h2>Assembly Language in C</h2>
+<p>Lines between <code>#asm</code> and <code>#endasm</code> go into the program as they are. The lines are not looked at by the preprocessor; they are limited to 767 characters in all. There are two ways to use them.</p>
+<p>Inside a function, the lines become part of its code. BP holds the frame of the function: the first parameter is at [bp+4], the second at [bp+6], and so on, and what the function returns is in AX. In the first function below there is no return statement; the value that is in AX when the function ends is the result.</p>
+<p>At the top level of a file, the lines are a function (or data) of their own. Write <b>section .text</b> first, give the label with an underscore, as in _swapb, and tell Small-C its name with a line <b><code>;#def</code> _swapb</b>, so that the program can find it (Chapter 6). Here the arguments are at [sp+2], [sp+4]...: BX is the easy way to read them. A function must leave BP, SI, DI, DS and SS as it found them (Appendix B).</p>
+<pre class="listing">/* ASMDEMO.C - assembler inside a C program */
+#include &lt;stdio.h&gt;
+
+/* A whole function in assembler, at the top level of the file.
+   The arguments are at [sp+2], [sp+4]...; the result goes in AX. */
+#asm
+section .text
+;#def _swapb
+_swapb:
+    mov bx, sp
+    mov ax, [bx+2]
+    xchg al, ah
+    ret
+#endasm
+
+unsigned swapb(unsigned x);
+
+/* A few instructions inside a C function. BP holds the frame, so the
+   first argument is at [bp+4]; the value of the function is AX. */
+int triple(int x)
+{
+#asm
+    mov ax, [bp+4]
+    mov cx, ax
+    add ax, ax
+    add ax, cx
+#endasm
+}
+
+int main(void)
+{
+    printf(&quot;%x %d\n&quot;, swapb(0x1234), triple(14));
+    return 0;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc asmdemo.c</b>
+ASMDEMO.COM: 4006 bytes
+
+A:\&gt;<b>asmdemo</b>
+3412 42
+
+A:\&gt;
+</pre>
+
+<h2>Running Other Programs</h2>
+<p><code>spawn</code>(<var>path</var>, <var>args</var>) runs a program, waits for it to end and returns its return code, or -1 if it could not be run. The name needs its extension, .COM or .EXE, and COS does not look for it in other directories. <var>args</var> is the command line that the program will see after its own name. A .COM program made by Small-C keeps only 64 KB and gives back all the other memory, so the program that it starts has room.</p>
+<pre class="listing">/* RUN.C - runs another program and reports its return code */
+#include &lt;stdio.h&gt;
+#include &lt;dos.h&gt;
+
+int main(void)
+{
+    int code;
+
+    code = spawn(&quot;ARGS.COM&quot;, &quot;a b&quot;);
+    printf(&quot;ARGS ended with %d\n&quot;, code);
+    code = spawn(&quot;NOSUCH.COM&quot;, &quot;&quot;);
+    printf(&quot;NOSUCH gives %d\n&quot;, code);
+    return 0;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc args.c</b>
+ARGS.COM: 4024 bytes
+
+A:\&gt;<b>smallc run.c</b>
+RUN.COM: 4308 bytes
+
+A:\&gt;<b>run</b>
+argv[0] = &quot;A:\ARGS.COM&quot;
+argv[1] = &quot;a&quot;
+argv[2] = &quot;b&quot;
+ARGS ended with 2
+NOSUCH gives -1
+
+A:\&gt;
+</pre>
+<p>The return code of ARGS is 2: its <code>argc</code> less one. Return codes are 0 to 255.</p>
+
+<h2>Memory for Data</h2>
+<p><code>malloc</code> takes memory from the heap, which goes from the end of the variables of the program to 2 KB below the stack, and free gives it back. The stack grows down from the top of the segment toward the heap, so a program with deep recursion and a big heap may find them touching: keep the 2 KB free. A program that has not got 2 KB of room between its variables and its stack ends at the start with "Not enough memory". The variables that are not initialized start as zero; the memory that <code>malloc</code> gives does not (use <code>calloc</code> for that).</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 6                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="6" data-title="Modules and Libraries" data-part="Part One: Using Small-C">
+
+<h2>Modules</h2>
+<p>A <i>module</i> is a piece of a program in assembly language, with a few lines that tell the link what the module has and needs. Small-C writes a module for each C source it compiles. The lines begin with ;# (they are comments for ASM) and say:</p>
+<table class="ref wrap">
+<tr><th>Line</th><th>Meaning</th></tr>
+<tr><td><code>;#module</code> <var>NAME</var></td><td>A module begins here. Small-C names a module with the name of its file, in capitals, up to 8 letters and digits.</td></tr>
+<tr><td><code>;#def</code> <var>names</var></td><td>The names that the module defines. They come before the <code>;#ref</code> lines.</td></tr>
+<tr><td><code>;#ref</code> <var>names</var></td><td>The names that the module uses and does not define.</td></tr>
+<tr><td><code>;#bss</code> <var>name</var> <var>size</var></td><td>A variable of that many bytes, that starts as zero. The link places all of them at the end of the program.</td></tr>
+<tr><td><code>;#weak</code> <var>name</var></td><td>A function that may be missing: if nobody defines it, it is a function that does nothing (a single RET). The start-up uses this for the stream functions.</td></tr>
+</table>
+<p>The names of C functions and variables have a leading underscore: <code>main</code> is _main. Appendix B shows a whole module, as Small-C writes it:</p>
+
+<h2>Making a Library</h2>
+<p>A library is the modules, one after the other, in one file. -c with -o makes it from C files and assembly language files:</p>
+<dl><dt>Format</dt><dd><pre>SMALLC -c -o <var>library</var>.LIB <var>file</var> ...</pre></dd></dl>
+<p>Without -o, -c makes a .ASM file for each .C file, as in <b>smallc -c vec.c</b>, which writes <code>VEC.ASM</code>, a module of its own. The .ASM files given with -o must have their own <code>;#module</code> line, so that the library knows where each begins.</p>
+<h2>Using a Library</h2>
+<p>A library is given to Small-C as any other file, or with -L. Small-C does not take all of it: it takes the modules that define names that the program uses, and the modules that those need, and no others. A program is so as small as it can be, which is also why <code>CLIB.LIB</code> can hold every function of Chapter 7 without making every program larger.</p>
+<pre class="screen">
+A:\&gt;<b>smallc -c vec.c</b>
+
+A:\&gt;<b>smallc -c -o vec.lib vec.c</b>
+
+A:\&gt;<b>smallc demo.c vec.lib</b>
+DEMO.COM: 4190 bytes
+
+A:\&gt;<b>demo</b>
+sum 583, largest 358
+2 calls
+
+A:\&gt;<b>dir vec.*</b>
+
+ Volume in drive A is COS
+ Directory of  A:\
+
+VEC      C        371   1-01-80  12:00a
+VEC      H        122   1-01-80  12:00a
+VEC      ASM     1253   1-01-80  12:00a
+VEC      LIB     1253   1-01-80  12:00a
+        4 File(s)   1236480 bytes free
+
+A:\&gt;
+</pre>
+<p><code>VEC.ASM</code> and <code>VEC.LIB</code> are the same here, because the library has one module. Compiling <code>VEC.C</code> once and keeping it in a library saves Small-C the work of reading it each time; ASM still has to assemble the whole program.</p>
+<h2>Rules</h2>
+<ul>
+<li>A name must be defined once. Two modules that define the same function, or give the same variable a value, give the message "<var>name</var> is defined in two modules". A module taken from a library is chosen only if no module that you gave defines the name.</li>
+<li>A name that nobody defines gives "<var>name</var> is not defined anywhere", with the name as written in C.</li>
+<li>A library holds up to 80 modules and 600 names in all; a program may have 250 variables made by <code>;#bss</code>.</li>
+<li>Static functions and variables are named MODULE@name (Appendix B), so two modules may each have their own.</li>
+</ul>
+<h2>Modules in Assembly Language</h2>
+<p>A function written in assembly language is a module like the others. It needs the <code>;#def</code> line for what it defines and a <code>;#ref</code> line for each library function that it calls, or the link will not bring that function in. The addresses of data are written as <i>label</i> - <code>__dbase</code>, which is right in .COM and .EXE programs (Appendix B), and arguments are removed from the stack by the caller.</p>
+<pre class="listing">;#module GREET
+; GREET.ASM - greet(): prints a line with puts
+;#def _greet
+;#ref _puts
+section .text
+_greet:
+    mov ax, message - __dbase       ; the address of the text, in the data segment
+    push ax
+    call _puts                      ; puts(message)
+    add sp, 2                       ; the caller takes the arguments off
+    ret
+section .data
+message db &#x27;Greetings from assembler!&#x27;, 0</pre>
+<pre class="listing">/* USEGREET.C - calls a function written in assembler */
+void greet(void);
+
+int main(void)
+{
+    greet();
+    return 0;
+}</pre>
+<pre class="screen">
+A:\&gt;<b>smallc usegreet.c greet.asm</b>
+USEGREET.COM: 2650 bytes
+
+A:\&gt;<b>usegreet</b>
+Greetings from assembler!
+
+A:\&gt;
+</pre>
+<p>The same module can be given in a library: <b>smallc -c -o g.lib greet.asm</b>, and then <b>smallc usegreet.c g.lib</b>.</p>
+<h2>Start-up Modules</h2>
+<p>Every program begins with a start-up module that <code>CLIB.LIB</code> has in two forms: C0COM for .COM programs and C0EXE for .EXE programs. It sets up the segments, clears the variables, builds <code>argc</code> and <code>argv</code>, calls <i><code>main</code></i> and ends the program with the value it returned. -n leaves <code>CLIB.LIB</code> out; the libraries given with -L must then have a start-up, and everything the program calls.</p>
+</section>
+
+<!-- ================================================================== -->
+<!-- CHAPTER 7                                                            -->
+<!-- ================================================================== -->
+
+<section class="chapter" data-num="7" data-title="Library Reference" data-part="Part Two: Reference">
+
+<h2>How to Read This Chapter</h2>
+<p>The functions are grouped by the header file that declares them, and are in alphabetic order in each group. Include the header before using its functions. Functions that fail return 0 (for pointers), <code>EOF</code> or -1, as each one says.</p>
+
+<h2><code>STDIO.H</code>: Streams</h2>
+<p>A <i>stream</i> is a file, or the keyboard and screen, with a buffer of its own. <code>stdin</code>, <code>stdout</code> and <code>stderr</code> are open when the program starts; at most 7 more files may be open at once (<code>FOPEN_MAX</code> is 10, counting those three). A stream opened for text turns each \n written into the two characters CR LF, and drops the CR of CR LF when reading; a Ctrl-Z in the file is the end of the text. A stream opened with "b" does neither. <code>stdout</code> and <code>stderr</code> are written at each \n and before <code>stdin</code> is read; every stream is written when the program ends with exit, or by return from <code>main</code>. A program that ends with <code>_exit</code> loses what is still in its buffers.</p>
+<p><code>STDIO.H</code> defines <code>FILE</code>, <code>EOF</code> (-1), <code>BUFSIZ</code> (512), <code>FOPEN_MAX</code> (10) and <code>NULL</code> (0).</p>
+<table class="ref wrap">
+<tr><th>Function</th><th>Does</th></tr>
+<tr><td><code>void</code> <code>clearerr</code>(<code>FILE</code> *f)</td><td>Clears the end-of-file and error marks of the stream.</td></tr>
+<tr><td><code>int</code> <code>fclose</code>(<code>FILE</code> *f)</td><td>Writes what is waiting in the buffer, closes the file and frees the buffer. 0, or <code>EOF</code> if something went wrong.</td></tr>
+<tr><td><code>int</code> <code>feof</code>(<code>FILE</code> *f)</td><td>Not 0 if the end of the file was reached by a read.</td></tr>
+<tr><td><code>int</code> <code>ferror</code>(<code>FILE</code> *f)</td><td>Not 0 if a read or a write failed.</td></tr>
+<tr><td><code>int</code> <code>fflush</code>(<code>FILE</code> *f)</td><td>Writes what is waiting in the buffer of an output stream. 0, or <code>EOF</code> on an error.</td></tr>
+<tr><td><code>int</code> <code>fgetc</code>(<code>FILE</code> *f)</td><td>The same as <code>getc</code>.</td></tr>
+<tr><td><code>char</code> *<code>fgets</code>(<code>char</code> *s, <code>int</code> n, <code>FILE</code> *f)</td><td>Reads a line, up to n-1 characters, with its \n if it fits, and ends it with a zero. Gives s, or 0 at the end of the file when nothing was read.</td></tr>
+<tr><td><code>FILE</code> *<code>fopen</code>(<code>char</code> *name, <code>char</code> *mode)</td><td>Opens a file. mode begins with <b>r</b> (read; the file must exist), <b>w</b> (write; the file is made, or emptied) or <b>a</b> (write at the end; the file is made if it is not there); then may have <b>+</b> (read and write) and <b>b</b> (not text). Gives 0 if it cannot: no file, no free stream, no memory for the buffer.</td></tr>
+<tr><td><code>int</code> <code>fprintf</code>(<code>FILE</code> *f, <code>char</code> *format, ...)</td><td><code>printf</code> to a stream.</td></tr>
+<tr><td><code>int</code> <code>fputc</code>(<code>int</code> c, <code>FILE</code> *f)</td><td>The same as <code>putc</code>.</td></tr>
+<tr><td><code>int</code> <code>fputs</code>(<code>char</code> *s, <code>FILE</code> *f)</td><td>Writes a string, without a \n. 0, or <code>EOF</code>.</td></tr>
+<tr><td><code>int</code> <code>fread</code>(<code>void</code> *buf, <code>int</code> size, <code>int</code> n, <code>FILE</code> *f)</td><td>Reads n items of size bytes. Gives the number of whole items read.</td></tr>
+<tr><td><code>int</code> <code>fwrite</code>(<code>void</code> *buf, <code>int</code> size, <code>int</code> n, <code>FILE</code> *f)</td><td>Writes n items of size bytes. Gives the number written.</td></tr>
+<tr><td><code>int</code> <code>getc</code>(<code>FILE</code> *f)</td><td>The next character of the stream, 0 to 255, or <code>EOF</code> at the end. <code>getc</code> and <code>putc</code> are functions, not macros.</td></tr>
+<tr><td><code>int</code> <code>getchar</code>(<code>void</code>)</td><td><code>getc</code>(<code>stdin</code>).</td></tr>
+<tr><td><code>char</code> *<code>gets</code>(<code>char</code> *s)</td><td>Reads a line from <code>stdin</code>, without its \n. It does not know how <code>long</code> s is: use <code>fgets</code> when the line may be <code>long</code>.</td></tr>
+<tr><td><code>int</code> <code>printf</code>(<code>char</code> *format, ...)</td><td>Writes formatted text on <code>stdout</code>. Gives the number of characters written. See below.</td></tr>
+<tr><td><code>int</code> <code>putc</code>(<code>int</code> c, <code>FILE</code> *f)</td><td>Writes a character. Gives it, or <code>EOF</code>.</td></tr>
+<tr><td><code>int</code> <code>putchar</code>(<code>int</code> c)</td><td><code>putc</code>(c, <code>stdout</code>).</td></tr>
+<tr><td><code>int</code> <code>puts</code>(<code>char</code> *s)</td><td>Writes a string and a \n on <code>stdout</code>.</td></tr>
+<tr><td><code>int</code> <code>remove</code>(<code>char</code> *name)</td><td>Deletes a file. 0, or -1.</td></tr>
+<tr><td><code>int</code> <code>rename</code>(<code>char</code> *old, <code>char</code> *new)</td><td>Renames a file. 0, or -1.</td></tr>
+<tr><td><code>int</code> <code>sprintf</code>(<code>char</code> *s, <code>char</code> *format, ...)</td><td><code>printf</code> into a string, ended with a zero. The string must be large enough.</td></tr>
+<tr><td><code>int</code> <code>ungetc</code>(<code>int</code> c, <code>FILE</code> *f)</td><td>Gives one character back to be read again. Only one may be waiting.</td></tr>
+<tr><td><code>int</code> <code>vfprintf</code>(<code>FILE</code> *f, <code>char</code> *format, <code>char</code> *ap)<br><code>int</code> <code>vprintf</code>(<code>char</code> *format, <code>char</code> *ap)<br><code>int</code> <code>vsprintf</code>(<code>char</code> *s, <code>char</code> *format, <code>char</code> *ap)</td><td>As <code>fprintf</code>, <code>printf</code> and <code>sprintf</code>, with the arguments read from ap, a <code>va_list</code> that <code>va_start</code> made (<code>STDARG.H</code>).</td></tr>
+</table>
+<h3>The formats of <code>printf</code></h3>
+<p>A conversion is % followed by, in this order: flags, a width, a point and a precision, and a letter.</p>
+<table class="ref wrap">
+<tr><td>%d %i</td><td>An <code>int</code> in decimal, with its sign.</td></tr>
+<tr><td>%u</td><td>An <code>unsigned</code> number in decimal.</td></tr>
+<tr><td>%x %X</td><td>An <code>unsigned</code> number in hexadecimal, with small or capital letters.</td></tr>
+<tr><td>%o</td><td>In octal.</td></tr>
+<tr><td>%c</td><td>A character.</td></tr>
+<tr><td>%s</td><td>A string. A null pointer shows as (null). A precision is the most characters to show.</td></tr>
+<tr><td>%p</td><td>A pointer, in hexadecimal, at least four digits.</td></tr>
+<tr><td>%%</td><td>A % sign.</td></tr>
+</table>
+<p>The flags: <b>-</b> <code>puts</code> the value at the left of its width, <b>0</b> fills a number with zeros, <b>+</b> shows the sign of positive numbers and a space shows a space in its place. The width is a number or *, which takes it from the next argument; so may the precision, after the point. With a number, the precision is the least digits (up to 8). The letters l and h are accepted and ignored: numbers are always 16 bits. There is no conversion for fractions.</p>
+<pre class="screen">
+printf("[%5d][%-5d][%05d][%x][%c][%.2s]\n", 42, 42, 42, 255, 'Z', "abc");
+[   42][42   ][00042][ff][Z][ab]
+</pre>
+
+<h2><code>STDLIB.H</code>: Memory and Numbers</h2>
+<p><code>STDLIB.H</code> defines <code>NULL</code>, <code>RAND_MAX</code> (32767), <code>EXIT_SUCCESS</code> (0) and <code>EXIT_FAILURE</code> (1).</p>
+<table class="ref wrap">
+<tr><th>Function</th><th>Does</th></tr>
+<tr><td><code>int</code> <code>abs</code>(<code>int</code> v)</td><td>The absolute value.</td></tr>
+<tr><td><code>int</code> <code>atoi</code>(<code>char</code> *s)</td><td>The number at the start of s: spaces, a sign and digits. Stops at the first other character.</td></tr>
+<tr><td><code>void</code> *<code>calloc</code>(<code>unsigned</code> n, <code>unsigned</code> size)</td><td>Memory for n items of size bytes, set to zero. 0 if there is not enough.</td></tr>
+<tr><td><code>void</code> <code>exit</code>(<code>int</code> code)</td><td>Writes all the streams and ends the program, with the return code.</td></tr>
+<tr><td><code>void</code> <code>_exit</code>(<code>int</code> code)</td><td>Ends the program at once, without writing the streams.</td></tr>
+<tr><td><code>void</code> <code>free</code>(<code>void</code> *p)</td><td>Gives memory back. <code>free</code>(0) does nothing.</td></tr>
+<tr><td><code>char</code> *<code>getenv</code>(<code>char</code> *name)</td><td>The value of a COS environment variable (see SET), or 0. The text is kept in a place that the next call changes.</td></tr>
+<tr><td><code>char</code> *<code>itoa</code>(<code>int</code> v, <code>char</code> *s, <code>int</code> radix)</td><td>Writes v in s in base radix (2 to 36, small letters). A sign only in base 10; in the other bases the number is <code>unsigned</code>. Gives s.</td></tr>
+<tr><td><code>void</code> *<code>malloc</code>(<code>unsigned</code> n)</td><td>Memory for n bytes, not cleared. 0 if there is not enough.</td></tr>
+<tr><td><code>int</code> <code>rand</code>(<code>void</code>)</td><td>The next number of a series of pseudo-random numbers, 0 to 32767.</td></tr>
+<tr><td><code>void</code> *<code>realloc</code>(<code>void</code> *p, <code>unsigned</code> n)</td><td>Changes the size of a block of memory, keeping what it held (the block may move). With p = 0, it is <code>malloc</code>. Gives 0, and leaves the block as it was, if there is no room.</td></tr>
+<tr><td><code>void</code> <code>srand</code>(<code>unsigned</code> seed)</td><td>Starts the series again at seed. At the start of a program, the seed is 1.</td></tr>
+</table>
+
+<h2><code>STRING.H</code>: Strings and Memory</h2>
+<table class="ref wrap">
+<tr><th>Function</th><th>Does</th></tr>
+<tr><td><code>int</code> <code>memcmp</code>(<code>void</code> *a, <code>void</code> *b, <code>int</code> n)</td><td>Compares n bytes: 0 if equal, else the difference of the first two that differ, as <code>unsigned</code> bytes.</td></tr>
+<tr><td><code>void</code> *<code>memcpy</code>(<code>void</code> *d, <code>void</code> *s, <code>int</code> n)</td><td>Copies n bytes. The areas may overlap. Gives d.</td></tr>
+<tr><td><code>void</code> *<code>memmove</code>(<code>void</code> *d, <code>void</code> *s, <code>int</code> n)</td><td>The same as <code>memcpy</code>.</td></tr>
+<tr><td><code>void</code> *<code>memset</code>(<code>void</code> *d, <code>int</code> c, <code>int</code> n)</td><td>Sets n bytes to c. Gives d.</td></tr>
+<tr><td><code>char</code> *<code>strcat</code>(<code>char</code> *d, <code>char</code> *s)</td><td>Adds s at the end of d. Gives d.</td></tr>
+<tr><td><code>char</code> *<code>strchr</code>(<code>char</code> *s, <code>int</code> c)</td><td>The first c in s, or 0. <code>strchr</code>(s, 0) is the end of the string.</td></tr>
+<tr><td><code>int</code> <code>strcmp</code>(<code>char</code> *a, <code>char</code> *b)</td><td>Compares strings: 0 if equal, negative if a is first, positive if b is.</td></tr>
+<tr><td><code>char</code> *<code>strcpy</code>(<code>char</code> *d, <code>char</code> *s)</td><td>Copies s, with its zero, to d. Gives d.</td></tr>
+<tr><td><code>char</code> *<code>strdup</code>(<code>char</code> *s)</td><td>A copy of s in memory from <code>malloc</code>, or 0. Free it when it is no longer wanted.</td></tr>
+<tr><td><code>int</code> <code>stricmp</code>(<code>char</code> *a, <code>char</code> *b)</td><td>As <code>strcmp</code>, with capitals and small letters the same.</td></tr>
+<tr><td><code>int</code> <code>strlen</code>(<code>char</code> *s)</td><td>The number of characters before the zero.</td></tr>
+<tr><td><code>char</code> *<code>strlwr</code>(<code>char</code> *s)</td><td>Turns s into small letters, in place. Gives s.</td></tr>
+<tr><td><code>char</code> *<code>strncat</code>(<code>char</code> *d, <code>char</code> *s, <code>int</code> n)</td><td>Adds at most n characters of s to d, and a zero. Gives d.</td></tr>
+<tr><td><code>int</code> <code>strncmp</code>(<code>char</code> *a, <code>char</code> *b, <code>int</code> n)</td><td><code>strcmp</code> of at most n characters.</td></tr>
+<tr><td><code>char</code> *<code>strncpy</code>(<code>char</code> *d, <code>char</code> *s, <code>int</code> n)</td><td>Copies exactly n characters: if s is shorter, d is filled with zeros; if it is longer, d is not ended with a zero. Gives d.</td></tr>
+<tr><td><code>char</code> *<code>strrchr</code>(<code>char</code> *s, <code>int</code> c)</td><td>The last c in s, or 0.</td></tr>
+<tr><td><code>char</code> *<code>strstr</code>(<code>char</code> *s, <code>char</code> *t)</td><td>Where the string t is in s, or 0.</td></tr>
+<tr><td><code>char</code> *<code>strupr</code>(<code>char</code> *s)</td><td>Turns s into capitals, in place. Gives s.</td></tr>
+</table>
+
+<h2><code>CTYPE.H</code>: Kinds of Characters</h2>
+<p>These functions take a character code and give not 0 if it is of the kind, and 0 if not. They know the ASCII characters only.</p>
+<table class="ref wrap">
+<tr><th>Function</th><th>True for</th></tr>
+<tr><td><code>isalnum</code>(c)</td><td>Letters and digits.</td></tr>
+<tr><td><code>isalpha</code>(c)</td><td>A to Z and a to z.</td></tr>
+<tr><td><code>iscntrl</code>(c)</td><td>Codes 0 to 31 and 127.</td></tr>
+<tr><td><code>isdigit</code>(c)</td><td>0 to 9.</td></tr>
+<tr><td><code>islower</code>(c)</td><td>a to z.</td></tr>
+<tr><td><code>isprint</code>(c)</td><td>Codes 32 to 126.</td></tr>
+<tr><td><code>ispunct</code>(c)</td><td>Printing characters that are not a space, a letter or a digit.</td></tr>
+<tr><td><code>isspace</code>(c)</td><td>Space, tab, line feed, vertical tab, form feed, carriage return.</td></tr>
+<tr><td><code>isupper</code>(c)</td><td>A to Z.</td></tr>
+<tr><td><code>isxdigit</code>(c)</td><td>0 to 9, A to F, a to f.</td></tr>
+<tr><td><code>tolower</code>(c)</td><td>The small letter of a capital; any other c unchanged.</td></tr>
+<tr><td><code>toupper</code>(c)</td><td>The capital of a small letter; any other c unchanged.</td></tr>
+</table>
+
+<h2><code>STDARG.H</code>: Variable Arguments</h2>
+<p>For a function declared with ... after its named parameters. The arguments are words on the stack, so only types of one word (<code>int</code>, <code>unsigned</code>, pointers) can be read; a <code>char</code> is read as an <code>int</code>.</p>
+<table class="ref wrap">
+<tr><th>Macro</th><th>Does</th></tr>
+<tr><td><code>va_list</code></td><td>The type of the variable that goes through the arguments.</td></tr>
+<tr><td><code>va_start</code>(ap, last)</td><td>Starts ap at the argument after <var>last</var>, the last named parameter.</td></tr>
+<tr><td><code>va_arg</code>(ap, type)</td><td>The next argument, of that type.</td></tr>
+<tr><td><code>va_end</code>(ap)</td><td>Ends the reading. It does nothing, but write it.</td></tr>
+</table>
+
+<h2><code>IO.H</code>: Files by Handle</h2>
+<p>These functions are the services of COS for files (Chapter 7 of the COS User's Guide) without a buffer or the change of \n: what is written is what the file <code>gets</code>. A handle is a number; 0, 1 and 2 are the keyboard, the screen and the screen for errors. <code>IO.H</code> defines <code>O_RDONLY</code> (0), <code>O_WRONLY</code> (1), <code>O_RDWR</code> (2), <code>SEEK_SET</code> (0), <code>SEEK_CUR</code> (1), <code>SEEK_END</code> (2) and the variable <code>errno</code>. When a function fails it returns -1 and <code>errno</code> has the error code of COS (Appendix A of the COS User's Guide).</p>
+<table class="ref wrap">
+<tr><th>Function</th><th>Does</th></tr>
+<tr><td><code>int</code> <code>close</code>(<code>int</code> fd)</td><td>Closes a handle. 0, or -1.</td></tr>
+<tr><td><code>int</code> <code>creat</code>(<code>char</code> *name, <code>int</code> attrib)</td><td>Makes a file, or empties it, and opens it for writing. attrib is 0 for an ordinary file. Gives the handle.</td></tr>
+<tr><td><code>int</code> <code>isatty</code>(<code>int</code> fd)</td><td>1 if the handle is the keyboard or screen, 0 if it is a file.</td></tr>
+<tr><td><code>unsigned</code> <code>lseek</code>(<code>int</code> fd, <code>unsigned</code> lo, <code>unsigned</code> hi, <code>int</code> whence)</td><td>Moves the position of the file: to the offset lo + 65536 * hi counted from the start (<code>SEEK_SET</code>), the present position (<code>SEEK_CUR</code>) or the end (<code>SEEK_END</code>). Gives the low word of the new position.</td></tr>
+<tr><td><code>int</code> <code>open</code>(<code>char</code> *name, <code>int</code> mode)</td><td>Opens a file that exists, with <code>O_RDONLY</code>, <code>O_WRONLY</code> or <code>O_RDWR</code>. Gives the handle.</td></tr>
+<tr><td><code>int</code> <code>read</code>(<code>int</code> fd, <code>void</code> *buf, <code>unsigned</code> n)</td><td>Reads up to n bytes. Gives how many were read, 0 at the end of the file.</td></tr>
+<tr><td><code>int</code> <code>rename</code>(<code>char</code> *old, <code>char</code> *new)</td><td>Renames a file.</td></tr>
+<tr><td><code>int</code> <code>unlink</code>(<code>char</code> *name)</td><td>Deletes a file.</td></tr>
+<tr><td><code>int</code> <code>write</code>(<code>int</code> fd, <code>void</code> *buf, <code>unsigned</code> n)</td><td>Writes n bytes. Gives how many were written; less than n means the diskette is full.</td></tr>
+</table>
+
+<h2><code>DOS.H</code>: The Machine</h2>
+<p><code>DOS.H</code> defines <code>struct</code> <code>REGS</code>, with the <code>unsigned</code> members ax, bx, cx, dx, si, di and cflag, and the variable <code>_psp</code>, the segment of the program's PSP.</p>
+<table class="ref wrap">
+<tr><th>Function</th><th>Does</th></tr>
+<tr><td><code>void</code> <code>disable</code>(<code>void</code>)</td><td>Stops the interrupts of the processor (CLI). Do not leave them off for <code>long</code>.</td></tr>
+<tr><td><code>void</code> <code>enable</code>(<code>void</code>)</td><td>Allows interrupts again (STI).</td></tr>
+<tr><td><code>unsigned</code> <code>getds</code>(<code>void</code>)</td><td>The data segment of the program.</td></tr>
+<tr><td><code>int</code> <code>inp</code>(<code>int</code> port)</td><td>Reads a byte from a port.</td></tr>
+<tr><td><code>unsigned</code> <code>inpw</code>(<code>int</code> port)</td><td>Reads a word from a port.</td></tr>
+<tr><td><code>int</code> <code>int86</code>(<code>int</code> n, <code>struct</code> <code>REGS</code> *in, <code>struct</code> <code>REGS</code> *out)</td><td>Runs INT n with the registers of <var>in</var>; <code>puts</code> the registers it gives in <var>out</var>, and the carry flag in out-&gt;cflag. Gives AX.</td></tr>
+<tr><td><code>int</code> <code>intdos</code>(<code>struct</code> <code>REGS</code> *in, <code>struct</code> <code>REGS</code> *out)</td><td><code>int86</code> for INT 21h.</td></tr>
+<tr><td><code>int</code> <code>outp</code>(<code>int</code> port, <code>int</code> value)</td><td>Writes a byte to a port.</td></tr>
+<tr><td><code>unsigned</code> <code>outpw</code>(<code>int</code> port, <code>unsigned</code> value)</td><td>Writes a word to a port.</td></tr>
+<tr><td><code>unsigned</code> <code>peek</code>(<code>unsigned</code> seg, <code>unsigned</code> off)</td><td>The word at seg:off.</td></tr>
+<tr><td><code>int</code> <code>peekb</code>(<code>unsigned</code> seg, <code>unsigned</code> off)</td><td>The byte at seg:off, 0 to 255.</td></tr>
+<tr><td><code>void</code> <code>poke</code>(<code>unsigned</code> seg, <code>unsigned</code> off, <code>unsigned</code> value)</td><td>Writes a word at seg:off.</td></tr>
+<tr><td><code>void</code> <code>pokeb</code>(<code>unsigned</code> seg, <code>unsigned</code> off, <code>int</code> value)</td><td>Writes a byte at seg:off.</td></tr>
+<tr><td><code>int</code> <code>spawn</code>(<code>char</code> *path, <code>char</code> *args)</td><td>Runs a program, waits, and gives its return code, or -1 if it could not be run.</td></tr>
+</table>
+
+<h2><code>CONIO.H</code>: Keyboard and Screen</h2>
+<table class="ref wrap">
+<tr><th>Function</th><th>Does</th></tr>
+<tr><td><code>int</code> <code>cputs</code>(<code>char</code> *s)</td><td>Writes a string on the screen, as it is.</td></tr>
+<tr><td><code>int</code> <code>getch</code>(<code>void</code>)</td><td>Waits for a key and gives it, without showing it. Does not check Ctrl-C.</td></tr>
+<tr><td><code>int</code> <code>getche</code>(<code>void</code>)</td><td>Waits for a key, shows it and gives it.</td></tr>
+<tr><td><code>int</code> <code>kbhit</code>(<code>void</code>)</td><td>Not 0 if a key is waiting.</td></tr>
+<tr><td><code>int</code> <code>putch</code>(<code>int</code> c)</td><td>Writes a character on the screen, as it is.</td></tr>
+</table>
+</section>
+
+<!-- ================================================================== -->
+<!-- APPENDIX A                                                           -->
+<!-- ================================================================== -->
+
+<section class="chapter appendix" data-num="A" data-title="Error Messages" data-part="Appendixes">
+
+<h2>How Messages Look</h2>
+<p>A mistake in a file is shown as <var>file</var>(<var>line</var>): <var>message</var>, where <var>file</var> is the name as Small-C opened it, a header file included. Other messages begin with SMALLC: and have no line. The names that Small-C shows are in italics here. When the program has several mistakes, correct the first and compile again: the others may be its consequence.</p>
+<h2>Messages About the Command Line and the Link</h2>
+<p>These begin with SMALLC: and have no file name.</p>
+<table class="ref wrap">
+<tr><th>Message</th><th>Meaning</th></tr>
+<tr><td>usage: SMALLC [options] file...</td><td>Small-C was given no files, or an option it does not know, or -o with no name. The options are shown.</td></tr>
+<tr><td>SMALLC: cannot open <var>file</var></td><td>A file given to Small-C is not there (or, for a file with no extension, there is no .ASM of that name).</td></tr>
+<tr><td>SMALLC: cannot open the library <var>file</var></td><td>A library given to Small-C, or <code>CLIB.LIB</code>, cannot be read. <code>CLIB.LIB</code> must be next to <code>SMALLC.EXE</code>.</td></tr>
+<tr><td>SMALLC: cannot create <var>file</var></td><td>Small-C cannot write a file: the diskette is full or write-protected.</td></tr>
+<tr><td>SMALLC: cannot run <var>file</var></td><td><code>ASM.COM</code> was not found next to <code>SMALLC.EXE</code> or in the root directory.</td></tr>
+<tr><td>SMALLC: too many files</td><td>More than 24 files on the line.</td></tr>
+<tr><td>SMALLC: <var>file</var> would be written over</td><td>A file given to Small-C has the name Small-C wants for <code>CCTEMP.ASM</code>, or for the .ASM of -S. Rename it.</td></tr>
+<tr><td>SMALLC: -c takes .C files, and .ASM files with -o: <var>file</var></td><td>With -c, a file that is not .C; .ASM files are only taken with -o.</td></tr>
+<tr><td>SMALLC: no <var>C0COM or C0EXE</var> start-up module in the libraries</td><td>No library has the start-up module; with -n, give one with -L.</td></tr>
+<tr><td>SMALLC: &#x27;<var>name</var>&#x27; is not defined anywhere</td><td>The program uses a name that no module or library defines.</td></tr>
+<tr><td>SMALLC: <var>name</var> is not defined anywhere</td><td>The same, for a name of assembly language, without a C name.</td></tr>
+<tr><td>SMALLC: <var>name</var> is defined in two modules</td><td>Two modules define the same function, or give the same variable a value (the name is shown with its underscore). A name may be defined once.</td></tr>
+<tr><td>SMALLC: the variables do not fit in 64 KB</td><td>The variables of the program together are too large for a segment.</td></tr>
+<tr><td>SMALLC: too many errors</td><td>Small-C stops after 20 messages.</td></tr>
+<tr><td>SMALLC: a library module has <code>;#def</code> after <code>;#ref</code></td><td>In a library, the <code>;#def</code> lines of a module must come before its <code>;#ref</code> lines.</td></tr>
+<tr><td>SMALLC: library too big</td><td>A library has more than 600 names in all.</td></tr>
+<tr><td>SMALLC: too many library modules</td><td>The libraries have more than 80 modules in all.</td></tr>
+<tr><td>SMALLC: too many variables in .bss</td><td>More than 250 variables that start as zero in the whole program.</td></tr>
+</table>
+<h2>Messages About Files and Lines</h2>
+<table class="ref wrap">
+<tr><th>Message</th><th>Meaning</th></tr>
+<tr><td>cannot open the include file <var>name</var></td><td><code>#include</code> did not find the file in any of the places of Chapter 2.</td></tr>
+<tr><td><code>#include</code> needs &quot;file&quot; or &lt;file&gt;</td><td>The file name after <code>#include</code> is not in quotation marks or angle brackets.</td></tr>
+<tr><td><code>#include</code> nested too deep</td><td>Files include files more than 5 levels deep.</td></tr>
+<tr><td>line too <code>long</code></td><td>A line of more than 511 characters.</td></tr>
+<tr><td>line too <code>long</code> after its macros</td><td>A line has more than 767 characters once its macros are replaced.</td></tr>
+<tr><td>comment without its end</td><td>A /* comment was not closed before the end of the file.</td></tr>
+<tr><td>string too <code>long</code></td><td>A string of more than 299 characters. Write it as several strings next to each other.</td></tr>
+<tr><td>string without its end</td><td>A string&#x27;s closing quotation mark is missing on its line.</td></tr>
+<tr><td>bad character constant</td><td>A character constant that is not one character, or lacks its closing &#x27;.</td></tr>
+<tr><td>bad number</td><td>A number followed by letters, or with a point.</td></tr>
+<tr><td><code>long</code> constants are not supported</td><td>A number ending in L.</td></tr>
+<tr><td>unexpected character</td><td>A character that is not part of C, such as @ or $.</td></tr>
+</table>
+<h2>Messages About the Preprocessor</h2>
+<table class="ref wrap">
+<tr><th>Message</th><th>Meaning</th></tr>
+<tr><td><code>#define</code> needs a name</td><td><code>#define</code> was not followed by a name.</td></tr>
+<tr><td>bad macro parameters</td><td>The parameters of a macro are not names separated by commas, or there are more than 16.</td></tr>
+<tr><td>the # and ## operators are not supported</td><td>A macro uses # or ##.</td></tr>
+<tr><td>wrong number of arguments for a macro</td><td>A macro is called with more or fewer arguments than it has parameters.</td></tr>
+<tr><td>the arguments of a macro must be on one line</td><td>The closing parenthesis of a macro call is not on its line.</td></tr>
+<tr><td>a macro expands without end</td><td>A macro uses itself, directly or through others.</td></tr>
+<tr><td>bad <code>#if</code> expression</td><td>The expression of <code>#if</code> or <code>#elif</code> is not made of numbers and operators.</td></tr>
+<tr><td>&#x27;)&#x27; missing in <code>#if</code></td><td>A parenthesis of an <code>#if</code> expression is not closed.</td></tr>
+<tr><td><code>#else</code> without <code>#if</code></td><td><code>#else</code> or <code>#elif</code> with no <code>#if</code> before it.</td></tr>
+<tr><td><code>#endif</code> without <code>#if</code></td><td>An <code>#endif</code> that closes nothing.</td></tr>
+<tr><td><code>#if</code> without <code>#endif</code></td><td>An <code>#if</code> is open at the end of the file.</td></tr>
+<tr><td><code>#error</code> <var>text</var></td><td>An <code>#error</code> line was reached; the text is what it said.</td></tr>
+<tr><td>unknown directive</td><td>A line that begins with # and is not a directive SMALLC knows.</td></tr>
+<tr><td><code>#asm</code> without <code>#endasm</code></td><td>The <code>#asm</code> block does not end before the end of the file.</td></tr>
+<tr><td><code>#asm</code> block too <code>long</code></td><td>An <code>#asm</code> block of more than 767 characters.</td></tr>
+<tr><td>too many macros</td><td>More than 250 macros, or more than 3000 characters of macros, in a source file.</td></tr>
+<tr><td>too many names</td><td>More than 1250 different names, or 10000 characters of names.</td></tr>
+<tr><td><code>#if</code> nested too deep</td><td>More than 16 levels of <code>#if</code>.</td></tr>
+</table>
+<h2>Messages About Declarations</h2>
+<table class="ref wrap">
+<tr><th>Message</th><th>Meaning</th></tr>
+<tr><td><code>long</code> is not supported</td><td><code>long</code> was used.</td></tr>
+<tr><td>floating point is not supported</td><td><code>float</code> or <code>double</code> was used.</td></tr>
+<tr><td><code>typedef</code> is not supported</td><td><code>typedef</code> was used.</td></tr>
+<tr><td>bit fields are not supported</td><td>A member of a structure with a colon and a width.</td></tr>
+<tr><td>pointers to functions are not supported</td><td>A declarator with parentheses, a pointer to a function, or the address of a function.</td></tr>
+<tr><td>structures are passed by pointer, not by value</td><td>A structure as a parameter or as an argument.</td></tr>
+<tr><td>functions return structures by pointer, not by value</td><td>A function declared to return a structure.</td></tr>
+<tr><td>a function cannot return an array</td><td>A function declared to return an array.</td></tr>
+<tr><td>two storage classes</td><td>For example <code>static</code> <code>extern</code>.</td></tr>
+<tr><td>two types</td><td>For example <code>char</code> <code>int</code>.</td></tr>
+<tr><td><code>unsigned</code> with a type that has no sign</td><td><code>unsigned</code> before a structure, a <code>void</code> or another type with no sign.</td></tr>
+<tr><td><code>auto</code> or <code>register</code> outside a function</td><td>Those classes are for variables of functions.</td></tr>
+<tr><td>a type expected</td><td>A declaration at the top level has a name and no type, and is not a function.</td></tr>
+<tr><td>a name expected</td><td>A declaration has no name where one is needed.</td></tr>
+<tr><td>a member type expected</td><td>A structure member without a type.</td></tr>
+<tr><td>a parameter type expected</td><td>A parameter without a type.</td></tr>
+<tr><td>a parameter declaration expected</td><td>In an old-style definition, what follows the parentheses is not a declaration.</td></tr>
+<tr><td>a parameter without a name</td><td>A function definition with a parameter that has only a type.</td></tr>
+<tr><td>not a parameter</td><td>An old-style definition declares a name that is not among the parameters.</td></tr>
+<tr><td>too many parameters</td><td>More than 32 parameters.</td></tr>
+<tr><td>a storage class in a type name</td><td><code>static</code> or <code>extern</code> in a cast or <code>sizeof</code>.</td></tr>
+<tr><td>a name in a type name</td><td>A cast or <code>sizeof</code> (type) with a name in it.</td></tr>
+<tr><td>a structure needs a name or its members</td><td><code>struct</code> alone.</td></tr>
+<tr><td>a structure not yet defined</td><td>A variable of a structure type that has no members yet.</td></tr>
+<tr><td>a member of a structure not yet defined</td><td>A structure inside another before it is defined. Use a pointer, or define it first.</td></tr>
+<tr><td><code>struct</code> &#x27;<var>name</var>&#x27; defined twice</td><td>The members of a tag were written twice.</td></tr>
+<tr><td>member &#x27;<var>name</var>&#x27; twice</td><td>Two members of a structure with the same name.</td></tr>
+<tr><td>&#x27;<var>name</var>&#x27; declared again</td><td>A name that is an enumeration constant is declared again.</td></tr>
+<tr><td>&#x27;<var>name</var>&#x27; declared again as something else</td><td>A name is declared once as a variable and again as a function (or the reverse).</td></tr>
+<tr><td>&#x27;<var>name</var>&#x27; defined twice</td><td>A variable with an initial value twice.</td></tr>
+<tr><td>function &#x27;<var>name</var>&#x27; defined twice</td><td>Two bodies for a function.</td></tr>
+<tr><td><code>static</code> function &#x27;<var>name</var>&#x27; is not defined</td><td>A <code>static</code> function that is used and has no body in the file.</td></tr>
+<tr><td>the size of &#x27;<var>name</var>&#x27; is not known</td><td>A variable of an array with no size and no initial value, or an unfinished structure.</td></tr>
+<tr><td>the size of a local is not known</td><td>The same, in a function.</td></tr>
+<tr><td>the size of a <code>static</code> is not known</td><td>The same, for a <code>static</code> of a function.</td></tr>
+<tr><td>an array has from 1 to 32767 elements</td><td>An array size that is 0, negative, or above 32767.</td></tr>
+<tr><td>only the first dimension can be left out</td><td>A [] that is not the first of an array.</td></tr>
+<tr><td>an initializer must be a constant</td><td>An initial value that is not a number, an address or a string.</td></tr>
+<tr><td><code>extern</code> with an initializer</td><td>An <code>extern</code> variable with an initial value.</td></tr>
+<tr><td>too many initializers</td><td>More values than the array has elements.</td></tr>
+<tr><td>a <code>union</code> takes one initializer</td><td>More than one value for a <code>union</code>.</td></tr>
+<tr><td>one string per pointer</td><td>A pointer initialized with several strings.</td></tr>
+<tr><td>one string per array</td><td>A <code>char</code> array initialized with several strings.</td></tr>
+<tr><td>the string is longer than the array</td><td>A string that does not fit the <code>char</code> array it initializes.</td></tr>
+<tr><td>only simple locals can be initialized here; make it <code>static</code></td><td>An array or structure of a function with an initial value.</td></tr>
+<tr><td>too many dimensions</td><td>More than 8 dimensions.</td></tr>
+<tr><td>too many globals</td><td>More than 320 names of variables, functions and enumeration constants in a file.</td></tr>
+<tr><td>too many locals</td><td>More than 100 names of variables and parameters in a function at one time.</td></tr>
+<tr><td>too many members</td><td>More than 200 structure members in a file.</td></tr>
+<tr><td>too many structures</td><td>More than 80 structures and unions in a file.</td></tr>
+<tr><td>too many types</td><td>More than 200 different types in a file.</td></tr>
+<tr><td>too many strings in one initializer</td><td>More than 40 strings, or 600 characters of strings, in the initial value of one variable.</td></tr>
+</table>
+<h2>Messages About Expressions</h2>
+<table class="ref wrap">
+<tr><th>Message</th><th>Meaning</th></tr>
+<tr><td>&#x27;<var>name</var>&#x27; is not declared</td><td>A name used and not declared. The most often it is a spelling mistake, or a missing <code>#include</code>.</td></tr>
+<tr><td>an expression expected</td><td>An expression is not complete.</td></tr>
+<tr><td>a constant is needed</td><td>A case, an array size or an enumeration value is not a constant expression.</td></tr>
+<tr><td>division by zero</td><td>A division by a constant zero.</td></tr>
+<tr><td>an integer is needed here</td><td>An operator that needs integers has a pointer or another type.</td></tr>
+<tr><td>a number or a pointer is needed here</td><td>A structure or an array where a number is needed.</td></tr>
+<tr><td>an lvalue is needed for &amp;</td><td>&amp; of something with no address.</td></tr>
+<tr><td>an lvalue is needed for =</td><td>The left of = is not a variable.</td></tr>
+<tr><td>an lvalue is needed for an assignment</td><td>The left of += and others is not a variable.</td></tr>
+<tr><td>++ or -- needs a variable</td><td>++ or -- of an expression.</td></tr>
+<tr><td>only += and -= on pointers</td><td>*=, &amp;= and others on a pointer.</td></tr>
+<tr><td>* of something that is not a pointer</td><td>* applied to a number.</td></tr>
+<tr><td>* of a <code>void</code> pointer</td><td>* applied to a <code>void</code> *.</td></tr>
+<tr><td>arithmetic on a pointer to something without a size</td><td>Adding to a <code>void</code> * or to a pointer to a function.</td></tr>
+<tr><td><code>sizeof</code> of something without a size</td><td><code>sizeof</code> a function or <code>void</code>.</td></tr>
+<tr><td>only functions can be called</td><td>A call with parentheses of something that is not a function.</td></tr>
+<tr><td>-&gt; on something that is not a pointer to a structure</td><td>The left of -&gt; is not a pointer to a structure.</td></tr>
+<tr><td>. on something that is not a structure</td><td>The left of . is not a structure.</td></tr>
+<tr><td>no member &#x27;<var>name</var>&#x27;</td><td>The structure has no member with that name.</td></tr>
+<tr><td>casts are between numbers and pointers</td><td>A cast to or from a structure or array.</td></tr>
+<tr><td>a value of the wrong type</td><td>A structure or array where a number is needed.</td></tr>
+<tr><td>a <code>void</code> value used</td><td>The value of a <code>void</code> function is used.</td></tr>
+<tr><td>structures of different types</td><td>A structure assigned to another of a different type.</td></tr>
+<tr><td>expression too complex</td><td>More than 250 parts in one expression.</td></tr>
+</table>
+<h2>Messages About Statements</h2>
+<table class="ref wrap">
+<tr><th>Message</th><th>Meaning</th></tr>
+<tr><td>declarations go at the start of a block</td><td>A declaration after a statement.</td></tr>
+<tr><td>a condition must be a number or a pointer</td><td>The condition of if, while, do or for is a structure.</td></tr>
+<tr><td>a <code>void</code> function returns no value</td><td>return with a value in a <code>void</code> function.</td></tr>
+<tr><td>break outside a loop or a switch</td><td>break where there is nothing to leave.</td></tr>
+<tr><td>continue outside a loop</td><td>continue where there is no loop.</td></tr>
+<tr><td>case outside a switch</td><td>case not inside a switch.</td></tr>
+<tr><td>default outside a switch</td><td>default not inside a switch.</td></tr>
+<tr><td>two defaults</td><td>A switch has two default labels.</td></tr>
+<tr><td>the same case twice</td><td>Two cases of a switch have the same value.</td></tr>
+<tr><td>switch needs an integer</td><td>The expression of a switch is a pointer or another type.</td></tr>
+<tr><td>label &#x27;<var>name</var>&#x27; twice</td><td>Two labels with the same name in a function.</td></tr>
+<tr><td>label &#x27;<var>name</var>&#x27; is not defined</td><td><code>goto</code> to a label that the function does not have.</td></tr>
+<tr><td>loops nested too deep</td><td>More than 32 loops and switches nested.</td></tr>
+<tr><td>too many cases</td><td>More than 150 cases in a function.</td></tr>
+<tr><td>too many labels</td><td>More than 64 labels in a function.</td></tr>
+<tr><td>&#x27;<var>c</var>&#x27; expected</td><td>The punctuation shown is missing: ; ) } and so on. The message gives the line where Small-C found something else, often the line after the mistake.</td></tr>
+</table>
+</section>
+
+<!-- ================================================================== -->
+<!-- APPENDIX B                                                           -->
+<!-- ================================================================== -->
+
+<section class="chapter appendix" data-num="B" data-title="Technical Information" data-part="Appendixes">
+
+<h2>The Calling Convention</h2>
+<p>This is what to know to write functions in assembly language that C can call, or to call C from assembly language.</p>
+<ul>
+<li>The caller pushes the arguments, each as a word, from the <i>last</i> to the first, calls the function, and takes the arguments off the stack itself (ADD SP, n). A <code>char</code> argument is pushed as an <code>int</code>. At the start of the function, [sp] is the return address and [sp+2] the first argument.</li>
+<li>A function that uses its stack frame begins with PUSH BP and MOV BP, SP. Then the first parameter is at [bp+4], the second at [bp+6], and so on; the variables of the function are below BP, at [bp-2], [bp-4]...</li>
+<li>The value is returned in AX.</li>
+<li>BP, SI, DI, DS, ES and SS must be as they were when the function ends. AX, BX, CX and DX may be changed. The direction flag is clear, and must be left so.</li>
+<li>A function of C that is called with the wrong number of arguments cannot know it; the stack is put right by the caller, so it keeps its balance, but the function reads what is not there.</li>
+</ul>
+
+<h2>Names and Labels</h2>
+<table class="ref wrap">
+<tr><th>Name</th><th>Is</th></tr>
+<tr><td>_name</td><td>A function or variable of C: a leading underscore. Library functions follow this rule too.</td></tr>
+<tr><td>MODULE@name</td><td>A <code>static</code> function or variable. MODULE is the name of the module, which is the name of its file in capitals.</td></tr>
+<tr><td>MODULE@V<var>n</var></td><td>A <code>static</code> variable of a function, that starts as zero. With an initial value it is .V<var>n</var>.</td></tr>
+<tr><td>.L<var>n</var>, .S<var>n</var>, .U<var>name</var>, .R, .F</td><td>Local labels of a function: of jumps, of strings, of the labels of the program (<code>goto</code>), of the end of the function and of the size of its frame. They begin with a dot: they belong to the function, and each function has its own.</td></tr>
+<tr><td><code>__start</code>, <code>_exit</code>, <code>__exit</code>, <code>__psp</code>, <code>__brk</code>, <code>__brkend</code>, <code>__dbase</code>, <code>__image</code></td><td>Names of the start-up modules.</td></tr>
+</table>
+<p>Every address of data is written as <i>label</i> - <code>__dbase</code>: in a .COM program <code>__dbase</code> is 0 and the address is the offset; in an .EXE it is the start of the data segment, and the result is the offset in that segment. Code that is not made by Small-C must follow it for the same program to be made for both.</p>
+
+<h2>Data</h2>
+<ul>
+<li><code>int</code>, <code>unsigned</code>, pointers and enumerations are 2 bytes, low byte first. <code>char</code> is 1 byte.</li>
+<li>The members of a structure follow each other with no padding; a structure may begin at any address. The members of a <code>union</code> all begin at its start. An array of arrays is stored with the last index changing fastest.</li>
+<li>A string is a series of bytes with a zero after it, in the data of the program. The data that have an initial value come first, then the variables that start as zero, which are not in the file of the program, but placed after it when it starts, and set to zero.</li>
+</ul>
+
+<h2>Memory of a .COM Program</h2>
+<p>The program is loaded at offset 0x100 of a segment, after its PSP, and its code, its initialized data and its other variables follow, in that order. The program asks COS for 64 KB and gives back the rest of memory. The stack starts at the top of the segment. The heap goes from the end of the variables, up, to 2 KB below the stack pointer at the start.</p>
+<table class="ref">
+<tr><th>Offset</th><th>Contents</th></tr>
+<tr><td>0000h</td><td>The PSP</td></tr>
+<tr><td>0100h</td><td>Code</td></tr>
+<tr><td>...</td><td>Initialized data</td></tr>
+<tr><td>...</td><td>Variables that start as zero</td></tr>
+<tr><td>...</td><td>Heap, growing up</td></tr>
+<tr><td>...</td><td>2 KB kept free</td></tr>
+<tr><td>...</td><td>Stack, growing down</td></tr>
+<tr><td>FFFEh</td><td>Top of the stack</td></tr>
+</table>
+
+<h2>Memory of an .EXE Program</h2>
+<p>An .EXE has a header with one relocation, which sets the data segment, and then its code. The code is one segment, up to 64 KB, as in a .COM. The data segment is another, after the code (on a boundary of 16 bytes): it holds the initialized data, the variables that start as zero, the heap, and the stack, which begins at the top of the segment, offset 0, wrapped, and goes down. The program asks for the memory it needs, at least the variables and 4 KB of stack, and gives back what it does not use of the rest. The heap stops 2 KB below the stack, as in a .COM. CS and DS are different segments, so the data may be the whole 64 KB, less the stack.</p>
+
+<h2>Limits of the Compiler</h2>
+<table class="ref wrap">
+<tr><th>Item</th><th>Limit</th></tr>
+<tr><td>Names</td><td>1250 different names (identifiers, macros and link names, in all the files of a compilation); their characters, 10000.</td></tr>
+<tr><td>Globals</td><td>320 variables, functions and enumeration constants in a source file.</td></tr>
+<tr><td>Locals</td><td>100 variables and parameters of a function that are in scope at once.</td></tr>
+<tr><td>Types</td><td>200 different types (every pointer type and array type counts) in a source file.</td></tr>
+<tr><td>Structures</td><td>80 structures and unions, and 200 members in all, in a source file.</td></tr>
+<tr><td>Macros</td><td>250, with 3000 characters of text, in a source file. Parameters: 16.</td></tr>
+<tr><td>Expression</td><td>250 parts.</td></tr>
+<tr><td>Statements</td><td>150 cases in a function, 32 loops and switches nested, 64 labels in a function.</td></tr>
+<tr><td>Declarations</td><td>32 parameters; 8 dimensions; 40 strings and 600 characters of them in one initializer.</td></tr>
+<tr><td>Source</td><td>511 characters in a line, 767 after macros; 299 in a string; 767 in a <code>#asm</code> block; <code>#include</code> 5 deep; <code>#if</code> 16 deep; 20 errors.</td></tr>
+<tr><td>Command line</td><td>24 files; 16 -D; 3 -I; 3 -L (and <code>CLIB.LIB</code>). A path of up to 79 characters.</td></tr>
+<tr><td>Link</td><td>80 modules and 600 names in the libraries; 250 variables that start as zero.</td></tr>
+<tr><td>Program</td><td>Code up to 64 KB; variables up to 64 KB, less the stack (and, in a .COM, less the code). One array or structure under 32 KB.</td></tr>
+<tr><td>Arguments</td><td>24 words, 127 characters, for <code>argc</code> and <code>argv</code>.</td></tr>
+<tr><td>Streams</td><td>7 open files at once.</td></tr>
+</table>
+
+<h2>Keywords</h2>
+<p>These words are reserved:</p>
+<div class="keywords"><div><code>auto</code></div><div>break</div><div>case</div><div><code>char</code></div><div>continue</div><div>default</div><div>do</div><div>else</div><div><code>enum</code></div><div><code>extern</code></div><div>for</div><div><code>goto</code></div><div>if</div><div><code>int</code></div><div><code>register</code></div><div>return</div><div><code>short</code></div><div><code>signed</code></div><div><code>sizeof</code></div><div><code>static</code></div><div><code>struct</code></div><div>switch</div><div><code>union</code></div><div><code>unsigned</code></div><div><code>void</code></div><div>while</div></div>
+<p><code>const</code> and <code>volatile</code> are accepted and ignored. <code>long</code>, <code>float</code>, <code>double</code> and <code>typedef</code> are reserved, and give messages.</p>
+
+<h2>A Module</h2>
+<p>This is <code>TINY.C</code>, and <code>TINY.ASM</code>, the module that <b>smallc -c tiny.c</b> makes from it. The <code>;#bss</code> line is the <code>static</code> variable count, the <code>;#def</code> lines the two names that other files can use; bump is <code>static</code>, so it is TINY@bump.</p>
+<pre class="listing">/* TINY.C - a small module */
+static int count;
+char *label = &quot;sum&quot;;
+
+static int bump(void)
+{
+    return ++count;
+}
+
+int add(int a, int b)
+{
+    int t;
+
+    t = a + b;
+    bump();
+    return t;
+}</pre>
+<pre class="listing">;#module TINY
+section .data
+_label:
+    dw .S1-__dbase
+.S1:
+    db &#x27;sum&#x27;, 0
+section .text
+TINY@bump:
+    push bp
+    mov bp, sp
+    times !!.F sub sp, .F
+    inc word [TINY@count-__dbase]
+    mov ax, [TINY@count-__dbase]
+.R:
+    times !!.F mov sp, bp
+    pop bp
+    ret
+.F equ 0
+_add:
+    push bp
+    mov bp, sp
+    times !!.F sub sp, .F
+    mov ax, [bp+4]
+    add ax, [bp+6]
+    mov [bp-2], ax
+    call TINY@bump
+    mov ax, [bp-2]
+.R:
+    times !!.F mov sp, bp
+    pop bp
+    ret
+.F equ 2
+;#bss TINY@count 2
+;#def _label
+;#def _add</pre>
+</section>
+
+<!-- ================================================================== -->
+<!-- APPENDIX C                                                           -->
+<!-- ================================================================== -->
+
+<section class="chapter appendix" data-num="C" data-title="The Sample Program WORDS.C" data-part="Appendixes">
+
+<h2>Counting Words</h2>
+<p>WORDS counts the words of a text file and lists the commonest. It shows structures and tables of them, a <code>static</code> table, strings in memory from <code>strdup</code>, files, the command line, the macro that a -D can change, and a sort. Compile it with <b>smallc words.c</b>; with <b>smallc -DMAXWORDS=500 words.c</b> it has room for more different words.</p>
+<pre class="screen">
+A:\&gt;<b>smallc words.c</b>
+WORDS.COM: 7540 bytes
+
+A:\&gt;<b>words sample.txt 8</b>
+72 words, 33 different
+the            12  16%
+is              8  11%
+computer        6   8%
+list            6   8%
+a               5   6%
+and             4   5%
+small           2   2%
+program         2   2%
+
+A:\&gt;<b>words nofile.txt</b>
+WORDS: cannot open nofile.txt
+
+A:\&gt;
+</pre>
+<ul>
+<li>find looks a word up and makes a new entry when it is new, returning a pointer to the entry, so <code>main</code> can count it with e-&gt;count++.</li>
+<li>getword reads letters from the file with <code>getc</code> and ctype's <code>isalpha</code>, and makes them small with <code>tolower</code>.</li>
+<li>sort uses structure assignment: a structure cannot be passed to a function, but may be copied.</li>
+<li>The percentage is worked out as an <code>unsigned</code> number, so that count * 100 does not overflow an <code>int</code>.</li>
+</ul>
+<h2>The Listing</h2>
+<pre class="listing full">/* WORDS.C - counts the words of a text file and lists the commonest.
+ *
+ *   WORDS file [count]
+ *
+ * A word is a run of letters (and apostrophes); capitals count as small
+ * letters. Make it with: SMALLC WORDS.C   (or SMALLC -DMAXWORDS=500 WORDS.C)
+ */
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;ctype.h&gt;
+
+#ifndef MAXWORDS
+#define MAXWORDS 300            /* different words kept */
+#endif
+#define MAXLEN 20               /* longer words are cut */
+
+struct entry {
+    char *word;
+    int count;
+};
+
+static struct entry table[MAXWORDS];
+static int used;                /* entries of table in use */
+
+/* The entry of a word, made if it is new; 0 when there is no room. */
+static struct entry *find(char *w)
+{
+    int i;
+
+    for (i = 0; i &lt; used; i++)
+        if (strcmp(table[i].word, w) == 0)
+            return &amp;table[i];
+    if (used == MAXWORDS)
+        return 0;
+    table[used].word = strdup(w);
+    if (table[used].word == 0)
+        return 0;
+    table[used].count = 0;
+    return &amp;table[used++];
+}
+
+/* Reads the next word of f into w: its length, or 0 at the end. */
+static int getword(FILE *f, char *w)
+{
+    int c, n;
+
+    do
+        c = getc(f);
+    while (c != EOF &amp;&amp; !isalpha(c));
+    n = 0;
+    while (c != EOF &amp;&amp; (isalpha(c) || c == &#x27;\&#x27;&#x27;)) {
+        if (n &lt; MAXLEN)
+            w[n++] = tolower(c);
+        c = getc(f);
+    }
+    w[n] = 0;
+    return n;
+}
+
+/* Puts the table in order of count, the commonest first. */
+static void sort(void)
+{
+    int i, j;
+    struct entry e;
+
+    for (i = 1; i &lt; used; i++) {
+        e = table[i];
+        for (j = i - 1; j &gt;= 0 &amp;&amp; table[j].count &lt; e.count; j--)
+            table[j + 1] = table[j];
+        table[j + 1] = e;
+    }
+}
+
+int main(int argc, char **argv)
+{
+    FILE *f;
+    char w[MAXLEN + 1];
+    struct entry *e;
+    int i, top, total, lost;
+
+    if (argc &lt; 2) {
+        printf(&quot;usage: WORDS file [count]\n&quot;);
+        return 1;
+    }
+    f = fopen(argv[1], &quot;r&quot;);
+    if (f == 0) {
+        printf(&quot;WORDS: cannot open %s\n&quot;, argv[1]);
+        return 1;
+    }
+    top = argc &gt; 2 ? atoi(argv[2]) : 10;
+    total = 0;
+    lost = 0;
+    while (getword(f, w)) {
+        total++;
+        e = find(w);
+        if (e)
+            e-&gt;count++;
+        else
+            lost++;
+    }
+    fclose(f);
+    sort();
+    printf(&quot;%d words, %d different\n&quot;, total, used);
+    for (i = 0; i &lt; used &amp;&amp; i &lt; top; i++)
+        printf(&quot;%-12s %4d %3u%%\n&quot;, table[i].word, table[i].count,
+               (unsigned)table[i].count * 100 / total);
+    if (lost)
+        printf(&quot;%d words were not counted: the table is full\n&quot;, lost);
+    return 0;
+}</pre>
+</section>
+
+<section class="back quick" data-kind="quick" data-title="Quick Reference">
+<h2>Quick Reference</h2>
+<table class="ref wrap">
+<tr><th>Task</th><th>How</th></tr>
+<tr><td>Compile and make a .COM</td><td>SMALLC <var>file</var>.C</td></tr>
+<tr><td>Make an .EXE</td><td>SMALLC -e <var>file</var>.C</td></tr>
+<tr><td>Name the program</td><td>SMALLC -o <var>name</var> <var>file</var>.C</td></tr>
+<tr><td>Several files</td><td>SMALLC <var>a</var>.C <var>b</var>.C <var>c</var>.ASM <var>lib</var>.LIB</td></tr>
+<tr><td>Define a macro</td><td>SMALLC -D<var>name</var>=<var>value</var> ...</td></tr>
+<tr><td>Where the headers are</td><td>SMALLC -I<var>directory</var> ...</td></tr>
+<tr><td>Keep the assembly language</td><td>SMALLC -S ...</td></tr>
+<tr><td>A module for each file</td><td>SMALLC -c <var>a</var>.C <var>b</var>.C</td></tr>
+<tr><td>A library</td><td>SMALLC -c -o <var>lib</var>.LIB <var>a</var>.C <var>b</var>.C <var>c</var>.ASM</td></tr>
+<tr><td>Files and text</td><td><code>STDIO.H</code>: <code>fopen</code>, <code>fclose</code>, <code>getc</code>, <code>putc</code>, <code>fgets</code>, <code>fputs</code>, <code>printf</code>, <code>sprintf</code>, <code>fread</code>, <code>fwrite</code>, remove, rename</td></tr>
+<tr><td>Memory and numbers</td><td><code>STDLIB.H</code>: <code>malloc</code>, <code>calloc</code>, <code>realloc</code>, free, exit, abs, <code>atoi</code>, <code>itoa</code>, <code>rand</code>, <code>srand</code>, <code>getenv</code></td></tr>
+<tr><td>Strings</td><td><code>STRING.H</code>: <code>strlen</code>, <code>strcpy</code>, <code>strcat</code>, <code>strcmp</code>, <code>strchr</code>, <code>strstr</code>, <code>strdup</code>, <code>memcpy</code>, <code>memset</code>, <code>memcmp</code>...</td></tr>
+<tr><td>Characters</td><td><code>CTYPE.H</code>: <code>isalpha</code>, <code>isdigit</code>, <code>isspace</code>, <code>toupper</code>, <code>tolower</code>...</td></tr>
+<tr><td>Handles</td><td><code>IO.H</code>: open, <code>creat</code>, close, read, write, <code>lseek</code>, <code>unlink</code></td></tr>
+<tr><td>The machine</td><td><code>DOS.H</code>: <code>inp</code>, <code>outp</code>, peek, poke, <code>int86</code>, <code>intdos</code>, <code>spawn</code>, disable, enable</td></tr>
+<tr><td>Keys and screen</td><td><code>CONIO.H</code>: <code>getch</code>, <code>getche</code>, <code>kbhit</code>, <code>putch</code>, <code>cputs</code></td></tr>
+<tr><td>Assembly language</td><td><code>#asm</code> ... <code>#endasm</code></td></tr>
+</table>
+</section>
+
+</div>
+<script>
+// ---------------------------------------------------------------------
+// Pagination: flows the sections of #source into 7 x 9 inch pages, with
+// chapter-page numbers, running heads, tabs and a table of contents.
+// ---------------------------------------------------------------------
+const book = document.getElementById("book");
+const src = document.getElementById("source");
+const pages = [];
+const ROMAN = ["", "i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", "xi", "xii", "xiii", "xiv"];
+const BLANK = "This page intentionally left blank.";
+
+// ---------- pages ----------
+function newPage(opts) {
+  const p = document.createElement("div");
+  p.className = "page odd";
+  p.innerHTML = '<div class="head"><span class="l"></span><span class="r"></span></div>' +
+                '<div class="body"></div><div class="foot"><span class="label"></span><span class="ed"></span></div>' +
+                '<div class="tab"></div>';
+  Object.assign(p, opts || {});
+  book.appendChild(p);
+  pages.push(p);
+  return p;
+}
+function blankPage(chap) {
+  const p = newPage({ kind: "blank", chap });
+  p.classList.add("blank");
+  bodyOf(p).textContent = BLANK;
+  return p;
+}
+const bodyOf = p => p.querySelector(".body");
+const fits = b => b.scrollHeight <= b.clientHeight + 1;
+const isHead = el => /^(H[1-4]|DT)$/.test(el.tagName) || el.classList.contains("fnhead");
+
+let cur = null;
+function startPage(opts) { cur = newPage(opts); return cur; }
+
+// A new page; headings left at the bottom of the old one go with it.
+function breakPage() {
+  const old = bodyOf(cur), moving = [];
+  while (old.children.length > 1 && isHead(old.lastElementChild)) moving.unshift(old.removeChild(old.lastElementChild));
+  startPage({ chap: cur.chap, kind: cur.kind === "opener" ? undefined : cur.kind });
+  for (const m of moving) bodyOf(cur).appendChild(m);
+}
+
+// Splits a block where the page ends: [what fits, the rest], or null.
+function split(el, body) {
+  const tag = el.tagName;
+  let items, make, fill;
+  if (tag === "PRE") {
+    items = el.innerHTML.replace(/\n$/, "").split("\n");
+    if (items.length < 6) return null;
+    make = () => el.cloneNode(false);
+    fill = (box, list) => { box.innerHTML = list.join("\n"); };
+  } else if (tag === "TABLE") {
+    const rows = [...el.querySelectorAll(":scope > tbody > tr, :scope > tr")];
+    const head = rows.length && rows[0].querySelector("th") ? rows[0] : null;
+    items = head ? rows.slice(1) : rows;
+    if (items.length < 4) return null;
+    make = () => el.cloneNode(false);
+    fill = (box, list) => {
+      box.innerHTML = "";
+      const tb = document.createElement("tbody");
+      if (head) tb.appendChild(head.cloneNode(true));
+      for (const r of list) tb.appendChild(r.cloneNode(true));
+      box.appendChild(tb);
+    };
+  } else if (tag === "UL" || tag === "OL" || tag === "DIV" && el.classList.contains("toc")) {
+    items = [...el.children];
+    if (items.length < 2) return null;
+    make = () => el.cloneNode(false);
+    fill = (box, list) => { box.innerHTML = ""; for (const li of list) box.appendChild(li.cloneNode(true)); };
+  } else if (tag === "DL") {
+    items = [];                                  // dt + dd pairs
+    for (const k of el.children) {
+      if (k.tagName === "DT" || !items.length) items.push([k]);
+      else items[items.length - 1].push(k);
+    }
+    if (items.length < 2) return null;
+    make = () => el.cloneNode(false);
+    fill = (box, list) => { box.innerHTML = ""; for (const g of list) for (const k of g) box.appendChild(k.cloneNode(true)); };
+  } else return null;
+
+  const min = tag === "PRE" ? 3 : tag === "TABLE" ? 2 : 1;
+  const a = make();
+  body.appendChild(a);
+  let best = 0, lo = min, hi = items.length - 1;      // the most items that fit
+  while (lo <= hi) {
+    const k = (lo + hi) >> 1;
+    fill(a, items.slice(0, k));
+    if (fits(body)) { best = k; lo = k + 1; } else hi = k - 1;
+  }
+  body.removeChild(a);
+  if (!best || best >= items.length) return null;
+  fill(a, items.slice(0, best));
+  const b = make();
+  fill(b, items.slice(best));
+  if (tag === "OL") b.setAttribute("start", String(best + parseInt(el.getAttribute("start") || "1")));
+  return [a, b];
+}
+
+// Boxes that may be opened up when they do not fit: their children flow.
+const container = el => el.tagName === "DIV" && el.classList.contains("entry") ||
+                        (el.tagName === "DD" || el.tagName === "DL") && el.children.length > 0;
+
+let placed = 0;
+function place(el, retried) {
+  if (++placed > 20000) throw new Error("layout loop at: " + (el.textContent || "").slice(0, 80));
+  const body = bodyOf(cur);
+  body.appendChild(el);
+  if (fits(body)) return;
+  body.removeChild(el);
+  const parts = split(el, body);
+  if (parts) {
+    body.appendChild(parts[0]);
+    breakPage();
+    place(parts[1]);
+    return;
+  }
+  if (container(el)) {
+    for (const k of [...el.children]) {
+      if (el.tagName === "DD") k.classList.add("in-dd");
+      place(k);
+    }
+    return;
+  }
+  if (body.children.length && !retried) {      // again on a new page, where it may split
+    breakPage();
+    place(el, true);
+    return;
+  }
+  bodyOf(cur).appendChild(el);
+  if (!fits(bodyOf(cur))) console.warn("too tall for a page:", el.tagName, el.className, el.textContent.slice(0, 60));
+}
+
+function flowSection(sec, opts) {
+  startPage(opts);
+  for (const el of [...sec.children]) place(el);
+}
+
+const front = [...src.querySelectorAll(":scope > section.front")];
+const chapters = [...src.querySelectorAll(":scope > section.chapter")];
+const back = [...src.querySelectorAll(":scope > section.back")];
+const frontOf = kind => front.find(s => s.dataset.kind === kind);
+
+// ---------- the cover and its back ----------
+const cover = startPage({ kind: "cover" });
+cover.classList.add("cover", "plain");
+bodyOf(cover).innerHTML =
+  '<div class="titles"><div class="t1">Small-C</div><div class="t2">For COS</div></div>';
+flowSection(frontOf("notice"), { kind: "notice" });
+
+// ---------- the chapters: their page numbers do not depend on the front matter ----------
+const frontStart = pages.length;           // the preface and contents go here later
+const chapterInfo = [];
+for (const ch of chapters) {
+  if (pages.length % 2 === 1) blankPage(cur.chap);       // a chapter starts on a right-hand page
+  const chap = { num: ch.dataset.num, title: ch.dataset.title, part: ch.dataset.part,
+                 appendix: ch.classList.contains("appendix") };
+  const op = startPage({ chap, kind: "opener" });
+  op.classList.add("opener");
+  bodyOf(op).innerHTML = '<div class="num">' + chap.num + '</div><h1>' +
+    (chap.appendix ? "Appendix " + chap.num + ". " : "") + chap.title +
+    '</h1><div class="mini"><h4>Contents</h4><div class="toc"></div></div>';
+  startPage({ chap });
+  const heads = [...ch.querySelectorAll("h2")];
+  for (const el of [...ch.children]) place(el);
+  chapterInfo.push({ chap, heads, op });
+}
+for (const b of back) {
+  if (pages.length % 2 === 1) blankPage(cur.chap);
+  flowSection(b, { kind: "back", chap: { title: b.dataset.title } });
+}
+
+// ---------- chapter-page labels ----------
+const count = {};
+for (const p of pages) {
+  if (!p.chap || !p.chap.num) continue;
+  count[p.chap.num] = (count[p.chap.num] || 0) + 1;
+  p.label = p.chap.num + "-" + count[p.chap.num];
+}
+const labelOf = el => { let p = el; while (p && !(p.classList && p.classList.contains("page"))) p = p.parentNode; return p ? p.label : ""; };
+const headText = h => h.childNodes[0].textContent.trim();
+
+function tocRow(box, text, label, cls) {
+  const r = document.createElement("div");
+  r.className = "row " + (cls || "");
+  r.innerHTML = '<span class="t"></span><span class="dots"></span><span class="p"></span>';
+  r.querySelector(".t").textContent = text;
+  r.querySelector(".p").textContent = label;
+  if (!label) r.querySelector(".dots").style.visibility = "hidden";
+  box.appendChild(r);
+}
+for (const { heads, op } of chapterInfo) {
+  const t = op.querySelector(".toc");
+  for (const h of heads) tocRow(t, headText(h), labelOf(h));
+}
+
+// ---------- the front matter, laid out last and moved in front ----------
+const toc = document.getElementById("toc");
+let part = "";
+for (const { chap, heads } of chapterInfo) {
+  if (chap.part !== part) { part = chap.part; tocRow(toc, part, "", "ch part"); }
+  tocRow(toc, (chap.appendix ? "Appendix " : "Chapter ") + chap.num + ". " + chap.title, chap.num + "-1", "ch");
+  for (const h of heads) tocRow(toc, headText(h), labelOf(h), "sec");
+}
+tocRow(toc, "Quick Reference", "", "ch");
+
+const mark = pages.length;
+for (const s of [frontOf("preface"), frontOf("contents")]) {
+  if ((frontStart + pages.length - mark) % 2 === 1) blankPage(null);
+  flowSection(s, { kind: "front", chap: { title: s.dataset.title } });
+}
+if ((frontStart + pages.length - mark) % 2 === 1) blankPage(null);   // chapter 1 on the right
+const moved = pages.splice(mark);
+const anchor = pages[frontStart];
+for (const p of moved) book.insertBefore(p, anchor);
+pages.splice(frontStart, 0, ...moved);
+
+// ---------- sides, heads, feet, tabs ----------
+const tabOrder = ["1", "2", "3", "4", "5", "6", "7", "A", "B", "C"];
+pages.forEach((p, i) => {
+  p.classList.remove("odd", "even");
+  p.classList.add(i % 2 === 0 ? "odd" : "even");
+  if (p.kind === "cover") return;
+  const chap = p.chap || {};
+  if (!chap.num && p.kind !== "back") p.label = ROMAN[i + 1];
+  const head = p.querySelector(".head"), foot = p.querySelector(".foot");
+  head.querySelector(".l").textContent = chap.num ?
+    (chap.appendix ? "Appendix " : "Chapter ") + chap.num + ". " + chap.title : (chap.title || "");
+  head.querySelector(".r").textContent = chap.part || "Small-C Version 1.00";
+  foot.querySelector(".label").textContent = p.label || "";
+  foot.querySelector(".ed").textContent = "Small-C User's Guide";
+  if (p.kind === "opener" || p.kind === "blank" || p.kind === "notice") head.style.visibility = "hidden";
+  if (p.kind === "notice") foot.style.visibility = "hidden";
+  if (chap.num) {
+    p.classList.add("has-tab");
+    const t = p.querySelector(".tab");
+    t.textContent = chap.num;
+    t.style.top = (0.95 + tabOrder.indexOf(chap.num) * 0.6) + "in";
+  }
+});
+src.remove();
+window.MANUAL_READY = pages.length;
+</script>
+</body>
+</html>

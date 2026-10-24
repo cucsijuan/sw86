@@ -2,9 +2,9 @@
 """
 Prints the manuals to PDF with a Chromium-based browser in headless mode:
 Microsoft Edge, Google Chrome or Chromium. manual.html becomes
-COS-Manual.pdf and cbasic.html CBasic-Manual.pdf.
+COS-Manual.pdf, cbasic.html CBasic-Manual.pdf and smallc.html Small-C-Manual.pdf.
 
-Usage: python3 build.py [--browser PATH] [cos | cbasic ...]
+Usage: python3 build.py [--browser PATH] [cos | cbasic | smallc ...]
 """
 import argparse, os, shutil, subprocess, sys, tempfile, time
 from pathlib import Path
@@ -28,13 +28,14 @@ def find_browser():
     sys.exit("no Chromium-based browser found: use --browser")
 
 
-MANUALS = {"cos": ("manual.html", "COS-Manual.pdf"), "cbasic": ("cbasic.html", "CBasic-Manual.pdf")}
+MANUALS = {"cos": ("manual.html", "COS-Manual.pdf"), "cbasic": ("cbasic.html", "CBasic-Manual.pdf"),
+           "smallc": ("smallc.html", "Small-C-Manual.pdf")}
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--browser")
-    ap.add_argument("manuals", nargs="*", help="cos, cbasic (by default, both)")
+    ap.add_argument("manuals", nargs="*", help="cos, cbasic, smallc (by default, all)")
     args = ap.parse_args()
     for name in args.manuals:
         if name not in MANUALS:

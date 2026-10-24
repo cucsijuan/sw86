@@ -12,6 +12,7 @@ Like the rest of the suite, what it implements behaves like DOS, and what it doe
 | `tests/dos_test.py`: boot, commands, programs, Ctrl-C, a changed diskette, no diskette, write protection, a full diskette, the date and time, what the diskettes hold afterwards (read back on the host); MD, CD, RD, the prompt, DIR, COPY, REN, DEL, TYPE and programs with paths, and a diskette after a session in directories checked on the host like CHKDSK (chains, cross-links, lost clusters, `.` and `..`) | 37/37 |
 | `boot.asm`, `cos.asm`, `command.asm` assembled with NASM 2.16 | identical bytes to asm86 |
 | `tests/tools_test.py`: ASM on the machine assembles every sw86 source (itself included) and random programs, rejects programs with errors on the right line; EDIT edits, cuts and pastes, finds, saves 400 KB files and survives running out of memory | the same bytes as asm86; all pass |
+| `tests/smallc_test.py`: C programs compiled with Small-C and run on the machine, their output compared: integers of 16 bits signed and unsigned, pointers and arrays of two dimensions, structures, unions and lists on the heap, statements (switch with fall-through, goto, static locals, recursion), the preprocessor, printf, files and the heap, a program in two files with statics of the same name, an `.EXE` with 54 KB of data, `#asm`, `intdos`, `peek`/`poke`; SMALLC.EXE in COS: its error messages, a program made with ASM, byte for byte the one made by the other build; with `--self`, SMALLC.EXE compiles its own sources in COS into the same assembler source | 12/12 (and the self-compilation) |
 | `tests/basic_test.py`: BASIC programs run on the machine and their output compared: control flow, strings and the garbage collector, SUB/FUNCTION (recursion, by reference, DEF FN), arrays and TYPE records, DATA, ON ERROR/RESUME, files, INPUT, math functions, sound and timing, compile errors, a program written like GORILLA.BAS; APES.BAS starts | 13/13 |
 
 ## Writing programs on COS: EDIT and ASM
@@ -26,8 +27,21 @@ A:\>hello
 Hello from the 8086!
 ```
 
-- **ASM** (`asm.asm`): `ASM source[.ASM] [output]`. The asm86 dialect (a NASM subset for the 8086: labels and .local labels, EQU, DB/DW/RESB/RESW, TIMES, ORG, `$`/`$$`, the `.text`/`.data`/`.bss` sections, 32-bit expressions, BYTE/WORD/SHORT/NEAR/FAR, segment overrides, REP), with the same passes and choices as asm86, so the bytes are identical; errors are shown as `NAME.ASM(line): message`, with asm86's messages. It reads the source a piece at a time and keeps it as tokens in memory, so sources larger than 64 KB work; the names (each on a paragraph of its own, known by its segment) grow down from the top of memory while the tokens grow up, so neither has a limit of its own. It assembles COS, COMMAND.COM, EDIT, CBasic and itself. At the machine's 4.77 MHz, HELLO takes about a second, COS.SYS under a minute and CBasic about five minutes.
+- **ASM** (`asm.asm`): `ASM source[.ASM] [output]`. The asm86 dialect (a NASM subset for the 8086: labels and .local labels, EQU, DB/DW/RESB/RESW, TIMES, ORG, `$`/`$$`, the `.text`/`.data`/`.bss` sections, 32-bit expressions, BYTE/WORD/SHORT/NEAR/FAR, segment overrides, REP; and, beyond NASM, conditional jumps with NEAR, short when the target is close, otherwise the opposite condition over a near JMP), with the same passes and choices as asm86, so the bytes are identical; errors are shown as `NAME.ASM(line): message`, with asm86's messages. It reads the source a piece at a time and keeps it as tokens in memory, so sources larger than 64 KB work; the names (each on a paragraph of its own, known by its segment) grow down from the top of memory while the tokens grow up, so neither has a limit of its own. It assembles COS, COMMAND.COM, EDIT, CBasic, the programs Small-C makes and itself. At the machine's 4.77 MHz, HELLO takes about a second, COS.SYS under a minute and CBasic about five minutes.
 - **EDIT** (`edit.asm`): `EDIT file`. Arrows, Home/End, PgUp/PgDn, Ctrl+Home/End, Ctrl+arrows; Enter keeps the indentation; Ins; Tab (columns of 4); Ctrl+Y cuts lines, F9 pastes them; F3/F4 find (any case), F5 goes to a line; F2 saves through NAME.$$$ and keeps NAME.BAK; Esc leaves. Lines live one by one in memory above the program (up to 16000 lines of 1000 characters, about 450 KB), and are compacted when memory fills; F2 always works, even out of memory.
+
+## Small-C
+
+`SMALLC [options] file...` compiles C programs written with EDIT into `.COM` programs, or `.EXE` programs with `-e`; several `.C` files make one program, `.ASM` files are taken whole and `.LIB` libraries give the modules the program needs (`SMALLC -c -o MY.LIB A.C B.C` makes one). Small-C writes the whole program as assembler source and runs ASM on it, so there are no object files and no linker. SMALLC.EXE, CLIB.LIB and the headers (`STDIO.H`, `STDLIB.H`, `STRING.H`, `CTYPE.H`, `STDARG.H`, `IO.H`, `DOS.H`, `CONIO.H`) are on the system diskette; `HELLO.C` is the first program:
+
+```
+A:\>smallc hello.c
+HELLO.COM: 4352 bytes
+A:\>hello
+Hello from the 8086, in C!
+```
+
+At the machine's 4.77 MHz this takes about 50 seconds: 20 for Small-C, 30 for ASM. The language and how it works are in [../smallc/README.md](../smallc/README.md); the Small-C manual (`../doc/Small-C-Manual.pdf`) is for users.
 
 ## CBasic
 
@@ -38,7 +52,7 @@ How it works: the whole program is compiled in two passes into code for a stack 
 ## Making a system diskette
 
 ```
-make dos                        # build/cos.img: COS.SYS, COMMAND.COM, ASM, EDIT, BASIC, HELLO.ASM and APES.BAS, bootable
+make dos                        # build/cos.img: COS.SYS, COMMAND.COM, ASM, EDIT, BASIC, Small-C (with CLIB.LIB and the headers), HELLO.ASM, HELLO.C and APES.BAS, bootable
 ```
 
 By hand, with the pc86 tools:
@@ -50,12 +64,19 @@ asm86 dos/command.asm -o COMMAND.COM
 asm86 dos/asm.asm -o ASM.COM
 asm86 dos/edit.asm -o EDIT.COM
 asm86 dos/basic.asm -o BASIC.COM
+cc -o build/smallc smallc/*.c            # Small-C for this computer (any C compiler)
+build/smallc -Ismallc/include/ -c -o CLIB.LIB smallc/lib/*.asm smallc/lib/*.c
+build/smallc -n -LCLIB.LIB -Ismallc/include/ -e -S -o SMALLC.EXE smallc/main.c smallc/lex.c smallc/decl.c smallc/expr.c smallc/gen.c smallc/stmt.c smallc/link.c
+asm86 SMALLC.ASM -o SMALLC.EXE
 fdimage new cos.img --label COS         # or --720k
 fdimage add cos.img COS.SYS
 fdimage add cos.img COMMAND.COM
 fdimage add cos.img ASM.COM
 fdimage add cos.img EDIT.COM
 fdimage add cos.img BASIC.COM
+fdimage add cos.img SMALLC.EXE
+fdimage add cos.img CLIB.LIB
+fdimage add cos.img smallc/include/stdio.h STDIO.H      # and the other headers
 fdimage add cos.img dos/apes.bas APES.BAS
 fdimage boot cos.img boot.bin             # keeps the diskette's BPB
 fdimage add cos.img GAME.COM              # and any programs
@@ -176,7 +197,9 @@ tests/testexe.asm    an .EXE written by hand, with a relocation
 tests/readline.asm   reads a line from standard input
 tests/diskfull.asm   writes until the diskette is full
 tests/unsup.asm      calls a function that is not supported
+tests/jumps.asm      conditional jumps with NEAR, short or long (for ASM against asm86)
 ../tests/dos_test.py builds diskettes and runs everything on the machine
 ../tests/tools_test.py ASM and EDIT on the machine
 ../tests/basic_test.py CBasic on the machine (programs in ../tests/basic)
+../tests/smallc_test.py Small-C: C programs on the machine (in ../tests/smallc), SMALLC.EXE in COS
 ```

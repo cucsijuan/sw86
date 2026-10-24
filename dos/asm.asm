@@ -5290,14 +5290,39 @@ do_jcc:
 .imm:
     cmp byte [op0 + O_JMOD], J_NEAR
     jne .short
-    mov si, m_jcc_near
-    jmp enc_error
+    ; NEAR: the short jump when the target is close, else the opposite
+    ; condition over a near JMP (the 8086 has only short ones)
+    test byte [sticky], 1
+    jnz .long
+    cmp byte [op0 + O_IMM + V_UNK], 0
+    jne .short
+    mov cx, 2
+    call rel_target
+    call fits_s8
+    jc .long
 .short:
     mov al, [m_cc]
     add al, 70h
     mov si, m_cond_jump
     mov di, m_cond_hint
     jmp encode_rel8
+.long:
+    cmp byte [pass], STICKY_PASS
+    jb .long_emit
+    or byte [sticky], 1
+.long_emit:
+    mov al, [m_cc]
+    xor al, 1
+    add al, 70h
+    call eb
+    mov al, 3
+    call eb
+    mov al, 0E9h
+    call eb
+    mov cx, 2
+    call rel_target
+    call ew
+    jmp enc_ok
 
 do_loop:
     mov al, 1
@@ -5614,7 +5639,7 @@ m_limit         db ' bytes away and the limit is -128..127', 0
 m_short_jump    db 'short jump', 0
 m_short_hint    db ' (remove SHORT to allow a near jump)', 0
 m_cond_jump     db 'conditional jump', 0
-m_cond_hint     db '. To go further, invert the condition and jump over a JMP', 0
+m_cond_hint     db '. To go further, write NEAR (je near label)', 0
 m_loop_jump     db 'loop jump', 0
 m_loop_hint     db '. For longer loops use dec cx / jnz with a JMP', 0
 m_mov_cs        db 'CS cannot be written with MOV; on the 8086 it changes with a far jump', 0
@@ -5634,7 +5659,6 @@ m_already_far   db 'segment:offset is already far; write it without FAR: % 0000h
 m_far_needs     db 'a far % needs segment:offset (% 0000h:7C00h) or a pointer in memory (% far [bx])', 0
 m_call_short    db 'CALL has no SHORT form', 0
 m_jcc_label     db 'conditional jumps only accept a label as target', 0
-m_jcc_near      db 'NEAR conditional jumps are 80386+; on the 8086 they are always short (-128..127)', 0
 m_int_range     db 'interrupt number must be 0..255', 0
 m_inout_acc     db '% only works with AL or AX', 0
 m_port_range    db 'direct port numbers are 0..255; for higher ports use DX (mov dx, port / % ...)', 0

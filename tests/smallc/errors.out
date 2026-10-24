@@ -1,0 +1,9 @@
+ERRORS.C(4): 'y' is not declared
+ERRORS.C(10): an expression expected
+ERRORS.C(11): * of something that is not a pointer
+ERRORS.C(19): no member 'b'
+ERRORS.C(24): long is not supported
+ERRORS.C(25): break outside a loop or a switch
+ERRORS.C(26): a void function returns no value
+ERRORS.C(32): an lvalue is needed for =
+ERRORS.C(35): label 'nowhere' is not defined
